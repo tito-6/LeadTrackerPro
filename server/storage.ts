@@ -7,6 +7,7 @@ export interface IStorage {
   createLead(lead: InsertLead): Promise<Lead>;
   updateLead(id: number, lead: Partial<InsertLead>): Promise<Lead | undefined>;
   deleteLead(id: number): Promise<boolean>;
+  clearAllLeads(): Promise<void>;
   getLeadsByFilter(filters: {
     startDate?: string;
     endDate?: string;
@@ -145,6 +146,11 @@ export class MemStorage implements IStorage {
 
   async deleteLead(id: number): Promise<boolean> {
     return this.leads.delete(id);
+  }
+
+  async clearAllLeads(): Promise<void> {
+    this.leads.clear();
+    this.currentLeadId = 1;
   }
 
   async getLeadsByFilter(filters: {

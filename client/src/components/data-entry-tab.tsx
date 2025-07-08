@@ -12,7 +12,7 @@ import { insertLeadSchema, type InsertLead } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { CloudUpload, Plus } from "lucide-react";
+import { CloudUpload, Plus, Trash2 } from "lucide-react";
 import { useLeads } from "@/hooks/use-leads";
 import { useSalesReps } from "@/hooks/use-leads";
 
@@ -114,6 +114,28 @@ export default function DataEntryTab() {
       toast({
         title: "Hata",
         description: "Dosya içe aktarılırken bir hata oluştu.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const clearDataMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("DELETE", "/api/leads/clear");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({
+        title: "Veriler Temizlendi",
+        description: "Tüm lead verileri başarıyla temizlendi.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Hata",
+        description: "Veriler temizlenirken bir hata oluştu.",
         variant: "destructive",
       });
     },
@@ -445,6 +467,23 @@ export default function DataEntryTab() {
               </div>
               <div className="text-xs text-gray-500">
                 Desteklenen formatlar: .xlsx, .csv, .json
+              </div>
+              
+              {/* Clear Data Button */}
+              <div className="pt-4 border-t">
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => clearDataMutation.mutate()}
+                  disabled={clearDataMutation.isPending}
+                  className="w-full"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {clearDataMutation.isPending ? 'Temizleniyor...' : 'Tüm Verileri Temizle'}
+                </Button>
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                  Bu işlem tüm lead verilerini kalıcı olarak siler
+                </p>
               </div>
             </div>
           </CardContent>
