@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,10 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Filter } from "lucide-react";
+import { Filter, BarChart3, TrendingUp, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useLeads, useSalesReps } from "@/hooks/use-leads";
 import { createChart } from "@/lib/chart-utils";
+import InteractiveChart from "@/components/interactive-chart";
+import type { Lead, SalesRep } from "@shared/schema";
 
 interface ReportFilters {
   startDate: string;
@@ -26,6 +28,8 @@ export default function ReportsTab() {
     salesRep: "",
     leadType: "",
   });
+  
+  const [selectedPersonnel, setSelectedPersonnel] = useState<string>("");
 
   const { data: filteredLeads = [] } = useQuery({
     queryKey: ["/api/leads", filters],
@@ -77,6 +81,47 @@ export default function ReportsTab() {
   const rentalStats = calculateStats(rentalLeads);
   const salesStats = calculateStats(salesLeads);
 
+  // Generate chart data for Lead Status Distribution (100% sync with Overview)
+  const statusChartData = useMemo(() => {
+    const statusCounts = filteredLeads.reduce((acc: { [key: string]: number }, lead) => {
+      const status = lead.status || 'Tanımsız';
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, {});
+    
+    const total = filteredLeads.length;
+    return Object.entries(statusCounts).map(([status, count]) => ({
+      name: status,
+      value: count,
+      percentage: total > 0 ? Math.round((count / total) * 100) : 0
+    }));
+  }, [filteredLeads]);
+
+  // Generate chart data for Personnel Performance (100% sync with Overview)
+  const personnelChartData = useMemo(() => {
+    const personnelCounts = filteredLeads.reduce((acc: { [key: string]: number }, lead) => {
+      const personnel = lead.assignedPersonnel || 'Atanmamış';
+      acc[personnel] = (acc[personnel] || 0) + 1;
+      return acc;
+    }, {});
+    
+    const total = filteredLeads.length;
+    return Object.entries(personnelCounts).map(([personnel, count]) => ({
+      name: personnel,
+      value: count,
+      percentage: total > 0 ? Math.round((count / total) * 100) : 0
+    }));
+  }, [filteredLeads]);
+
+  // Handle chart click to filter data
+  const handleStatusChartClick = (item: { name: string }) => {
+    console.log('Status clicked in Reports:', item.name);
+  };
+
+  const handlePersonnelChartClick = (item: { name: string }) => {
+    setSelectedPersonnel(item.name === selectedPersonnel ? '' : item.name);
+  };
+
   // Calculate progress for each sales rep
   const calculateProgress = () => {
     return salesReps.map(rep => {
@@ -95,13 +140,7 @@ export default function ReportsTab() {
 
   const progressData = calculateProgress();
 
-  useEffect(() => {
-    // Initialize charts when data changes
-    setTimeout(() => {
-      createChart("rentalChart", rentalStats, "pie");
-      createChart("salesChart", salesStats, "pie");
-    }, 100);
-  }, [rentalStats, salesStats]);
+  // Removed chart effects - now using InteractiveChart components
 
   const handleFilterChange = (key: keyof ReportFilters, value: string) => {
     // Convert "all" back to empty string for API calls
@@ -179,7 +218,75 @@ export default function ReportsTab() {
         </CardContent>
       </Card>
 
-      {/* Report Content */}
+      {/* Interactive Charts Section */}
+      <div className="grid gap-6">
+        {/* Lead Status Distribution Chart */}
+        <InteractiveChart
+          title="📊 Filtrelenmiş Lead - Durum Dağılımı (SON GORUSME SONUCU)"
+          data={statusChartData}
+          onItemClick={handleStatusChartClick}
+          height={350}
+        />
+        
+        {/* Personnel Lead Distribution Chart */}
+        <InteractiveChart
+          title="👨‍💼 Filtrelenmiş Personel - Lead Dağılımı (Atanan Personel)"
+          data={personnelChartData}
+          onItemClick={handlePersonnelChartClick}
+          height={350}
+        />
+        
+        {/* Lead Type Distribution Charts */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Kiralama Lead Dağılımı ({rentalLeads.length} toplam)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {rentalStats.map((stat, index) => (
+                  <div key={stat.status} className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{stat.status}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">{stat.count}</span>
+                      <Progress value={stat.percentage} className="w-20 h-2" />
+                      <span className="text-sm text-muted-foreground">{stat.percentage}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Satış Lead Dağılımı ({salesLeads.length} toplam)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {salesStats.map((stat, index) => (
+                  <div key={stat.status} className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{stat.status}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">{stat.count}</span>
+                      <Progress value={stat.percentage} className="w-20 h-2" />
+                      <span className="text-sm text-muted-foreground">{stat.percentage}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Report Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Kiralama Report */}
         <Card>
@@ -187,9 +294,6 @@ export default function ReportsTab() {
             <CardTitle>Kiralama Lead Raporu</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="mb-4">
-              <canvas id="rentalChart" width="400" height="200"></canvas>
-            </div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -225,9 +329,6 @@ export default function ReportsTab() {
             <CardTitle>Satış Lead Raporu</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="mb-4">
-              <canvas id="salesChart" width="400" height="200"></canvas>
-            </div>
             <Table>
               <TableHeader>
                 <TableRow>

@@ -1,0 +1,91 @@
+ULTIMATE UI/UX CHART & REPORTING UPGRADE PROMPT – Lead Reporter App
+✨ Transform the Genel Görünüm (Overview) and Raporlar (Reports) tabs into powerful, interactive, visually rich reporting dashboards that fully reflect the imported data and meet the following criteria:
+
+📊 1. Toplam Lead - Durum Dağılımı (Total Lead Status Distribution) Chart
+Must reflect the exact same data as the “Raporlar” tab.
+
+Based on the column:
+
+nginx
+Copy
+Edit
+SON GORUSME SONUCU
+Group all unique statuses (e.g., “Satış Yapıldı”, “Olumsuz”, “Bilgi Verildi”) with dynamic counts.
+
+Use 3D Pie Chart style by default.
+
+Add toggle button to switch chart type between:
+
+🥧 Pie (3D)
+
+📊 Column Bar Chart
+
+📈 Line Chart
+
+👨‍💼 2. Personel Performans Tablosu (Personnel Performance Table)
+Data must match 100% with reports under “Raporlar” tab.
+
+Based on:
+
+Atanan Personel
+
+SON GORUSME SONUCU
+
+Filterable by Talep Geliş Tarihi
+
+Each row must include:
+
+Personnel name
+
+Count of leads by status (colored cells like in Excel)
+
+Progress bar (% of monthly sales goal reached)
+
+Auto-updating monthly target (e.g., 1 sale per month, adjusted by date range)
+
+Charts reflecting each salesperson’s performance
+
+🧠 3. New Chart: Total Leads by Salesperson
+A new chart must be added to both Genel Görünüm and Raporlar:
+
+Data source: Atanan Personel
+
+Chart must:
+
+Reflect each salesperson’s share of the total leads
+
+Work even if someone has 0 leads (must show empty slice/bar with 0%)
+
+Have a label with both absolute count and percentage
+
+Chart Type Switcher: Allow user to toggle between:
+
+Pie (3D)
+
+Donut
+
+Column
+
+Line
+
+🛠️ 4. Cool Factor & Interaction
+All charts must support:
+
+Hover effects with details (tooltip showing count, percentage, etc.)
+
+Click-to-filter (clicking a salesperson filters the table to show only their leads)
+
+Smooth transitions between chart types
+
+Add animation when data changes or filters are applied (make the UI fun and modern)
+
+Respect dark/light mode switch
+
+🧪 5. Ensure Sync Between Tabs
+Any data in Genel Görünüm (Overview tab) must be 100% in sync with:
+
+Filters applied in the Reports tab
+
+Data imported and parsed
+
+No mismatch in lead status counts, charts, or personnel metrics

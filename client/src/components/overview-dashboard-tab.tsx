@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -8,8 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQuery } from '@tanstack/react-query';
 import { Lead, SalesRep } from '@shared/schema';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
-import { Calendar, Filter } from 'lucide-react';
+import { Calendar, Filter, Users, TrendingUp, Target, BarChart3 } from 'lucide-react';
+import InteractiveChart from '@/components/interactive-chart';
 
 // Status definitions with colors matching the screenshot
 const statusConfig = {
@@ -44,6 +44,8 @@ export default function OverviewDashboardTab() {
     month: '',
     year: ''
   });
+  
+  const [selectedPersonnel, setSelectedPersonnel] = useState<string>('');
 
   const { data: leads = [] } = useQuery<Lead[]>({
     queryKey: ['/api/leads', dateFilters],
@@ -123,6 +125,52 @@ export default function OverviewDashboardTab() {
     
     return stats;
   });
+
+  // Generate chart data for Lead Status Distribution
+  const statusChartData = useMemo(() => {
+    const statusCounts = leads.reduce((acc: { [key: string]: number }, lead) => {
+      const status = lead.status || 'Tanımsız';
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, {});
+    
+    const total = leads.length;
+    return Object.entries(statusCounts).map(([status, count]) => ({
+      name: status,
+      value: count,
+      percentage: total > 0 ? Math.round((count / total) * 100) : 0
+    }));
+  }, [leads]);
+
+  // Generate chart data for Personnel Performance
+  const personnelChartData = useMemo(() => {
+    const personnelCounts = leads.reduce((acc: { [key: string]: number }, lead) => {
+      const personnel = lead.assignedPersonnel || 'Atanmamış';
+      acc[personnel] = (acc[personnel] || 0) + 1;
+      return acc;
+    }, {});
+    
+    const total = leads.length;
+    return Object.entries(personnelCounts).map(([personnel, count]) => ({
+      name: personnel,
+      value: count,
+      percentage: total > 0 ? Math.round((count / total) * 100) : 0
+    }));
+  }, [leads]);
+
+  // Handle chart click to filter data
+  const handleStatusChartClick = (item: { name: string }) => {
+    console.log('Status clicked:', item.name);
+  };
+
+  const handlePersonnelChartClick = (item: { name: string }) => {
+    setSelectedPersonnel(item.name === selectedPersonnel ? '' : item.name);
+  };
+
+  // Filter sales person stats based on selection
+  const filteredSalesPersonStats = selectedPersonnel 
+    ? salesPersonStats.filter(stat => stat.personel === selectedPersonnel)
+    : salesPersonStats;
 
   // Calculate totals
   const totals = {
@@ -359,34 +407,21 @@ export default function OverviewDashboardTab() {
           </CardContent>
         </Card>
 
-        {/* Pie Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Toplam Lead - Durum Dağılımı</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieChartData}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}`}
-                  >
-                    {pieChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Interactive Chart - Lead Status Distribution */}
+        <InteractiveChart
+          title="📊 Toplam Lead - Durum Dağılımı (SON GORUSME SONUCU)"
+          data={statusChartData}
+          onItemClick={handleStatusChartClick}
+          height={350}
+        />
+        
+        {/* Interactive Chart - Personnel Distribution */}
+        <InteractiveChart
+          title="👨‍💼 Personel Başına Lead Dağılımı (Atanan Personel)"
+          data={personnelChartData}
+          onItemClick={handlePersonnelChartClick}
+          height={350}
+        />
       </div>
 
       {/* Sales Target Progress */}
