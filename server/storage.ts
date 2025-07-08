@@ -94,7 +94,40 @@ export class MemStorage implements IStorage {
     const lead: Lead = {
       ...insertLead,
       id,
-      notes: insertLead.notes || null,
+      // Ensure all nullable fields have proper null values
+      customerId: insertLead.customerId || null,
+      contactId: insertLead.contactId || null,
+      firstCustomerSource: insertLead.firstCustomerSource || null,
+      formCustomerSource: insertLead.formCustomerSource || null,
+      webFormNote: insertLead.webFormNote || null,
+      infoFormLocation1: insertLead.infoFormLocation1 || null,
+      infoFormLocation2: insertLead.infoFormLocation2 || null,
+      infoFormLocation3: insertLead.infoFormLocation3 || null,
+      infoFormLocation4: insertLead.infoFormLocation4 || null,
+      reminderPersonnel: insertLead.reminderPersonnel || null,
+      wasCalledBack: insertLead.wasCalledBack || null,
+      webFormPoolDate: insertLead.webFormPoolDate || null,
+      formSystemDate: insertLead.formSystemDate || null,
+      assignmentTimeDiff: insertLead.assignmentTimeDiff || null,
+      responseTimeDiff: insertLead.responseTimeDiff || null,
+      outgoingCallSystemDate: insertLead.outgoingCallSystemDate || null,
+      customerResponseDate: insertLead.customerResponseDate || null,
+      wasEmailSent: insertLead.wasEmailSent || null,
+      customerEmailResponseDate: insertLead.customerEmailResponseDate || null,
+      unreachableByPhone: insertLead.unreachableByPhone || null,
+      daysWaitingResponse: insertLead.daysWaitingResponse || null,
+      daysToResponse: insertLead.daysToResponse || null,
+      callNote: insertLead.callNote || null,
+      emailNote: insertLead.emailNote || null,
+      oneOnOneMeeting: insertLead.oneOnOneMeeting || null,
+      meetingDate: insertLead.meetingDate || null,
+      responseResult: insertLead.responseResult || null,
+      negativeReason: insertLead.negativeReason || null,
+      wasSaleMade: insertLead.wasSaleMade || null,
+      saleCount: insertLead.saleCount || null,
+      appointmentDate: insertLead.appointmentDate || null,
+      lastMeetingNote: insertLead.lastMeetingNote || null,
+      lastMeetingResult: insertLead.lastMeetingResult || null,
       createdAt: new Date(),
     };
     this.leads.set(id, lead);
@@ -124,15 +157,15 @@ export class MemStorage implements IStorage {
     let filteredLeads = Array.from(this.leads.values());
 
     if (filters.startDate) {
-      filteredLeads = filteredLeads.filter(lead => lead.date >= filters.startDate!);
+      filteredLeads = filteredLeads.filter(lead => lead.requestDate >= filters.startDate!);
     }
 
     if (filters.endDate) {
-      filteredLeads = filteredLeads.filter(lead => lead.date <= filters.endDate!);
+      filteredLeads = filteredLeads.filter(lead => lead.requestDate <= filters.endDate!);
     }
 
     if (filters.salesRep) {
-      filteredLeads = filteredLeads.filter(lead => lead.salesRep === filters.salesRep);
+      filteredLeads = filteredLeads.filter(lead => lead.assignedPersonnel === filters.salesRep);
     }
 
     if (filters.leadType) {

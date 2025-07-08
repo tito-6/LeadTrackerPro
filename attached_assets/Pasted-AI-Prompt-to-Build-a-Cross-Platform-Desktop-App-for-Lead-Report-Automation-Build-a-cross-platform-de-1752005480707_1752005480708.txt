@@ -1,0 +1,162 @@
+AI Prompt to Build a Cross-Platform Desktop App for Lead Report Automation
+Build a cross-platform desktop application using Tauri + React or Electron + Vue/React to automate the creation of advanced real estate lead reports based on raw lead data. The source data will be imported as .json, .xlsx, or .csv, and will contain the following exact fields:
+
+📥 Input Fields (Raw Data Columns):
+Müşteri ID
+
+İletişim ID
+
+Müşteri Adı Soyadı
+
+İlk Müşteri Kaynağı
+
+Form Müşteri Kaynağı
+
+WebForm Notu
+
+Talep Geliş Tarihi
+
+İnfo Form Geliş Yeri
+
+İnfo Form Geliş Yeri 2
+
+İnfo Form Geliş Yeri 3
+
+İnfo Form Geliş Yeri 4
+
+Atanan Personel
+
+Hatıırlatma Personeli
+
+GERİ DÖNÜŞ YAPILDI MI? (Müşteri Arandı mı?)
+
+Web Form Havuz Oluşturma Tarihi
+
+Form Sistem Oluşturma Tarihi
+
+Atama Saat Farkı
+
+Dönüş Saat Farkı
+
+Giden Arama Sistem Oluşturma Tarihi
+
+Müşteri Geri Dönüş Tarihi (Giden Arama)
+
+GERİ DÖNÜŞ YAPILDI MI? (Müşteriye Mail Gönderildi mi?)
+
+Müşteri Mail Geri Dönüş Tarihi
+
+Telefonla Ulaşılamayan Müşteriler
+
+Kaç Gündür Geri Dönüş Bekliyor
+
+Kaç Günde Geri Dönüş Yapılmış (Süre)
+
+GERİ DÖNÜŞ NOTU (Giden Arama Notu)
+
+GERİ DÖNÜŞ NOTU (Giden Mail Notu)
+
+Birebir Görüşme Yapıldı mı?
+
+Birebir Görüşme Tarihi
+
+Dönüş Görüşme Sonucu
+
+Dönüş Olumsuzluk Nedeni
+
+Müşteriye Satış Yapıldı mı?
+
+Satış Adedi
+
+Randevu Tarihi
+
+SON GÖRÜŞME NOTU
+
+SON GÖRÜŞME SONUCU
+
+🧠 Functional Requirements:
+📊 Report Generator:
+For each project and personnel (e.g. Alperen Yerlikaya), generate:
+
+A Kiralama Lead Raporu table
+
+A Satış Lead Raporu table
+
+Summary counts (Toplam Lead, Bilgi Verildi, Olumsuz, Satış, Takipte, Randevu, etc.)
+
+Pie charts for lead distribution per status
+
+Line/bar charts for response timing metrics
+
+Charts and tables must match Excel visuals exactly in:
+
+Colors (editable via UI)
+
+Shape and layout
+
+Labeling and status grouping (e.g. Cevap Yok, Bilgi Hatalı, Satış, Olumsuz)
+
+🔍 Advanced Filtering:
+Filter by:
+
+Atanan Personel
+
+Lead Type (derived from WebForm Notu: “Satılık” or “Kiralık”)
+
+Status (from Dönüş Görüşme Sonucu, Geri Dönüş Notu, Satış Adedi)
+
+Date range (Talep Geliş Tarihi)
+
+🧩 Deep Insights Tabs:
+📌 Olumsuz Analizi Tab:
+Show full breakdown of “Olumsuz” leads.
+
+Include Dönüş Olumsuzluk Nedeni grouped and visualized.
+
+Include related notes from SON GÖRÜŞME NOTU and Geri Dönüş Notları
+
+📌 Takipte Analizi Tab:
+Display only leads with status “Takipte”
+
+Read and show:
+
+Follow-up notes from GERİ DÖNÜŞ NOTU (Giden Arama Notu)
+
+Action items from SON GÖRÜŞME NOTU
+
+Randevu Tarihi, if present
+
+💾 Export Options:
+Export reports by personnel/month/project as:
+
+Excel (.xlsx)
+
+PDF
+
+JSON (with calculated fields)
+
+⚙️ UI/UX Requirements:
+Tabs or pages:
+
+Dashboard, Reports, Lead Import, Settings
+
+Responsive layout
+
+Color theme switcher (light/dark)
+
+Status-based color control (red = Olumsuz, yellow = Takipte, green = Satış)
+
+Drag-and-drop file import
+
+Tooltips for all statuses and fields
+
+🧠 Tech Stack Suggestions:
+Frontend: React, Vue, or Svelte
+
+Charts: Chart.js, Recharts, or ApexCharts
+
+Desktop Framework: Tauri (preferred for performance) or Electron
+
+Excel/JSON Parser: xlsx, papaparse, or native FS
+
+Optional: SQLite or local JSON store for saving report states

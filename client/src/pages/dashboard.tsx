@@ -2,11 +2,13 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ChartLine, Plus, BarChart, Download, Settings, Moon, UserCircle } from "lucide-react";
+import { ChartLine, Plus, BarChart, Download, Settings, Moon, UserCircle, TrendingDown, Clock } from "lucide-react";
 import DataEntryTab from "@/components/data-entry-tab";
 import ReportsTab from "@/components/reports-tab";
 import ExportTab from "@/components/export-tab";
 import SettingsTab from "@/components/settings-tab";
+import OlumsuzAnaliziTab from "@/components/olumsuz-analizi-tab";
+import TakipteAnaliziTab from "@/components/takipte-analizi-tab";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("data-entry");
@@ -41,7 +43,7 @@ export default function Dashboard() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-6">
+          <TabsList className="grid w-full grid-cols-6 mb-6">
             <TabsTrigger value="data-entry" className="flex items-center space-x-2">
               <Plus className="h-4 w-4" />
               <span>Veri Girişi</span>
@@ -49,6 +51,14 @@ export default function Dashboard() {
             <TabsTrigger value="reports" className="flex items-center space-x-2">
               <BarChart className="h-4 w-4" />
               <span>Raporlar</span>
+            </TabsTrigger>
+            <TabsTrigger value="olumsuz-analizi" className="flex items-center space-x-2">
+              <TrendingDown className="h-4 w-4" />
+              <span>Olumsuz Analizi</span>
+            </TabsTrigger>
+            <TabsTrigger value="takipte-analizi" className="flex items-center space-x-2">
+              <Clock className="h-4 w-4" />
+              <span>Takipte Analizi</span>
             </TabsTrigger>
             <TabsTrigger value="export" className="flex items-center space-x-2">
               <Download className="h-4 w-4" />
@@ -66,6 +76,14 @@ export default function Dashboard() {
 
           <TabsContent value="reports">
             <ReportsTab />
+          </TabsContent>
+
+          <TabsContent value="olumsuz-analizi">
+            <OlumsuzAnaliziTab />
+          </TabsContent>
+
+          <TabsContent value="takipte-analizi">
+            <TakipteAnaliziTab />
           </TabsContent>
 
           <TabsContent value="export">

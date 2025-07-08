@@ -209,13 +209,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Convert leads to worksheet format
       const worksheetData = leads.map(lead => ({
-        'Lead Adı': lead.name,
-        'Tarih': lead.date,
+        'Müşteri Adı': lead.customerName,
+        'Tarih': lead.requestDate,
         'Lead Tipi': lead.leadType === 'kiralama' ? 'Kiralama' : 'Satış',
-        'Satış Temsilcisi': lead.salesRep,
-        'Proje': lead.project,
+        'Atanan Personel': lead.assignedPersonnel,
         'Durum': lead.status,
-        'Notlar': lead.notes || ''
+        'Son Görüşme Notu': lead.lastMeetingNote || '',
+        'Web Form Notu': lead.webFormNote || '',
+        'Müşteri ID': lead.customerId || '',
+        'İletişim ID': lead.contactId || ''
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(worksheetData);
@@ -272,7 +274,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return acc;
         }, {} as Record<string, number>),
         bySalesRep: leads.reduce((acc, lead) => {
-          acc[lead.salesRep] = (acc[lead.salesRep] || 0) + 1;
+          acc[lead.assignedPersonnel] = (acc[lead.assignedPersonnel] || 0) + 1;
           return acc;
         }, {} as Record<string, number>),
       };

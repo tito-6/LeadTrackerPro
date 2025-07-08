@@ -25,13 +25,45 @@ export default function DataEntryTab() {
   const form = useForm<InsertLead>({
     resolver: zodResolver(insertLeadSchema),
     defaultValues: {
-      name: "",
-      date: new Date().toISOString().split('T')[0],
-      leadType: "",
-      salesRep: "",
-      project: "",
-      status: "",
-      notes: "",
+      customerName: "",
+      requestDate: new Date().toISOString().split('T')[0],
+      leadType: "kiralama",
+      assignedPersonnel: "",
+      status: "yeni",
+      // Optional fields
+      customerId: "",
+      contactId: "",
+      firstCustomerSource: "",
+      formCustomerSource: "",
+      webFormNote: "",
+      infoFormLocation1: "",
+      infoFormLocation2: "",
+      infoFormLocation3: "",
+      infoFormLocation4: "",
+      reminderPersonnel: "",
+      wasCalledBack: "",
+      webFormPoolDate: "",
+      formSystemDate: "",
+      assignmentTimeDiff: "",
+      responseTimeDiff: "",
+      outgoingCallSystemDate: "",
+      customerResponseDate: "",
+      wasEmailSent: "",
+      customerEmailResponseDate: "",
+      unreachableByPhone: "",
+      daysWaitingResponse: undefined,
+      daysToResponse: undefined,
+      callNote: "",
+      emailNote: "",
+      oneOnOneMeeting: "",
+      meetingDate: "",
+      responseResult: "",
+      negativeReason: "",
+      wasSaleMade: "",
+      saleCount: undefined,
+      appointmentDate: "",
+      lastMeetingNote: "",
+      lastMeetingResult: "",
     },
   });
 
@@ -117,10 +149,10 @@ export default function DataEntryTab() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="name"
+                    name="customerName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Lead Adı</FormLabel>
+                        <FormLabel>Müşteri Adı Soyadı</FormLabel>
                         <FormControl>
                           <Input placeholder="Müşteri adını girin" {...field} />
                         </FormControl>
@@ -131,10 +163,10 @@ export default function DataEntryTab() {
 
                   <FormField
                     control={form.control}
-                    name="date"
+                    name="requestDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Tarih</FormLabel>
+                        <FormLabel>Talep Geliş Tarihi</FormLabel>
                         <FormControl>
                           <Input type="date" {...field} />
                         </FormControl>
@@ -160,6 +192,99 @@ export default function DataEntryTab() {
                             <SelectItem value="satis">Satış</SelectItem>
                           </SelectContent>
                         </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="assignedPersonnel"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Atanan Personel</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Personel seçiniz" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {salesReps.map((rep) => (
+                              <SelectItem key={rep.id} value={rep.name}>
+                                {rep.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Durum</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Durum seçiniz" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="yeni">Yeni</SelectItem>
+                            <SelectItem value="bilgi-verildi">Bilgi Verildi</SelectItem>
+                            <SelectItem value="olumsuz">Olumsuz</SelectItem>
+                            <SelectItem value="satis">Satış</SelectItem>
+                            <SelectItem value="takipte">Takipte</SelectItem>
+                            <SelectItem value="randevu">Randevu</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="customerId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Müşteri ID</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Müşteri ID" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="contactId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>İletişim ID</FormLabel>
+                        <FormControl>
+                          <Input placeholder="İletişim ID" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="webFormNote"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>WebForm Notu</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Web form notları" {...field} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -204,44 +329,76 @@ export default function DataEntryTab() {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Durum</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seçiniz" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="yeni">Yeni</SelectItem>
-                            <SelectItem value="bilgi-verildi">Bilgi Verildi</SelectItem>
-                            <SelectItem value="olumsuz">Olumsuz</SelectItem>
-                            <SelectItem value="satis">Satış</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notlar</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Ek notlar..." rows={3} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="mt-6">
+                  <h3 className="text-lg font-medium mb-4">Ek Bilgiler</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="lastMeetingNote"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Son Görüşme Notu</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Son görüşme notları..."
+                              className="min-h-[80px]"
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="callNote"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Geri Dönüş Notu (Arama)</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Arama notları..."
+                              className="min-h-[80px]"
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="negativeReason"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Olumsuzluk Nedeni</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Olumsuzluk nedeni" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="appointmentDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Randevu Tarihi</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
 
                 <div className="flex justify-end space-x-3">
                   <Button type="button" variant="outline" onClick={handleClear}>

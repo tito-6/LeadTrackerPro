@@ -35,10 +35,16 @@ Preferred communication style: Simple, everyday language.
 ## Key Components
 
 ### Database Schema
-Three main entities:
-- **Leads**: Core lead information including name, date, type (rental/sales), sales rep, project, status, and notes
+Three main entities with comprehensive real estate data structure:
+- **Leads**: Comprehensive lead information including customer details, source tracking, response management, meeting notes, appointment scheduling, and outcome tracking with 35+ fields
 - **Sales Reps**: Sales representative data with monthly targets and active status
 - **Settings**: Key-value store for application configuration
+
+### Advanced Analytics Features
+- **Olumsuz Analizi**: Complete negative lead breakdown with reason categorization, personnel performance analysis, and detailed note tracking
+- **Takipte Analizi**: Follow-up management with appointment scheduling, urgent alerts, and response time tracking
+- **Comprehensive Data Import**: Automatic field mapping from Turkish Excel/CSV files with intelligent lead type and status derivation
+- **Real-time Statistics**: Dynamic calculation of lead performance metrics across all categories
 
 ### API Structure
 RESTful API endpoints:
@@ -49,9 +55,11 @@ RESTful API endpoints:
 - `/api/export` - Data export functionality
 
 ### Frontend Features
-- **Data Entry Tab**: Form-based lead creation with file upload support
-- **Reports Tab**: Interactive charts and filtered data views
-- **Export Tab**: Multi-format export capabilities (Excel, PDF, CSV)
+- **Data Entry Tab**: Comprehensive form-based lead creation with file upload support for .xlsx, .csv, and .json files
+- **Reports Tab**: Interactive charts and filtered data views with Chart.js integration
+- **Olumsuz Analizi Tab**: Advanced negative lead analysis with breakdown by reasons, personnel, and detailed notes
+- **Takipte Analizi Tab**: Follow-up lead tracking with appointment management and urgent alerts
+- **Export Tab**: Multi-format export capabilities (Excel, JSON) with comprehensive field mapping
 - **Settings Tab**: Application configuration and sales rep target management
 
 ### Storage Implementation
