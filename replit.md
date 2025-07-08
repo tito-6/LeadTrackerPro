@@ -55,12 +55,15 @@ RESTful API endpoints:
 - `/api/export` - Data export functionality
 
 ### Frontend Features
+- **Overview Dashboard Tab**: Complete summary table showing each salesperson's performance with pie charts for lead status distribution, exactly matching the requested screenshot layout
+- **Excel Input Tab**: Dedicated Excel-style input screen with copy & paste functionality from Excel/Google Sheets, automatic total calculations, and comprehensive column support
 - **Data Entry Tab**: Comprehensive form-based lead creation with file upload support for .xlsx, .csv, and .json files
 - **Reports Tab**: Interactive charts and filtered data views with Chart.js integration
 - **Olumsuz Analizi Tab**: Advanced negative lead analysis with breakdown by reasons, personnel, and detailed notes
 - **Takipte Analizi Tab**: Follow-up lead tracking with appointment management and urgent alerts
 - **Export Tab**: Multi-format export capabilities (Excel, JSON) with comprehensive field mapping
 - **Settings Tab**: Application configuration and sales rep target management
+- **Dynamic Salesperson Tabs**: Individual performance tabs for each salesperson with separate sales and rental lead breakdowns, pie charts, and recent activity tracking
 
 ### Storage Implementation
 The application includes both memory-based storage (for development) and database storage interfaces, allowing for flexible deployment scenarios.

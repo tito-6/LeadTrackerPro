@@ -2,16 +2,25 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ChartLine, Plus, BarChart, Download, Settings, Moon, UserCircle, TrendingDown, Clock } from "lucide-react";
+import { ChartLine, Plus, BarChart, Download, Settings, Moon, UserCircle, TrendingDown, Clock, Grid, Home } from "lucide-react";
 import DataEntryTab from "@/components/data-entry-tab";
 import ReportsTab from "@/components/reports-tab";
 import ExportTab from "@/components/export-tab";
 import SettingsTab from "@/components/settings-tab";
 import OlumsuzAnaliziTab from "@/components/olumsuz-analizi-tab";
 import TakipteAnaliziTab from "@/components/takipte-analizi-tab";
+import ExcelInputTab from "@/components/excel-input-tab";
+import OverviewDashboardTab from "@/components/overview-dashboard-tab";
+import SalespersonPerformanceTab from "@/components/salesperson-performance-tab";
+import { useQuery } from "@tanstack/react-query";
+import { SalesRep } from "@shared/schema";
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState("data-entry");
+  const [activeTab, setActiveTab] = useState("overview");
+  
+  const { data: salesReps = [] } = useQuery<SalesRep[]>({
+    queryKey: ['/api/sales-reps'],
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -43,32 +52,48 @@ export default function Dashboard() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6 mb-6">
-            <TabsTrigger value="data-entry" className="flex items-center space-x-2">
+          <TabsList className="grid w-full grid-cols-8 mb-6 h-auto p-1">
+            <TabsTrigger value="overview" className="flex items-center space-x-2 p-3">
+              <Home className="h-4 w-4" />
+              <span>Genel Görünüm</span>
+            </TabsTrigger>
+            <TabsTrigger value="excel-input" className="flex items-center space-x-2 p-3">
+              <Grid className="h-4 w-4" />
+              <span>Excel Girişi</span>
+            </TabsTrigger>
+            <TabsTrigger value="data-entry" className="flex items-center space-x-2 p-3">
               <Plus className="h-4 w-4" />
               <span>Veri Girişi</span>
             </TabsTrigger>
-            <TabsTrigger value="reports" className="flex items-center space-x-2">
+            <TabsTrigger value="reports" className="flex items-center space-x-2 p-3">
               <BarChart className="h-4 w-4" />
               <span>Raporlar</span>
             </TabsTrigger>
-            <TabsTrigger value="olumsuz-analizi" className="flex items-center space-x-2">
+            <TabsTrigger value="olumsuz-analizi" className="flex items-center space-x-2 p-3">
               <TrendingDown className="h-4 w-4" />
               <span>Olumsuz Analizi</span>
             </TabsTrigger>
-            <TabsTrigger value="takipte-analizi" className="flex items-center space-x-2">
+            <TabsTrigger value="takipte-analizi" className="flex items-center space-x-2 p-3">
               <Clock className="h-4 w-4" />
               <span>Takipte Analizi</span>
             </TabsTrigger>
-            <TabsTrigger value="export" className="flex items-center space-x-2">
+            <TabsTrigger value="export" className="flex items-center space-x-2 p-3">
               <Download className="h-4 w-4" />
               <span>Dışa Aktar</span>
             </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center space-x-2">
+            <TabsTrigger value="settings" className="flex items-center space-x-2 p-3">
               <Settings className="h-4 w-4" />
               <span>Ayarlar</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="overview">
+            <OverviewDashboardTab />
+          </TabsContent>
+
+          <TabsContent value="excel-input">
+            <ExcelInputTab />
+          </TabsContent>
 
           <TabsContent value="data-entry">
             <DataEntryTab />
@@ -93,7 +118,34 @@ export default function Dashboard() {
           <TabsContent value="settings">
             <SettingsTab />
           </TabsContent>
+
+          {/* Dynamic Salesperson Tabs */}
+          {salesReps.map((rep) => (
+            <TabsContent key={`salesperson-${rep.id}`} value={`salesperson-${rep.id}`}>
+              <SalespersonPerformanceTab salespersonId={rep.id} />
+            </TabsContent>
+          ))}
         </Tabs>
+
+        {/* Add dynamic tabs for each salesperson */}
+        {salesReps.length > 0 && (
+          <div className="mt-4">
+            <h3 className="text-lg font-medium mb-2">Personel Sekmeleri:</h3>
+            <div className="flex flex-wrap gap-2">
+              {salesReps.map((rep) => (
+                <Button
+                  key={rep.id}
+                  variant={activeTab === `salesperson-${rep.id}` ? "default" : "outline"}
+                  onClick={() => setActiveTab(`salesperson-${rep.id}`)}
+                  size="sm"
+                >
+                  <UserCircle className="h-4 w-4 mr-2" />
+                  {rep.name}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
