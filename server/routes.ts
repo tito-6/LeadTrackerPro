@@ -8,6 +8,58 @@ import Papa from "papaparse";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+// Helper function to map row data to lead schema
+function mapRowToLead(row: any): any {
+  // Handle Turkish column names with comprehensive mapping
+  const customerName = row['Müşteri Adı'] || row.customerName || row.name || row.Name || row['Lead Adı'] || row['Müşteri'] || "";
+  const requestDate = row['Talep Tarihi'] || row.requestDate || row.date || row.Date || row.Tarih || new Date().toISOString().split('T')[0];
+  const assignedPersonnel = row['Satış Temsilcisi'] || row.assignedPersonnel || row.salesRep || row.SalesRep || row.Personel || row['Atanan Personel'] || "";
+  
+  const leadTypeValue = row['Lead Tipi'] || row.leadType || row.LeadType || row['Tür'] || "kiralama";
+  let leadType = 'kiralama';
+  if (typeof leadTypeValue === 'string') {
+    const normalized = leadTypeValue.toLowerCase().trim();
+    if (normalized.includes('satış') || normalized.includes('satis') || normalized.includes('sale')) {
+      leadType = 'satis';
+    }
+  }
+  
+  const statusValue = row['Durum'] || row.status || row.Status || "yeni";
+  let status = 'yeni';
+  if (typeof statusValue === 'string') {
+    const normalized = statusValue.toLowerCase().trim();
+    if (normalized.includes('olumsuz') || normalized.includes('negative')) status = 'olumsuz';
+    else if (normalized.includes('satıldı') || normalized.includes('satildi') || normalized.includes('sold')) status = 'satildi';
+    else if (normalized.includes('takipte') || normalized.includes('follow')) status = 'takipte';
+    else if (normalized.includes('toplantı') || normalized.includes('meeting')) status = 'toplanti';
+    else if (normalized.includes('ulaşılamıyor') || normalized.includes('unreachable')) status = 'ulasilamiyor';
+  }
+  
+  const callNote = row['Arama Notu'] || row.callNote || row.notes || row.Notes || row.Notlar || row['Call Note'] || "";
+  
+  return {
+    customerName,
+    requestDate,
+    leadType,
+    assignedPersonnel,
+    status,
+    // Optional comprehensive fields with Turkish mapping
+    customerId: row['Müşteri ID'] || row.customerId || row['Customer ID'],
+    contactId: row['İletişim ID'] || row.contactId || row['Contact ID'],
+    firstCustomerSource: row['İlk Müşteri Kaynağı'] || row.firstCustomerSource || row['First Source'],
+    formCustomerSource: row['Form Müşteri Kaynağı'] || row.formCustomerSource || row['Form Source'],
+    webFormNote: row['Web Form Notu'] || row.webFormNote || row['Web Form Note'],
+    callNote,
+    emailNote: row['E-posta Notu'] || row.emailNote || row['Email Note'],
+    negativeReason: row['Olumsuz Sebebi'] || row.negativeReason || row['Negative Reason'],
+    appointmentDate: row['Randevu Tarihi'] || row.appointmentDate || row['Appointment Date'],
+    meetingDate: row['Toplantı Tarihi'] || row.meetingDate || row['Meeting Date'],
+    responseResult: row['Yanıt Sonucu'] || row.responseResult || row['Response Result'],
+    lastMeetingNote: row['Son Toplantı Notu'] || row.lastMeetingNote || row['Last Meeting Note'],
+    lastMeetingResult: row['Son Toplantı Sonucu'] || row.lastMeetingResult || row['Last Meeting Result'],
+  };
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Leads endpoints
   app.get("/api/leads", async (req, res) => {
@@ -103,26 +155,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Unsupported file format" });
       }
 
+      // Log successful file processing
+      console.log(`Processing ${originalname}: ${leads.length} leads found`);
+
       // Validate and save leads
       const createdLeads = [];
       const errors = [];
 
       for (let i = 0; i < leads.length; i++) {
         try {
-          const leadData = insertLeadSchema.parse({
-            name: leads[i].name || leads[i].Name || "",
-            date: leads[i].date || leads[i].Date || new Date().toISOString().split('T')[0],
-            leadType: leads[i].leadType || leads[i].LeadType || leads[i].lead_type || "kiralama",
-            salesRep: leads[i].salesRep || leads[i].SalesRep || leads[i].sales_rep || "",
-            project: leads[i].project || leads[i].Project || "",
-            status: leads[i].status || leads[i].Status || "yeni",
-            notes: leads[i].notes || leads[i].Notes || "",
-          });
+          const mappedData = mapRowToLead(leads[i]);
           
+          // Skip empty rows
+          if (!mappedData.customerName && !mappedData.assignedPersonnel) {
+            continue;
+          }
+          
+          const leadData = insertLeadSchema.parse(mappedData);
           const lead = await storage.createLead(leadData);
           createdLeads.push(lead);
         } catch (error) {
-          errors.push({ row: i + 1, error: (error as Error).message });
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          errors.push({ row: i + 1, error: errorMessage });
         }
       }
 
