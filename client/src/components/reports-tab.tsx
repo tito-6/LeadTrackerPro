@@ -104,7 +104,9 @@ export default function ReportsTab() {
   }, [rentalStats, salesStats]);
 
   const handleFilterChange = (key: keyof ReportFilters, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    // Convert "all" back to empty string for API calls
+    const apiValue = value === "all" ? "" : value;
+    setFilters(prev => ({ ...prev, [key]: apiValue }));
   };
 
   const applyFilters = () => {
@@ -140,12 +142,12 @@ export default function ReportsTab() {
             </div>
             <div>
               <Label htmlFor="salesRep">Satış Temsilcisi</Label>
-              <Select value={filters.salesRep} onValueChange={(value) => handleFilterChange("salesRep", value)}>
+              <Select value={filters.salesRep || "all"} onValueChange={(value) => handleFilterChange("salesRep", value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Tümü" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tümü</SelectItem>
+                  <SelectItem value="all">Tümü</SelectItem>
                   {salesReps.map((rep) => (
                     <SelectItem key={rep.id} value={rep.name}>
                       {rep.name}
@@ -156,12 +158,12 @@ export default function ReportsTab() {
             </div>
             <div>
               <Label htmlFor="leadType">Lead Tipi</Label>
-              <Select value={filters.leadType} onValueChange={(value) => handleFilterChange("leadType", value)}>
+              <Select value={filters.leadType || "all"} onValueChange={(value) => handleFilterChange("leadType", value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Tümü" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tümü</SelectItem>
+                  <SelectItem value="all">Tümü</SelectItem>
                   <SelectItem value="kiralama">Kiralama</SelectItem>
                   <SelectItem value="satis">Satış</SelectItem>
                 </SelectContent>

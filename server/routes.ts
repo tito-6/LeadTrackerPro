@@ -74,7 +74,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // File upload endpoint
-  app.post("/api/leads/import", upload.single("file"), async (req, res) => {
+  app.post("/api/leads/import", upload.single("file"), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
@@ -122,7 +122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const lead = await storage.createLead(leadData);
           createdLeads.push(lead);
         } catch (error) {
-          errors.push({ row: i + 1, error: error.message });
+          errors.push({ row: i + 1, error: (error as Error).message });
         }
       }
 
@@ -133,7 +133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         errorDetails: errors
       });
     } catch (error) {
-      res.status(500).json({ message: "Failed to import file", error: error.message });
+      res.status(500).json({ message: "Failed to import file", error: (error as Error).message });
     }
   });
 
@@ -228,7 +228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Content-Disposition', `attachment; filename="lead-raporu-${new Date().toISOString().split('T')[0]}.xlsx"`);
       res.send(excelBuffer);
     } catch (error) {
-      res.status(500).json({ message: "Failed to export Excel", error: error.message });
+      res.status(500).json({ message: "Failed to export Excel", error: (error as Error).message });
     }
   });
 
@@ -246,7 +246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Content-Disposition', `attachment; filename="lead-raporu-${new Date().toISOString().split('T')[0]}.json"`);
       res.json(leads);
     } catch (error) {
-      res.status(500).json({ message: "Failed to export JSON", error: error.message });
+      res.status(500).json({ message: "Failed to export JSON", error: (error as Error).message });
     }
   });
 
