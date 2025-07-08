@@ -3,10 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, FileSpreadsheet, FileText, FileCode, Trash2 } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, FileCode, Trash2, Calendar, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 
 interface ExportSettings {
   title: string;
@@ -26,6 +28,31 @@ export default function ExportTab() {
     includeDetails: true,
   });
 
+  const [dateFilters, setDateFilters] = useState({
+    startDate: '',
+    endDate: '',
+    month: '',
+    year: '',
+    salesRep: '',
+    leadType: ''
+  });
+
+  const { data: salesReps = [] } = useQuery({
+    queryKey: ['/api/sales-reps'],
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ['/api/stats', dateFilters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      Object.entries(dateFilters).forEach(([key, value]) => {
+        if (value) params.append(key, value);
+      });
+      const response = await fetch(`/api/stats?${params.toString()}`);
+      return response.json();
+    }
+  });
+
   const [recentExports] = useState([
     {
       id: 1,
@@ -43,9 +70,25 @@ export default function ExportTab() {
     },
   ]);
 
+  const clearFilters = () => {
+    setDateFilters({
+      startDate: '',
+      endDate: '',
+      month: '',
+      year: '',
+      salesRep: '',
+      leadType: ''
+    });
+  };
+
   const handleExportExcel = async () => {
     try {
-      const response = await fetch("/api/export/excel");
+      const params = new URLSearchParams();
+      Object.entries(dateFilters).forEach(([key, value]) => {
+        if (value) params.append(key, value);
+      });
+      
+      const response = await fetch(`/api/export/excel?${params.toString()}`);
       if (!response.ok) throw new Error("Export failed");
       
       const blob = await response.blob();
@@ -81,7 +124,12 @@ export default function ExportTab() {
 
   const handleExportJSON = async () => {
     try {
-      const response = await fetch("/api/export/json");
+      const params = new URLSearchParams();
+      Object.entries(dateFilters).forEach(([key, value]) => {
+        if (value) params.append(key, value);
+      });
+      
+      const response = await fetch(`/api/export/json?${params.toString()}`);
       if (!response.ok) throw new Error("Export failed");
       
       const blob = await response.blob();
@@ -96,7 +144,7 @@ export default function ExportTab() {
 
       toast({
         title: "Başarılı",
-        description: "JSON verisi başarıyla indirildi.",
+        description: "Kapsamlı JSON raporu başarıyla indirildi.",
       });
     } catch (error) {
       toast({
@@ -113,9 +161,103 @@ export default function ExportTab() {
 
   return (
     <div className="space-y-6">
+      {/* Date Filtering and Export Controls */}
       <Card>
         <CardHeader>
-          <CardTitle>Rapor Dışa Aktarma</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Rapor Filtreleme ve Dışa Aktarma
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end mb-6">
+            <div className="space-y-2">
+              <Label>Başlangıç Tarihi</Label>
+              <Input
+                type="date"
+                value={dateFilters.startDate}
+                onChange={(e) => setDateFilters(prev => ({ ...prev, startDate: e.target.value, month: '', year: '' }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Bitiş Tarihi</Label>
+              <Input
+                type="date"
+                value={dateFilters.endDate}
+                onChange={(e) => setDateFilters(prev => ({ ...prev, endDate: e.target.value, month: '', year: '' }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Ay Seçimi</Label>
+              <Select value={dateFilters.month} onValueChange={(month) => setDateFilters(prev => ({ ...prev, month, year: prev.year || '2025', startDate: '', endDate: '' }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Ay seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Ocak</SelectItem>
+                  <SelectItem value="2">Şubat</SelectItem>
+                  <SelectItem value="3">Mart</SelectItem>
+                  <SelectItem value="4">Nisan</SelectItem>
+                  <SelectItem value="5">Mayıs</SelectItem>
+                  <SelectItem value="6">Haziran</SelectItem>
+                  <SelectItem value="7">Temmuz</SelectItem>
+                  <SelectItem value="8">Ağustos</SelectItem>
+                  <SelectItem value="9">Eylül</SelectItem>
+                  <SelectItem value="10">Ekim</SelectItem>
+                  <SelectItem value="11">Kasım</SelectItem>
+                  <SelectItem value="12">Aralık</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Personel</Label>
+              <Select value={dateFilters.salesRep} onValueChange={(salesRep) => setDateFilters(prev => ({ ...prev, salesRep }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tümü" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Tümü</SelectItem>
+                  {salesReps.map((rep: any) => (
+                    <SelectItem key={rep.id} value={rep.name}>{rep.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={clearFilters} variant="outline" size="sm">
+                <Filter className="h-4 w-4 mr-2" />
+                Temizle
+              </Button>
+            </div>
+          </div>
+          
+          {/* Export Statistics Summary */}
+          {stats && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">{stats.totalLeads}</div>
+                <div className="text-sm text-muted-foreground">Toplam Lead</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">{stats.byStatusWithPercentages?.find((s: any) => s.status.toLowerCase().includes('satış'))?.count || 0}</div>
+                <div className="text-sm text-muted-foreground">Satışlar</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-orange-600">{stats.byStatusWithPercentages?.find((s: any) => s.status.toLowerCase().includes('takip'))?.count || 0}</div>
+                <div className="text-sm text-muted-foreground">Takipte</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-600">{stats.byStatusWithPercentages?.find((s: any) => s.status.toLowerCase().includes('olumsuz'))?.count || 0}</div>
+                <div className="text-sm text-muted-foreground">Olumsuz</div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Dışa Aktarma Seçenekleri</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

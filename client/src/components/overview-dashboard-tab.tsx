@@ -1,10 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQuery } from '@tanstack/react-query';
 import { Lead, SalesRep } from '@shared/schema';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { Calendar, Filter } from 'lucide-react';
 
 // Status definitions with colors matching the screenshot
 const statusConfig = {
@@ -33,12 +38,43 @@ interface SalesPersonStats {
 }
 
 export default function OverviewDashboardTab() {
+  const [dateFilters, setDateFilters] = useState({
+    startDate: '',
+    endDate: '',
+    month: '',
+    year: ''
+  });
+
   const { data: leads = [] } = useQuery<Lead[]>({
-    queryKey: ['/api/leads'],
+    queryKey: ['/api/leads', dateFilters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      Object.entries(dateFilters).forEach(([key, value]) => {
+        if (value) params.append(key, value);
+      });
+      const response = await fetch(`/api/leads?${params.toString()}`);
+      return response.json();
+    }
   });
 
   const { data: salesReps = [] } = useQuery<SalesRep[]>({
     queryKey: ['/api/sales-reps'],
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ['/api/stats', dateFilters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      Object.entries(dateFilters).forEach(([key, value]) => {
+        if (value) params.append(key, value);
+      });
+      const response = await fetch(`/api/stats?${params.toString()}`);
+      return response.json();
+    }
+  });
+
+  const { data: uniqueStatuses = [] } = useQuery<string[]>({
+    queryKey: ['/api/status-values'],
   });
 
   // Calculate statistics per salesperson
@@ -83,18 +119,135 @@ export default function OverviewDashboardTab() {
   
   totals.percentage = totals.target > 0 ? Math.round((totals.satis / totals.target) * 100) : 0;
 
-  // Pie chart data for lead status distribution
-  const pieChartData = [
-    { name: 'Olumsuz', value: totals.olumsuz, color: statusConfig.olumsuz.color },
-    { name: 'Takipte', value: totals.potansiyelTakipte, color: statusConfig.takipte.color },
-    { name: 'Satış', value: totals.satis, color: statusConfig.satildi.color },
-    { name: 'Toplantı', value: totals.toplantiBirebirGorusme, color: statusConfig.toplanti.color },
-    { name: 'Ulaşılamıyor', value: totals.ulasilmiyorCevapYok, color: statusConfig.ulasilamiyor.color },
-    { name: 'Yeni', value: totals.aranmayanLead, color: statusConfig.yeni.color },
-  ].filter(item => item.value > 0);
+  // Dynamic pie chart data based on actual status values from SON GORUSME SONUCU
+  const pieChartData = stats?.byStatusWithPercentages?.map((item, index) => ({
+    name: item.status,
+    value: item.count,
+    percentage: item.percentage,
+    color: getStatusColor(item.status, index)
+  })) || [];
+
+  function getStatusColor(status: string, index: number): string {
+    const colorPalette = [
+      '#4caf50', '#f44336', '#ff9800', '#2196f3', '#9c27b0', 
+      '#ffeb3b', '#3f51b5', '#00bcd4', '#4caf50', '#795548'
+    ];
+    
+    // Map common status types to specific colors
+    const statusColors: Record<string, string> = {
+      'satildi': '#4caf50',
+      'satış': '#4caf50',
+      'başarılı': '#4caf50',
+      'olumsuz': '#f44336',
+      'takipte': '#ff9800',
+      'takip': '#ff9800',
+      'devam': '#ff9800',
+      'yeni': '#2196f3',
+      'toplanti': '#3f51b5',
+      'randevu': '#3f51b5',
+      'ulasilamiyor': '#9c27b0',
+      'bilgi-verildi': '#00bcd4'
+    };
+    
+    const statusLower = status.toLowerCase();
+    for (const [key, color] of Object.entries(statusColors)) {
+      if (statusLower.includes(key)) {
+        return color;
+      }
+    }
+    
+    return colorPalette[index % colorPalette.length];
+  }
+
+  const clearFilters = () => {
+    setDateFilters({
+      startDate: '',
+      endDate: '',
+      month: '',
+      year: ''
+    });
+  };
+
+  const setMonthFilter = (month: string, year: string) => {
+    setDateFilters(prev => ({
+      ...prev,
+      month,
+      year,
+      startDate: '',
+      endDate: ''
+    }));
+  };
+
+  const setDateRangeFilter = (startDate: string, endDate: string) => {
+    setDateFilters(prev => ({
+      ...prev,
+      startDate,
+      endDate,
+      month: '',
+      year: ''
+    }));
+  };
 
   return (
     <div className="space-y-6">
+      {/* Date Filtering Controls */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Tarih Filtreleme (Talep Geliş Tarihi)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div className="space-y-2">
+              <Label>Başlangıç Tarihi</Label>
+              <Input
+                type="date"
+                value={dateFilters.startDate}
+                onChange={(e) => setDateRangeFilter(e.target.value, dateFilters.endDate)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Bitiş Tarihi</Label>
+              <Input
+                type="date"
+                value={dateFilters.endDate}
+                onChange={(e) => setDateRangeFilter(dateFilters.startDate, e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Ay Seçimi</Label>
+              <Select value={dateFilters.month} onValueChange={(month) => setMonthFilter(month, dateFilters.year || '2025')}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Ay seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Ocak</SelectItem>
+                  <SelectItem value="2">Şubat</SelectItem>
+                  <SelectItem value="3">Mart</SelectItem>
+                  <SelectItem value="4">Nisan</SelectItem>
+                  <SelectItem value="5">Mayıs</SelectItem>
+                  <SelectItem value="6">Haziran</SelectItem>
+                  <SelectItem value="7">Temmuz</SelectItem>
+                  <SelectItem value="8">Ağustos</SelectItem>
+                  <SelectItem value="9">Eylül</SelectItem>
+                  <SelectItem value="10">Ekim</SelectItem>
+                  <SelectItem value="11">Kasım</SelectItem>
+                  <SelectItem value="12">Aralık</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={clearFilters} variant="outline" size="sm">
+                <Filter className="h-4 w-4 mr-2" />
+                Temizle
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>

@@ -25,14 +25,36 @@ function mapRowToLead(row: any): any {
     }
   }
   
-  // Determine status from various indicators
+  // Dynamic status generation based on SON GORUSME SONUCU column
   let status = 'yeni';
+  const sonGorusmeSonucu = row['SON GORUSME SONUCU'] || row['Son Görüşme Sonucu'] || row.lastMeetingResult || "";
   const statusValue = row['Durum'] || row.status || "";
   const negativeReason = row['Dönüş Olumsuzluk Nedeni'] || row['Olumsuz Sebebi'] || "";
   const meetingDone = row['Birebir Görüşme Yapıldı mı ?'] || row['Birebir Görüşme Yapıldı mı?'] || "";
   const saleMade = row['Müşteriye Satış Yapıldı Mı ?'] || row['Müşteriye Satış Yapıldı Mı?'] || "";
   
-  if (saleMade && (saleMade.toLowerCase().includes('evet') || saleMade.toLowerCase().includes('yes'))) {
+  // Primary status determination from SON GORUSME SONUCU
+  if (sonGorusmeSonucu && sonGorusmeSonucu.trim()) {
+    const normalized = sonGorusmeSonucu.toLowerCase().trim();
+    if (normalized.includes('olumsuz') || normalized.includes('negative')) {
+      status = 'olumsuz';
+    } else if (normalized.includes('satıldı') || normalized.includes('satildi') || normalized.includes('satış') || normalized.includes('başarılı')) {
+      status = 'satildi';
+    } else if (normalized.includes('bilgi verildi') || normalized.includes('bilgilendirildi')) {
+      status = 'bilgi-verildi';
+    } else if (normalized.includes('takipte') || normalized.includes('takip') || normalized.includes('devam')) {
+      status = 'takipte';
+    } else if (normalized.includes('toplantı') || normalized.includes('randevu') || normalized.includes('görüşme')) {
+      status = 'toplanti';
+    } else if (normalized.includes('ulaşılamıyor') || normalized.includes('ulaşılamadı')) {
+      status = 'ulasilamiyor';
+    } else {
+      // Use the actual value from SON GORUSME SONUCU as dynamic status
+      status = sonGorusmeSonucu.trim();
+    }
+  }
+  // Fallback to other indicators if SON GORUSME SONUCU is empty
+  else if (saleMade && (saleMade.toLowerCase().includes('evet') || saleMade.toLowerCase().includes('yes'))) {
     status = 'satildi';
   } else if (negativeReason && negativeReason.trim()) {
     status = 'olumsuz';
@@ -106,12 +128,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Leads endpoints
   app.get("/api/leads", async (req, res) => {
     try {
-      const { startDate, endDate, salesRep, leadType, status } = req.query;
+      const { startDate, endDate, salesRep, leadType, status, month, year } = req.query;
       
-      if (startDate || endDate || salesRep || leadType || status) {
+      // Enhanced filtering with automatic month logic
+      let finalStartDate = startDate as string;
+      let finalEndDate = endDate as string;
+      
+      // Auto-select full month logic
+      if (month && year) {
+        const monthNum = parseInt(month as string);
+        const yearNum = parseInt(year as string);
+        finalStartDate = `${yearNum}-${monthNum.toString().padStart(2, '0')}-01`;
+        const lastDay = new Date(yearNum, monthNum, 0).getDate();
+        finalEndDate = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${lastDay}`;
+      }
+      
+      if (finalStartDate || finalEndDate || salesRep || leadType || status) {
         const filteredLeads = await storage.getLeadsByFilter({
-          startDate: startDate as string,
-          endDate: endDate as string,
+          startDate: finalStartDate,
+          endDate: finalEndDate,
           salesRep: salesRep as string,
           leadType: leadType as string,
           status: status as string,
@@ -360,45 +395,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Export endpoints
+  // Enhanced Export endpoint with comprehensive data and dynamic status support
   app.get("/api/export/excel", async (req, res) => {
     try {
-      const { startDate, endDate, salesRep, leadType } = req.query;
+      const { startDate, endDate, salesRep, leadType, month, year } = req.query;
+      
+      // Enhanced filtering with automatic month logic
+      let finalStartDate = startDate as string;
+      let finalEndDate = endDate as string;
+      
+      if (month && year) {
+        const monthNum = parseInt(month as string);
+        const yearNum = parseInt(year as string);
+        finalStartDate = `${yearNum}-${monthNum.toString().padStart(2, '0')}-01`;
+        const lastDay = new Date(yearNum, monthNum, 0).getDate();
+        finalEndDate = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${lastDay}`;
+      }
+      
       const leads = await storage.getLeadsByFilter({
-        startDate: startDate as string,
-        endDate: endDate as string,
+        startDate: finalStartDate,
+        endDate: finalEndDate,
         salesRep: salesRep as string,
         leadType: leadType as string,
       });
 
-      // Create workbook
+      // Create workbook with comprehensive data
       const workbook = XLSX.utils.book_new();
       
-      // Convert leads to worksheet format
+      // Generate filename with period information
+      const periodInfo = month && year ? 
+        `${getMonthName(parseInt(month as string))}_${year}` : 
+        finalStartDate && finalEndDate ? 
+          `${finalStartDate}_to_${finalEndDate}` : 
+          new Date().toISOString().split('T')[0];
+      
+      // Main leads worksheet with all comprehensive data
       const worksheetData = leads.map(lead => ({
-        'Müşteri Adı': lead.customerName,
-        'Tarih': lead.requestDate,
-        'Lead Tipi': lead.leadType === 'kiralama' ? 'Kiralama' : 'Satış',
-        'Atanan Personel': lead.assignedPersonnel,
-        'Durum': lead.status,
-        'Son Görüşme Notu': lead.lastMeetingNote || '',
-        'Web Form Notu': lead.webFormNote || '',
         'Müşteri ID': lead.customerId || '',
-        'İletişim ID': lead.contactId || ''
+        'İletişim ID': lead.contactId || '',
+        'Müşteri Adı Soyadı': lead.customerName,
+        'İlk Müşteri Kaynağı': lead.firstCustomerSource || '',
+        'Form Müşteri Kaynağı': lead.formCustomerSource || '',
+        'WebForm Notu': lead.webFormNote || '',
+        'Talep Geliş Tarihi': lead.requestDate,
+        'İnfo Form Geliş Yeri': lead.infoFormLocation1 || '',
+        'İnfo Form Geliş Yeri 2': lead.infoFormLocation2 || '',
+        'İnfo Form Geliş Yeri 3': lead.infoFormLocation3 || '',
+        'İnfo Form Geliş Yeri 4': lead.infoFormLocation4 || '',
+        'Atanan Personel': lead.assignedPersonnel,
+        'Lead Tipi': lead.leadType === 'kiralama' ? 'Kiralama' : 'Satış',
+        'Son Görüşme Sonucu (Durum)': lead.status,
+        'Müşteri Geri Dönüş Tarihi': lead.customerResponseDate || '',
+        'Birebir Görüşme Yapıldı mı?': lead.oneOnOneMeeting || '',
+        'Birebir Görüşme Tarihi': lead.meetingDate || '',
+        'Dönüş Görüşme Sonucu': lead.responseResult || '',
+        'Dönüş Olumsuzluk Nedeni': lead.negativeReason || '',
+        'Müşteriye Satış Yapıldı Mı?': lead.wasSaleMade || '',
+        'Satış Adedi': lead.saleCount || 0,
+        'Randevu Tarihi': lead.appointmentDate || '',
+        'Son Görüşme Notu': lead.lastMeetingNote || '',
+        'Geri Dönüş Notu (Arama)': lead.callNote || '',
+        'Geri Dönüş Notu (Mail)': lead.emailNote || ''
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(worksheetData);
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Leads");
+      
+      // Add summary statistics worksheet
+      const stats = leads.reduce((acc, lead) => {
+        acc[lead.status] = (acc[lead.status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      const summaryData = Object.entries(stats).map(([status, count]) => ({
+        'Durum': status,
+        'Adet': count,
+        'Yüzde': `${((count / leads.length) * 100).toFixed(1)}%`
+      }));
+      
+      const summaryWorksheet = XLSX.utils.json_to_sheet(summaryData);
+      
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Detaylar");
+      XLSX.utils.book_append_sheet(workbook, summaryWorksheet, "Özet");
 
-      // Generate Excel buffer
-      const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-
+      // Generate buffer
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+      
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', `attachment; filename="lead-raporu-${new Date().toISOString().split('T')[0]}.xlsx"`);
+      res.setHeader('Content-Disposition', `attachment; filename="LeadRaporu_${periodInfo}.xlsx"`);
       res.send(excelBuffer);
     } catch (error) {
       res.status(500).json({ message: "Failed to export Excel", error: (error as Error).message });
     }
   });
+
+  function getMonthName(month: number): string {
+    const months = [
+      'Ocak', 'Subat', 'Mart', 'Nisan', 'Mayis', 'Haziran',
+      'Temmuz', 'Agustos', 'Eylul', 'Ekim', 'Kasim', 'Aralik'
+    ];
+    return months[month - 1] || 'Bilinmiyor';
+  }
 
   app.get("/api/export/json", async (req, res) => {
     try {
@@ -418,36 +514,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Statistics endpoint
+  // Enhanced Statistics endpoint with dynamic status grouping and date filtering
   app.get("/api/stats", async (req, res) => {
     try {
-      const { startDate, endDate, salesRep, leadType } = req.query;
+      const { startDate, endDate, salesRep, leadType, month, year } = req.query;
+      
+      // Enhanced filtering with automatic month logic
+      let finalStartDate = startDate as string;
+      let finalEndDate = endDate as string;
+      
+      // Auto-select full month logic
+      if (month && year) {
+        const monthNum = parseInt(month as string);
+        const yearNum = parseInt(year as string);
+        finalStartDate = `${yearNum}-${monthNum.toString().padStart(2, '0')}-01`;
+        const lastDay = new Date(yearNum, monthNum, 0).getDate();
+        finalEndDate = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${lastDay}`;
+      }
+      
       const leads = await storage.getLeadsByFilter({
-        startDate: startDate as string,
-        endDate: endDate as string,
+        startDate: finalStartDate,
+        endDate: finalEndDate,
         salesRep: salesRep as string,
         leadType: leadType as string,
       });
 
+      // Dynamic status grouping based on SON GORUSME SONUCU values
+      const byStatus = leads.reduce((acc, lead) => {
+        const status = lead.status || 'yeni';
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      // Enhanced statistics with percentage calculations
+      const totalLeads = leads.length;
       const stats = {
-        totalLeads: leads.length,
-        byStatus: leads.reduce((acc, lead) => {
-          acc[lead.status] = (acc[lead.status] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>),
+        totalLeads,
+        byStatus,
+        byStatusWithPercentages: Object.keys(byStatus).map(status => ({
+          status,
+          count: byStatus[status],
+          percentage: totalLeads > 0 ? Math.round((byStatus[status] / totalLeads) * 100) : 0
+        })),
         byType: leads.reduce((acc, lead) => {
           acc[lead.leadType] = (acc[lead.leadType] || 0) + 1;
           return acc;
         }, {} as Record<string, number>),
         bySalesRep: leads.reduce((acc, lead) => {
-          acc[lead.assignedPersonnel] = (acc[lead.assignedPersonnel] || 0) + 1;
+          const rep = lead.assignedPersonnel || 'Belirtilmemiş';
+          acc[rep] = (acc[rep] || 0) + 1;
           return acc;
         }, {} as Record<string, number>),
+        dateRange: {
+          startDate: finalStartDate,
+          endDate: finalEndDate,
+          isMonthFilter: !!(month && year)
+        }
       };
 
       res.json(stats);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch stats" });
+    }
+  });
+
+  // New endpoint for getting all unique status values from data
+  app.get("/api/status-values", async (req, res) => {
+    try {
+      const leads = await storage.getLeads();
+      const statusSet = new Set(leads.map(lead => lead.status));
+      const uniqueStatuses = Array.from(statusSet).filter(Boolean);
+      res.json(uniqueStatuses);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch status values" });
     }
   });
 

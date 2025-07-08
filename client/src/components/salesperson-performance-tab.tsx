@@ -1,10 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQuery } from '@tanstack/react-query';
 import { Lead, SalesRep } from '@shared/schema';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { Calendar, Filter, User, TrendingUp } from 'lucide-react';
 
 interface SalespersonPerformanceTabProps {
   salespersonId: number;
@@ -21,12 +26,31 @@ const statusConfig = {
 };
 
 export default function SalespersonPerformanceTab({ salespersonId }: SalespersonPerformanceTabProps) {
+  const [dateFilters, setDateFilters] = useState({
+    startDate: '',
+    endDate: '',
+    month: '',
+    year: ''
+  });
+
   const { data: leads = [] } = useQuery<Lead[]>({
-    queryKey: ['/api/leads'],
+    queryKey: ['/api/leads', dateFilters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      Object.entries(dateFilters).forEach(([key, value]) => {
+        if (value) params.append(key, value);
+      });
+      const response = await fetch(`/api/leads?${params.toString()}`);
+      return response.json();
+    }
   });
 
   const { data: salesReps = [] } = useQuery<SalesRep[]>({
     queryKey: ['/api/sales-reps'],
+  });
+
+  const { data: uniqueStatuses = [] } = useQuery<string[]>({
+    queryKey: ['/api/status-values'],
   });
 
   const salesperson = salesReps.find(rep => rep.id === salespersonId);
