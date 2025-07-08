@@ -1,0 +1,105 @@
+Data Import Requirements:
+
+The system must accept Excel or CSV files with the following exact field names (columns):
+
+mathematica
+Copy
+Edit
+Müşteri ID, İletişim ID, Müşteri Adı Soyadı, İlk Müşteri Kaynağı, Form Müşteri Kaynağı,
+WebForm Notu, Talep Geliş Tarihi, İnfo Form Geliş Yeri, İnfo Form Geliş Yeri 2,
+İnfo Form Geliş Yeri 3, İnfo Form Geliş Yeri 4, Atanan Personel, Hatıırlatma Personeli,
+GERİ DÖNÜŞ YAPILDI MI? (Müşteri Arandı mı?), Web Form Havuz Oluşturma Tarihi,
+Form Sistem Olusturma Tarihi, Atama Saat Farkı, Dönüş Saat Farkı,
+Giden Arama Sistem Oluşturma Tarihi, Müşteri Geri Dönüş Tarihi (Giden Arama),
+GERİ DÖNÜŞ YAPILDI MI? (Müşteriye Mail Gönderildi mi?), Müşteri Mail Geri Dönüş Tarihi,
+Telefonla Ulaşılamayan Müşteriler, Kaç Gündür Geri Dönüş Bekliyor,
+Kaç Günde Geri Dönüş Yapılmış (Süre), GERİ DÖNÜŞ NOTU (Giden Arama Notu),
+GERİ DÖNÜŞ NOTU (Giden Mail Notu), Birebir Görüşme Yapıldı mı ?, Birebir Görüşme Tarihi,
+Dönüş Görüşme Sonucu, Dönüş Olumsuzluk Nedeni, Müşteriye Satış Yapıldı Mı ?,
+Satış Adedi, Randevu Tarihi, SON GORUSME NOTU, SON GORUSME SONUCU
+Automatically detect salespeople from the Atanan Personel column.
+
+Automatically detect:
+
+Lead type (Kiralık / Satılık) from the WebForm Notu column by scanning keywords like Kiralık, Satılık.
+
+Project name from WebForm Notu based on pattern: / Ilgilendigi Gayrimenkul Tipi :TYPE / PROJECT_NAME.
+
+📈 Dashboard & Reporting Enhancements:
+
+Genel Görünüm Tab:
+
+All chart types (lead status, distribution by salesperson, total activity, etc.) must be 3D and have the ability to switch between pie, bar, and line formats.
+
+A new chart must show total leads per salesperson, with values and percentages visible.
+
+Chart slices must reflect even 0-lead users.
+
+Charts must include numeric and percentage labels beside each segment/bar.
+
+All reports and charts must be consistent between Genel Görünüm and Raporlar tabs.
+
+Personel Performans Tablosu:
+
+Must reflect:
+
+All status types from SON GORUSME SONUCU.
+
+Accurate counts of each status (e.g., Olumsuz, Takipte, Toplantı, Satış).
+
+Data must dynamically update according to imported content and filters.
+
+Filters must include: Project name, Salesperson, Date (Talep Geliş Tarihi).
+
+Fix: currently defaults all to Yeni, this must be corrected.
+
+Salesperson Detail Reports:
+
+All reporting functionality shown in Genel Görünüm must be replicated in each Salesperson tab.
+
+Add Project Name filter in each report.
+
+Ensure the sales/lead statuses shown are accurately grouped and calculated.
+
+Takipte Analizi Tab:
+
+Currently not showing any data — must show leads with:
+
+Takipte, Randevulu, Randevusuz, Acil Takip statuses.
+
+Grouped by salesperson and project.
+
+Include chart visualization for follow-up distribution.
+
+Olumsuz Analizi Tab:
+
+Automatically group and chart Dönüş Olumsuzluk Nedeni values such as:
+
+Gerekirse Kendisi Arayacak, Yanlış Numara, Bütçe Yetersiz, etc.
+
+Include chart showing count and percentage of each negative reason.
+
+Add grouping toggle to allow switching between reasons.
+
+Duplicate Analizi Tab:
+
+Automatically detect duplicates using:
+
+Müşteri ID, İletişim ID, Müşteri Adı Soyadı.
+
+Visual representation of duplicate entries.
+
+Option to mark, delete, or review duplicates.
+
+🛠️ Data Interaction & UX:
+
+After import, the entire data table must be visible and editable in-place (like Excel).
+
+Any changes to cells must dynamically reflect in the charts, analytics, and reports.
+
+Date filters must be compatible with Turkish date format DD.MM.YYYY, and flexible to accept variations.
+
+Sorting and searching by date, salesperson, status, and project must be fast and responsive.
+
+All export functions (PDF, Excel, CSV) must export exactly what’s on the screen with proper charts and values.
+

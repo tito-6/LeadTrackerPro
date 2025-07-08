@@ -46,6 +46,7 @@ export default function OverviewDashboardTab() {
   });
   
   const [selectedPersonnel, setSelectedPersonnel] = useState<string>('');
+  const [chartType, setChartType] = useState<'pie' | 'bar' | 'line'>('pie');
 
   const { data: leads = [] } = useQuery<Lead[]>({
     queryKey: ['/api/leads', dateFilters],
@@ -413,6 +414,7 @@ export default function OverviewDashboardTab() {
           data={statusChartData}
           onItemClick={handleStatusChartClick}
           height={350}
+          chartType={chartType}
         />
         
         {/* Interactive Chart - Personnel Distribution */}
@@ -421,6 +423,7 @@ export default function OverviewDashboardTab() {
           data={personnelChartData}
           onItemClick={handlePersonnelChartClick}
           height={350}
+          chartType={chartType}
         />
       </div>
 
