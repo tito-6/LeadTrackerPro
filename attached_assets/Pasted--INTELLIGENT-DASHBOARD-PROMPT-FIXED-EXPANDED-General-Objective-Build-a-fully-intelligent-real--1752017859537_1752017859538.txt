@@ -1,0 +1,102 @@
+ INTELLIGENT DASHBOARD PROMPT (FIXED & EXPANDED)
+General Objective:
+Build a fully intelligent, real-time updating lead performance dashboard that:
+
+Accepts two file uploads:
+
+The main lead file (including all general details).
+
+A second “takipte” file (like the one provided in JSON format), which must be uploaded after the first and provides extra context.
+
+Both must merge automatically and reflect insights across all tabs.
+
+🔄 Import & Data Parsing
+The system must automatically parse and detect:
+
+Date fields in any format (e.g., DD.MM.YYYY, YYYY-MM-DD, MM/DD/YYYY) and use them for dynamic date filtering.
+
+Lead status from the "SON GÖRÜŞME SONUCU" column. Do not label empty statuses as "Yeni"—they must reflect as "Boş" or be excluded until assigned.
+
+Lead type (Satılık, Kiralık) and project name (e.g., Model Sanayi Merkezi, Model Kuyum Merkezi, etc.) from WebForm Notu using pattern matching (/ Ilgilendigi Gayrimenkul Tipi :...).
+
+Duplicate leads based on name, phone number, or identical note data — and show them in visual charts + a dedicated “Duplicate Leads” tab.
+
+📊 Dashboard & Reporting Features
+1. Genel Görünüm Tab
+Charts here must reflect all lead statuses accurately.
+
+Charts must support 3D pie, column, and line views, switchable via dropdown.
+
+Every chart must show:
+
+Left-side written breakdown of each slice or bar: category, count, and percentage.
+
+Visual breakdown of total lead status, project type, and assigned salespeople.
+
+2. Personel Performans Tablosu
+Must dynamically update based on uploaded data.
+
+Must reflect all statuses from "SON GÖRÜŞME SONUCU" and group them correctly.
+
+Data should match Genel Görünüm charts.
+
+Display an additional 3D pie or bar chart showing total leads assigned per salesperson (including 0 values).
+
+3. Olumsuz Analizi Tab
+Automatically extract reasons from "Dönüş Olumsuzluk Nedeni" column.
+
+Group charts by distinct reasons (e.g., “Yanlış Numara”, “Bütçe Yetersiz”, etc.).
+
+Display interactive filters to switch between reason groups.
+
+Include trend insights over time: How often each reason occurs per salesperson or project.
+
+4. Takip Raporu Tab
+Must reflect data from the second imported JSON file.
+
+Currently showing nothing — fix this.
+
+Detect columns from file like SONUÇ, GÖRÜŞME, GÖRÜŞME TARİHİ, etc.
+
+Show filtered statuses such as:
+
+“Arandı - Geri Dönecek”
+
+“Ulaşılamıyor”
+
+“Takip Edilecek”
+
+Must group and visualize these by salesperson, project, and week/month.
+
+🛠 Settings Panel Requirements
+Allow users to:
+
+Change chart colors based on:
+
+Status
+
+Lead type
+
+Salesperson
+
+Choose chart types (3D pie, bar, line, donut, etc.)
+
+Re-label empty statuses or value placeholders
+
+💾 Editability & Reusability
+After upload, users must:
+
+See all imported data in editable format (table view).
+
+Edit any cell, and changes must immediately reflect across all dashboards and charts.
+
+💡 Innovation Requirement
+Provide the world’s smartest and most actionable dashboard:
+
+Show which project and salesperson combinations are underperforming.
+
+Display which reasons are trending for failure or success.
+
+Provide proactive alerts: “This project has 70% unsold leads,” etc.
+
+Allow hover-over insights and exporting PDF snapshots of each section.

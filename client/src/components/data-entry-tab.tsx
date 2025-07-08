@@ -12,7 +12,7 @@ import { insertLeadSchema, type InsertLead } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { CloudUpload, Plus, Trash2 } from "lucide-react";
+import { CloudUpload, Plus, Trash2, FileText } from "lucide-react";
 import { useLeads } from "@/hooks/use-leads";
 import { useSalesReps } from "@/hooks/use-leads";
 import ImportValidationWarnings from "@/components/import-validation-warnings";
@@ -455,34 +455,74 @@ export default function DataEntryTab() {
 
       {/* File Import and Stats */}
       <div className="space-y-6">
-        {/* File Import */}
+        {/* Intelligent File Import */}
         <Card>
           <CardHeader>
-            <CardTitle>Dosya İçe Aktarma</CardTitle>
+            <CardTitle>🧠 Akıllı Dosya İçe Aktarma</CardTitle>
+            <CardDescription>Ana lead dosyası + isteğe bağlı takip dosyası</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary transition-colors">
-                <CloudUpload className="mx-auto h-12 w-12 text-gray-400 mb-2" />
-                <p className="text-sm text-gray-600 mb-2">Dosyayı sürükleyip bırakın veya seçin</p>
-                <input
-                  type="file"
-                  className="hidden"
-                  accept=".xlsx,.csv,.json"
-                  onChange={handleFileUpload}
-                  id="file-upload"
-                />
-                <Button 
-                  type="button" 
-                  variant="link" 
-                  onClick={() => document.getElementById('file-upload')?.click()}
-                  disabled={importFileMutation.isPending}
-                >
-                  {importFileMutation.isPending ? 'Yükleniyor...' : 'Dosya Seç'}
-                </Button>
+            <div className="space-y-6">
+              {/* Main Lead File */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-blue-700">1. Ana Lead Dosyası</Label>
+                <div className="border-2 border-dashed border-blue-300 rounded-lg p-4 text-center hover:border-blue-500 transition-colors bg-blue-50">
+                  <CloudUpload className="mx-auto h-8 w-8 text-blue-500 mb-2" />
+                  <p className="text-sm text-blue-700 mb-2">Ana lead dosyasını yükleyin</p>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept=".xlsx,.csv,.json"
+                    onChange={handleFileUpload}
+                    id="main-file-upload"
+                  />
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => document.getElementById('main-file-upload')?.click()}
+                    disabled={importFileMutation.isPending}
+                  >
+                    {importFileMutation.isPending ? 'İşleniyor...' : 'Ana Dosya Seç'}
+                  </Button>
+                </div>
               </div>
-              <div className="text-xs text-gray-500">
-                Desteklenen formatlar: .xlsx, .csv, .json
+
+              {/* Secondary Takipte File */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-green-700">2. Takip Dosyası (İsteğe Bağlı)</Label>
+                <div className="border-2 border-dashed border-green-300 rounded-lg p-4 text-center hover:border-green-500 transition-colors bg-green-50">
+                  <FileText className="mx-auto h-8 w-8 text-green-500 mb-2" />
+                  <p className="text-sm text-green-700 mb-2">SONUÇ, GÖRÜŞME kolonları</p>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept=".xlsx,.csv,.json"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) {
+                        // TODO: Handle secondary file upload
+                        console.log('Secondary file:', e.target.files[0]);
+                      }
+                    }}
+                    id="secondary-file-upload"
+                  />
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => document.getElementById('secondary-file-upload')?.click()}
+                  >
+                    Takip Dosyası Seç
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded">
+                <strong>Akıllı Özellikler:</strong><br/>
+                • Tarih formatlarını otomatik algılar<br/>
+                • Duplicate leadleri tespit eder<br/>
+                • Proje tipini WebForm'dan çıkarır<br/>
+                • Boş durumlar "Yeni" olarak etiketlenmez
               </div>
               
               {/* Clear Data Button */}

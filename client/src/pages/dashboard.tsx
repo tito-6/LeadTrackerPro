@@ -2,13 +2,15 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ChartLine, Plus, BarChart, Download, Settings, Moon, UserCircle, TrendingDown, Clock, Grid, Home } from "lucide-react";
+import { ChartLine, Plus, BarChart, Download, Settings, Moon, UserCircle, TrendingDown, Clock, Grid, Home, Phone } from "lucide-react";
 import DataEntryTab from "@/components/data-entry-tab";
 import ReportsTab from "@/components/reports-tab";
 import ExportTab from "@/components/export-tab";
 import SettingsTab from "@/components/settings-tab";
 import OlumsuzAnaliziTab from "@/components/olumsuz-analizi-tab";
 import TakipteAnaliziTab from "@/components/takipte-analizi-tab";
+import TakipRaporuTab from "@/components/takip-raporu-tab";
+import IntelligentSettingsTab from "@/components/intelligent-settings-tab";
 import ExcelInputTab from "@/components/excel-input-tab";
 import DuplicateDetectionTab from "@/components/duplicate-detection-tab";
 import OverviewDashboardTab from "@/components/overview-dashboard-tab";
@@ -54,45 +56,60 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="mb-6 space-y-4">
-            {/* Main Navigation Tabs */}
-            <TabsList className="grid w-full grid-cols-9 h-auto p-1">
-              <TabsTrigger value="overview" className="flex items-center space-x-2 p-3">
-                <Home className="h-4 w-4" />
-                <span>Genel Görünüm</span>
-              </TabsTrigger>
-              <TabsTrigger value="excel-input" className="flex items-center space-x-2 p-3">
-                <Grid className="h-4 w-4" />
-                <span>Excel Girişi</span>
-              </TabsTrigger>
-              <TabsTrigger value="data-entry" className="flex items-center space-x-2 p-3">
-                <Plus className="h-4 w-4" />
-                <span>Veri Girişi</span>
-              </TabsTrigger>
-              <TabsTrigger value="reports" className="flex items-center space-x-2 p-3">
-                <BarChart className="h-4 w-4" />
-                <span>Raporlar</span>
-              </TabsTrigger>
-              <TabsTrigger value="olumsuz-analizi" className="flex items-center space-x-2 p-3">
-                <TrendingDown className="h-4 w-4" />
-                <span>Olumsuz Analizi</span>
-              </TabsTrigger>
-              <TabsTrigger value="takipte-analizi" className="flex items-center space-x-2 p-3">
-                <Clock className="h-4 w-4" />
-                <span>Takipte Analizi</span>
-              </TabsTrigger>
-              <TabsTrigger value="duplicate-detection" className="flex items-center space-x-2 p-3">
-                <Grid className="h-4 w-4" />
-                <span>Duplicate Analizi</span>
-              </TabsTrigger>
-              <TabsTrigger value="export" className="flex items-center space-x-2 p-3">
-                <Download className="h-4 w-4" />
-                <span>Dışa Aktar</span>
-              </TabsTrigger>
-              <TabsTrigger value="settings" className="flex items-center space-x-2 p-3">
-                <Settings className="h-4 w-4" />
-                <span>Ayarlar</span>
-              </TabsTrigger>
-            </TabsList>
+            {/* Main Navigation Tabs - Organized in two rows */}
+            <div className="space-y-2">
+              {/* Row 1: Core Functions */}
+              <TabsList className="grid w-full grid-cols-6 h-auto p-1">
+                <TabsTrigger value="overview" className="flex items-center space-x-2 p-3">
+                  <Home className="h-4 w-4" />
+                  <span>Genel Görünüm</span>
+                </TabsTrigger>
+                <TabsTrigger value="excel-input" className="flex items-center space-x-2 p-3">
+                  <Grid className="h-4 w-4" />
+                  <span>Excel Girişi</span>
+                </TabsTrigger>
+                <TabsTrigger value="data-entry" className="flex items-center space-x-2 p-3">
+                  <Plus className="h-4 w-4" />
+                  <span>🧠 Akıllı Veri Girişi</span>
+                </TabsTrigger>
+                <TabsTrigger value="reports" className="flex items-center space-x-2 p-3">
+                  <BarChart className="h-4 w-4" />
+                  <span>Raporlar</span>
+                </TabsTrigger>
+                <TabsTrigger value="export" className="flex items-center space-x-2 p-3">
+                  <Download className="h-4 w-4" />
+                  <span>Dışa Aktar</span>
+                </TabsTrigger>
+                <TabsTrigger value="intelligent-settings" className="flex items-center space-x-2 p-3">
+                  <Settings className="h-4 w-4" />
+                  <span>🎛️ Akıllı Ayarlar</span>
+                </TabsTrigger>
+              </TabsList>
+              
+              {/* Row 2: Analysis Functions */}
+              <TabsList className="grid w-full grid-cols-5 h-auto p-1">
+                <TabsTrigger value="olumsuz-analizi" className="flex items-center space-x-2 p-3">
+                  <TrendingDown className="h-4 w-4" />
+                  <span>Olumsuz Analizi</span>
+                </TabsTrigger>
+                <TabsTrigger value="takipte-analizi" className="flex items-center space-x-2 p-3">
+                  <Clock className="h-4 w-4" />
+                  <span>Takipte Analizi</span>
+                </TabsTrigger>
+                <TabsTrigger value="takip-raporu" className="flex items-center space-x-2 p-3">
+                  <Phone className="h-4 w-4" />
+                  <span>📞 Takip Raporu</span>
+                </TabsTrigger>
+                <TabsTrigger value="duplicate-detection" className="flex items-center space-x-2 p-3">
+                  <Grid className="h-4 w-4" />
+                  <span>Duplicate Analizi</span>
+                </TabsTrigger>
+                <TabsTrigger value="settings" className="flex items-center space-x-2 p-3">
+                  <Settings className="h-4 w-4" />
+                  <span>Genel Ayarlar</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
             {/* Dynamic Salesperson Tabs - Separate TabsList */}
             {salesReps.length > 0 && (
@@ -146,6 +163,14 @@ export default function Dashboard() {
 
           <TabsContent value="export">
             <ExportTab />
+          </TabsContent>
+
+          <TabsContent value="takip-raporu">
+            <TakipRaporuTab />
+          </TabsContent>
+
+          <TabsContent value="intelligent-settings">
+            <IntelligentSettingsTab />
           </TabsContent>
 
           <TabsContent value="settings">
