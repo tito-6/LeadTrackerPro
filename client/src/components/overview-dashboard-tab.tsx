@@ -77,24 +77,47 @@ export default function OverviewDashboardTab() {
     queryKey: ['/api/status-values'],
   });
 
-  // Calculate statistics per salesperson
+  // Calculate statistics per salesperson with dynamic status handling
   const salesPersonStats: SalesPersonStats[] = salesReps.map(rep => {
     const repLeads = leads.filter(lead => lead.assignedPersonnel === rep.name);
     
     const stats = {
       personel: rep.name,
       toplamLead: repLeads.length,
-      ulasilmiyorCevapYok: repLeads.filter(l => l.status === 'ulasilamiyor').length,
-      aranmayanLead: repLeads.filter(l => l.status === 'yeni').length,
-      ulasilmiyorBilgiHatali: repLeads.filter(l => l.status === 'bilgi_hatali').length,
-      bilgiVerildiTekrarAranacak: repLeads.filter(l => l.status === 'takipte' && l.callNote?.includes('tekrar')).length,
-      olumsuz: repLeads.filter(l => l.status === 'olumsuz').length,
-      toplantiBirebirGorusme: repLeads.filter(l => l.status === 'toplanti').length,
-      potansiyelTakipte: repLeads.filter(l => l.status === 'takipte').length,
-      satis: repLeads.filter(l => l.status === 'satildi').length,
+      ulasilmiyorCevapYok: 0,
+      aranmayanLead: 0,
+      ulasilmiyorBilgiHatali: 0,
+      bilgiVerildiTekrarAranacak: 0,
+      olumsuz: 0,
+      toplantiBirebirGorusme: 0,
+      potansiyelTakipte: 0,
+      satis: 0,
       target: rep.monthlyTarget || 10,
       percentage: 0,
     };
+    
+    // Enhanced dynamic status categorization from SON GORUSME SONUCU
+    repLeads.forEach(lead => {
+      const status = (lead.status || '').toLowerCase();
+      
+      if (status.includes('ulaş') && (status.includes('cevap') || status.includes('yok'))) {
+        stats.ulasilmiyorCevapYok++;
+      } else if (status.includes('aranmayan') || status.includes('çağrılmadı') || status === 'tanımsız') {
+        stats.aranmayanLead++;
+      } else if (status.includes('bilgi') && status.includes('hatalı')) {
+        stats.ulasilmiyorBilgiHatali++;
+      } else if (status.includes('bilgi') && (status.includes('verildi') || status.includes('aranacak'))) {
+        stats.bilgiVerildiTekrarAranacak++;
+      } else if (status.includes('olumsuz') || status.includes('red') || status.includes('hayır')) {
+        stats.olumsuz++;
+      } else if (status.includes('toplantı') || status.includes('görüşme') || status.includes('meeting')) {
+        stats.toplantiBirebirGorusme++;
+      } else if (status.includes('takip') || status.includes('potansiyel') || status.includes('devam')) {
+        stats.potansiyelTakipte++;
+      } else if (status.includes('satış') || status.includes('satis') || status.includes('başarılı') || status.includes('evet')) {
+        stats.satis++;
+      }
+    });
     
     stats.percentage = stats.target > 0 ? Math.round((stats.satis / stats.target) * 100) : 0;
     

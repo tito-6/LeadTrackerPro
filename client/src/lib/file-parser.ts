@@ -2,6 +2,50 @@ import * as XLSX from "xlsx";
 
 // Comprehensive field mapping for Turkish real estate lead data
 function mapRowToLead(row: any): ParsedLead {
+  // Enhanced date parsing function to handle multiple formats
+  const parseDate = (dateValue: any): string => {
+    if (!dateValue || dateValue === '') return '';
+    
+    const dateStr = String(dateValue).trim();
+    
+    // Try DD.MM.YYYY format (Turkish standard)
+    if (dateStr.match(/^\d{2}\.\d{2}\.\d{4}$/)) {
+      const [day, month, year] = dateStr.split('.');
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    // Try DD/MM/YYYY format
+    if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+      const [day, month, year] = dateStr.split('/');
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    // Try MM.DD.YYYY format (check if first number > 12 to distinguish from DD.MM.YYYY)
+    if (dateStr.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
+      const [first, second, year] = dateStr.split('.');
+      if (parseInt(first) > 12) {
+        // First number is likely day, so DD.MM.YYYY
+        return `${year}-${second.padStart(2, '0')}-${first.padStart(2, '0')}`;
+      } else {
+        // MM.DD.YYYY format
+        return `${year}-${first.padStart(2, '0')}-${second.padStart(2, '0')}`;
+      }
+    }
+    
+    // Try YYYY-MM-DD format (already correct)
+    if (dateStr.match(/^\d{4}-\d{1,2}-\d{1,2}$/)) {
+      return dateStr;
+    }
+    
+    // Try parsing as Date object for other formats
+    const parsedDate = new Date(dateStr);
+    if (!isNaN(parsedDate.getTime())) {
+      return parsedDate.toISOString().split('T')[0];
+    }
+    
+    return dateStr; // Return as-is if no format matches
+  };
+
   // Derive lead type from webFormNote or other indicators
   const webFormNote = row['WebForm Notu'] || row['webFormNote'] || '';
   const leadType = webFormNote.toLowerCase().includes('satılık') || webFormNote.toLowerCase().includes('satis') 
@@ -10,28 +54,20 @@ function mapRowToLead(row: any): ParsedLead {
     ? 'kiralama'
     : 'kiralama'; // default
 
-  // Derive status from various fields
-  let status = 'yeni';
-  const responseResult = row['Dönüş Görüşme Sonucu'] || row['responseResult'] || '';
-  const saleMade = row['Müşteriye Satış Yapıldı mı?'] || row['wasSaleMade'] || '';
-  const appointmentDate = row['Randevu Tarihi'] || row['appointmentDate'] || '';
+  // FIXED: Derive status EXCLUSIVELY from SON GORUSME SONUCU column
+  let status = 'Tanımsız'; // Default to undefined if no SON GORUSME SONUCU
+  const sonGorusmeSonucu = row['SON GORUSME SONUCU'] || row['SON GÖRÜŞME SONUCU'] || row['lastMeetingResult'] || '';
   
-  if (saleMade === 'Evet' || saleMade === 'Yes' || responseResult.toLowerCase().includes('satış')) {
-    status = 'satis';
-  } else if (responseResult.toLowerCase().includes('olumsuz') || responseResult.toLowerCase().includes('negative')) {
-    status = 'olumsuz';
-  } else if (responseResult.toLowerCase().includes('takip') || appointmentDate) {
-    status = 'takipte';
-  } else if (appointmentDate && !responseResult.toLowerCase().includes('olumsuz')) {
-    status = 'randevu';
-  } else if (responseResult) {
-    status = 'bilgi-verildi';
+  if (sonGorusmeSonucu && sonGorusmeSonucu.trim()) {
+    // Use the exact value from SON GORUSME SONUCU as the dynamic status
+    status = sonGorusmeSonucu.trim();
   }
+  // If SON GORUSME SONUCU is empty, leave status as "Tanımsız" unless settings specify otherwise
 
   return {
-    // Required fields
+    // Required fields with enhanced date parsing
     customerName: row['Müşteri Adı Soyadı'] || row['customerName'] || row['name'] || '',
-    requestDate: row['Talep Geliş Tarihi'] || row['requestDate'] || row['date'] || new Date().toISOString().split('T')[0],
+    requestDate: parseDate(row['Talep Geliş Tarihi'] || row['requestDate'] || row['date']),
     leadType,
     assignedPersonnel: row['Atanan Personel'] || row['assignedPersonnel'] || row['salesRep'] || '',
     status,

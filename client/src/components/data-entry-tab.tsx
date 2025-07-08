@@ -15,12 +15,14 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { CloudUpload, Plus, Trash2 } from "lucide-react";
 import { useLeads } from "@/hooks/use-leads";
 import { useSalesReps } from "@/hooks/use-leads";
+import ImportValidationWarnings from "@/components/import-validation-warnings";
 
 export default function DataEntryTab() {
   const { toast } = useToast();
   const { data: salesReps = [] } = useSalesReps();
   const { data: stats } = useLeads();
   const [file, setFile] = useState<File | null>(null);
+  const [validationWarnings, setValidationWarnings] = useState<any>(null);
 
   const form = useForm<InsertLead>({
     resolver: zodResolver(insertLeadSchema),
@@ -104,6 +106,13 @@ export default function DataEntryTab() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/sales-reps"] });
+      
+      // Display validation warnings if present
+      if (data.validationWarnings) {
+        setValidationWarnings(data.validationWarnings);
+      }
+      
       setFile(null);
       toast({
         title: "İçe Aktarma Başarılı",
@@ -159,6 +168,13 @@ export default function DataEntryTab() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Validation Warnings */}
+      {validationWarnings && (
+        <div className="lg:col-span-3">
+          <ImportValidationWarnings validationResults={validationWarnings} />
+        </div>
+      )}
+      
       {/* Manual Entry Form */}
       <div className="lg:col-span-2">
         <Card>

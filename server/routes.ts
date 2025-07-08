@@ -10,9 +10,54 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // Helper function to map row data to lead schema with comprehensive Turkish column support
 function mapRowToLead(row: any): any {
-  // Core required fields with Turkish mapping
+  // Enhanced date parsing function to handle multiple formats
+  const parseDate = (dateValue: any): string => {
+    if (!dateValue || dateValue === '') return '';
+    
+    const dateStr = String(dateValue).trim();
+    
+    // Try DD.MM.YYYY format (Turkish standard)
+    if (dateStr.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
+      const [day, month, year] = dateStr.split('.');
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    // Try DD/MM/YYYY format
+    if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+      const [day, month, year] = dateStr.split('/');
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    // Try MM.DD.YYYY format (check if first number > 12 to distinguish from DD.MM.YYYY)
+    if (dateStr.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
+      const [first, second, year] = dateStr.split('.');
+      if (parseInt(first) > 12) {
+        // First number is likely day, so DD.MM.YYYY
+        return `${year}-${second.padStart(2, '0')}-${first.padStart(2, '0')}`;
+      } else {
+        // MM.DD.YYYY format
+        return `${year}-${first.padStart(2, '0')}-${second.padStart(2, '0')}`;
+      }
+    }
+    
+    // Try YYYY-MM-DD format (already correct)
+    if (dateStr.match(/^\d{4}-\d{1,2}-\d{1,2}$/)) {
+      const parts = dateStr.split('-');
+      return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+    }
+    
+    // Try parsing as Date object for other formats
+    const parsedDate = new Date(dateStr);
+    if (!isNaN(parsedDate.getTime())) {
+      return parsedDate.toISOString().split('T')[0];
+    }
+    
+    return ''; // Return empty if no valid date format found
+  };
+
+  // Core required fields with Turkish mapping and enhanced date parsing
   const customerName = row['Müşteri Adı Soyadı'] || row['Müşteri Adı'] || row.customerName || row.name || row.Name || "";
-  const requestDate = row['Talep Geliş Tarihi'] || row['Talep Tarihi'] || row.requestDate || row.date || new Date().toISOString().split('T')[0];
+  const requestDate = parseDate(row['Talep Geliş Tarihi'] || row['Talep Tarihi'] || row.requestDate || row.date);
   const assignedPersonnel = row['Atanan Personel'] || row['Satış Temsilcisi'] || row.assignedPersonnel || row.salesRep || "";
   
   // Determine lead type from data patterns or default to kiralama
@@ -25,49 +70,16 @@ function mapRowToLead(row: any): any {
     }
   }
   
-  // Dynamic status generation based on SON GORUSME SONUCU column
-  let status = 'yeni';
-  const sonGorusmeSonucu = row['SON GORUSME SONUCU'] || row['Son Görüşme Sonucu'] || row.lastMeetingResult || "";
-  const statusValue = row['Durum'] || row.status || "";
-  const negativeReason = row['Dönüş Olumsuzluk Nedeni'] || row['Olumsuz Sebebi'] || "";
-  const meetingDone = row['Birebir Görüşme Yapıldı mı ?'] || row['Birebir Görüşme Yapıldı mı?'] || "";
-  const saleMade = row['Müşteriye Satış Yapıldı Mı ?'] || row['Müşteriye Satış Yapıldı Mı?'] || "";
+  // FIXED: Status derivation EXCLUSIVELY from SON GORUSME SONUCU column
+  let status = 'Tanımsız'; // Default to undefined status if no SON GORUSME SONUCU
+  const sonGorusmeSonucu = row['SON GORUSME SONUCU'] || row['SON GÖRÜŞME SONUCU'] || row['Son Görüşme Sonucu'] || row.lastMeetingResult || "";
   
-  // Primary status determination from SON GORUSME SONUCU
+  // Primary and ONLY status determination from SON GORUSME SONUCU
   if (sonGorusmeSonucu && sonGorusmeSonucu.trim()) {
-    const normalized = sonGorusmeSonucu.toLowerCase().trim();
-    if (normalized.includes('olumsuz') || normalized.includes('negative')) {
-      status = 'olumsuz';
-    } else if (normalized.includes('satıldı') || normalized.includes('satildi') || normalized.includes('satış') || normalized.includes('başarılı')) {
-      status = 'satildi';
-    } else if (normalized.includes('bilgi verildi') || normalized.includes('bilgilendirildi')) {
-      status = 'bilgi-verildi';
-    } else if (normalized.includes('takipte') || normalized.includes('takip') || normalized.includes('devam')) {
-      status = 'takipte';
-    } else if (normalized.includes('toplantı') || normalized.includes('randevu') || normalized.includes('görüşme')) {
-      status = 'toplanti';
-    } else if (normalized.includes('ulaşılamıyor') || normalized.includes('ulaşılamadı')) {
-      status = 'ulasilamiyor';
-    } else {
-      // Use the actual value from SON GORUSME SONUCU as dynamic status
-      status = sonGorusmeSonucu.trim();
-    }
+    // Use the exact value from SON GORUSME SONUCU as dynamic status
+    status = sonGorusmeSonucu.trim();
   }
-  // Fallback to other indicators if SON GORUSME SONUCU is empty
-  else if (saleMade && (saleMade.toLowerCase().includes('evet') || saleMade.toLowerCase().includes('yes'))) {
-    status = 'satildi';
-  } else if (negativeReason && negativeReason.trim()) {
-    status = 'olumsuz';
-  } else if (meetingDone && (meetingDone.toLowerCase().includes('evet') || meetingDone.toLowerCase().includes('yes'))) {
-    status = 'toplanti';
-  } else if (statusValue) {
-    const normalized = statusValue.toLowerCase().trim();
-    if (normalized.includes('olumsuz')) status = 'olumsuz';
-    else if (normalized.includes('satıldı') || normalized.includes('satildi')) status = 'satildi';
-    else if (normalized.includes('takipte')) status = 'takipte';
-    else if (normalized.includes('toplantı')) status = 'toplanti';
-    else if (normalized.includes('ulaşılamıyor')) status = 'ulasilamiyor';
-  }
+  // NO fallback to other fields - if SON GORUSME SONUCU is empty, status remains "Tanımsız"
   
   // Helper function to safely get value or undefined
   const getValue = (val: any) => {
@@ -263,9 +275,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Validate and save leads
+      // Enhanced validation and warnings
       const createdLeads = [];
       const errors = [];
+      const validationWarnings = {
+        dateFormatIssues: 0,
+        missingStatusCount: 0,
+        totalRecords: leads.length,
+        supportedDateFormats: ['DD.MM.YYYY', 'DD/MM/YYYY', 'MM.DD.YYYY', 'YYYY-MM-DD'],
+        statusColumnPresent: false,
+        dateColumnPresent: false
+      };
+
+      // Check if critical columns are present
+      if (leads.length > 0) {
+        const firstRow = leads[0];
+        validationWarnings.dateColumnPresent = !!(
+          firstRow['Talep Geliş Tarihi'] || 
+          firstRow['Talep Tarihi'] || 
+          firstRow['requestDate'] || 
+          firstRow['date']
+        );
+        
+        validationWarnings.statusColumnPresent = !!(
+          firstRow['SON GORUSME SONUCU'] || 
+          firstRow['SON GÖRÜŞME SONUCU'] || 
+          firstRow['Son Görüşme Sonucu'] || 
+          firstRow['lastMeetingResult']
+        );
+      }
 
       for (let i = 0; i < leads.length; i++) {
         try {
@@ -274,6 +312,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Skip empty rows
           if (!mappedData.customerName && !mappedData.assignedPersonnel) {
             continue;
+          }
+
+          // Track validation issues
+          if (!mappedData.requestDate || mappedData.requestDate === '') {
+            validationWarnings.dateFormatIssues++;
+          }
+          
+          if (!mappedData.status || mappedData.status === 'Tanımsız') {
+            validationWarnings.missingStatusCount++;
           }
           
           const leadData = insertLeadSchema.parse(mappedData);
@@ -289,7 +336,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: `Successfully imported ${createdLeads.length} leads`,
         imported: createdLeads.length,
         errors: errors.length,
-        errorDetails: errors
+        errorDetails: errors,
+        validationWarnings
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to import file", error: (error as Error).message });
