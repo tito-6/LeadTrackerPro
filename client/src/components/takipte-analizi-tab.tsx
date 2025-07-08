@@ -18,8 +18,8 @@ export default function TakipteAnaliziTab() {
   });
 
   const [chartType, setChartType] = useState<'pie' | 'bar' | 'line'>('pie');
-  const [selectedSalesperson, setSelectedSalesperson] = useState<string>('');
-  const [selectedProject, setSelectedProject] = useState<string>('');
+  const [selectedSalesperson, setSelectedSalesperson] = useState<string>('all');
+  const [selectedProject, setSelectedProject] = useState<string>('all');
 
   // Follow-up status mapping
   const followUpStatuses = [
@@ -39,8 +39,8 @@ export default function TakipteAnaliziTab() {
       );
       
       // Apply filters
-      let matchesSalesperson = !selectedSalesperson || lead.assignedPersonnel === selectedSalesperson;
-      let matchesProject = !selectedProject || (lead.projectName && lead.projectName.includes(selectedProject));
+      let matchesSalesperson = !selectedSalesperson || selectedSalesperson === 'all' || lead.assignedPersonnel === selectedSalesperson;
+      let matchesProject = !selectedProject || selectedProject === 'all' || (lead.projectName && lead.projectName.includes(selectedProject));
       
       return isFollowUp && matchesSalesperson && matchesProject;
     });
@@ -184,7 +184,7 @@ export default function TakipteAnaliziTab() {
                 <SelectValue placeholder="Tüm Personel" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Tüm Personel</SelectItem>
+                <SelectItem value="all">Tüm Personel</SelectItem>
                 {salesReps.map(rep => (
                   <SelectItem key={rep.id} value={rep.name}>
                     {rep.name}
@@ -201,7 +201,7 @@ export default function TakipteAnaliziTab() {
                 <SelectValue placeholder="Tüm Projeler" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Tüm Projeler</SelectItem>
+                <SelectItem value="all">Tüm Projeler</SelectItem>
                 {uniqueProjects.map(project => (
                   <SelectItem key={project} value={project}>
                     {project}

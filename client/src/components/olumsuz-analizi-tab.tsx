@@ -19,8 +19,8 @@ export default function OlumsuzAnaliziTab() {
   });
 
   const [chartType, setChartType] = useState<'pie' | 'bar' | 'line'>('pie');
-  const [selectedSalesperson, setSelectedSalesperson] = useState<string>('');
-  const [selectedProject, setSelectedProject] = useState<string>('');
+  const [selectedSalesperson, setSelectedSalesperson] = useState<string>('all');
+  const [selectedProject, setSelectedProject] = useState<string>('all');
   const [groupBy, setGroupBy] = useState<'reason' | 'personnel' | 'project'>('reason');
 
   // Filter for negative leads
@@ -34,8 +34,8 @@ export default function OlumsuzAnaliziTab() {
                         lead.negativeReason;
       
       // Apply filters
-      let matchesSalesperson = !selectedSalesperson || lead.assignedPersonnel === selectedSalesperson;
-      let matchesProject = !selectedProject || (lead.projectName && lead.projectName.includes(selectedProject));
+      let matchesSalesperson = !selectedSalesperson || selectedSalesperson === 'all' || lead.assignedPersonnel === selectedSalesperson;
+      let matchesProject = !selectedProject || selectedProject === 'all' || (lead.projectName && lead.projectName.includes(selectedProject));
       
       return isNegative && matchesSalesperson && matchesProject;
     });
@@ -234,7 +234,7 @@ export default function OlumsuzAnaliziTab() {
                 <SelectValue placeholder="Tüm Personel" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Tüm Personel</SelectItem>
+                <SelectItem value="all">Tüm Personel</SelectItem>
                 {salesReps.map(rep => (
                   <SelectItem key={rep.id} value={rep.name}>
                     {rep.name}
@@ -251,7 +251,7 @@ export default function OlumsuzAnaliziTab() {
                 <SelectValue placeholder="Tüm Projeler" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Tüm Projeler</SelectItem>
+                <SelectItem value="all">Tüm Projeler</SelectItem>
                 {uniqueProjects.map(project => (
                   <SelectItem key={project} value={project}>
                     {project}
