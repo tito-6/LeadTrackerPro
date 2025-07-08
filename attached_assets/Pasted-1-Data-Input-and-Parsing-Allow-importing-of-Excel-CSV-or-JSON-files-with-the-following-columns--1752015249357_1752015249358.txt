@@ -1,0 +1,158 @@
+1. Data Input and Parsing
+Allow importing of Excel, CSV, or JSON files with the following columns:
+
+mathematica
+Copy
+Edit
+Müşteri ID, İletişim ID, Müşteri Adı Soyadı, İlk Müşteri Kaynağı, 
+Form Müşteri Kaynağı, WebForm Notu, Talep Geliş Tarihi, 
+İnfo Form Geliş Yeri, İnfo Form Geliş Yeri 2, İnfo Form Geliş Yeri 3, 
+İnfo Form Geliş Yeri 4, Atanan Personel, Hatırlatma Personeli, 
+GERİ DÖNÜŞ YAPILDI MI? (Müşteri Arandı mı?), Web Form Havuz Oluşturma Tarihi, 
+Form Sistem Olusturma Tarihi, Atama Saat Farkı, Dönüş Saat Farkı, 
+Giden Arama Sistem Oluşturma Tarihi, Müşteri Geri Dönüş Tarihi (Giden Arama), 
+GERİ DÖNÜŞ YAPILDI MI? (Müşteriye Mail Gönderildi mi?), 
+Müşteri Mail Geri Dönüş Tarihi, Telefonla Ulaşılamayan Müşteriler, 
+Kaç Gündür Geri Dönüş Bekliyor, Kaç Günde Geri Dönüş Yapılmış (Süre), 
+GERİ DÖNÜŞ NOTU (Giden Arama Notu), GERİ DÖNÜŞ NOTU (Giden Mail Notu), 
+Birebir Görüşme Yapıldı mı ?, Birebir Görüşme Tarihi, Dönüş Görüşme Sonucu, 
+Dönüş Olumsuzluk Nedeni, Müşteriye Satış Yapıldı Mı ?, Satış Adedi, 
+Randevu Tarihi, SON GORUSME NOTU, SON GORUSME SONUCU
+Automatically detect and extract the following from the imported data:
+
+Salesperson names from the Atanan Personel column
+
+Lead statuses dynamically from the SON GORUSME SONUCU column
+
+Avoid defaulting to "Yeni" if the field is empty
+
+Lead type (Kiralık/Satılık) from WebForm Notu
+
+Detect based on inclusion of keywords like Kiralık, Satılık
+
+Project name from WebForm Notu (e.g., “Model Sanayi Merkezi”, “Model Kuyum Merkezi”)
+
+📅 2. Dynamic Date Filtering
+Enable date filtering using Talep Geliş Tarihi
+
+Accept multiple formats (e.g., dd.mm.yyyy, yyyy-mm-dd)
+
+Ensure filtering applies globally across:
+
+Genel Görünüm tab
+
+Raporlar tab
+
+Salesperson-specific pages
+
+Charts and exports
+
+📊 3. Overview Tab (Genel Görünüm)
+Display charts with full alignment with Raporlar tab:
+
+“Toplam Lead - Durum Dağılımı”:
+
+Use dynamic data from SON GORUSME SONUCU
+
+Use 3D charts
+
+Add written data on the left (count + %)
+
+“Personel Performans Tablosu”:
+
+Show total leads per person
+
+Reflect real-time numbers
+
+Another Chart:
+
+Show % of total leads per salesperson
+
+Even if 0 leads assigned → slice must appear
+
+Allow switching chart type (Pie, Column, Line)
+
+Must look sleek and interactive
+
+📈 4. Raporlar Tab Enhancements
+Sync data logic with Genel Görünüm tab
+
+All Durum values (statuses) must match
+
+Charts and filters must reflect:
+
+Salesperson
+
+Talep Geliş Tarihi
+
+Lead Type
+
+Lead Status
+
+Project
+
+Include lead type and project name detection in visuals
+
+Add editable grid to allow live editing of imported leads with auto-reflection to reports
+
+❗ 5. Olumsuz Analizi Tab
+Use column: Dönüş Olumsuzluk Nedeni
+
+Generate intelligence report + charts:
+
+Group and count reasons (e.g., “Yanlış Numara”, “Gerekirse Kendisi Arayacak”, etc.)
+
+Chart with % and counts
+
+Add legend and data labels
+
+Support chart switching (Pie, Column, Line)
+
+♻️ 6. Editable Table and Dynamic Updates
+Show imported leads in an editable table view
+
+Editing any field updates:
+
+Reports
+
+Overview tab
+
+Personal performance charts
+
+Olumsuz analysis
+
+Allow:
+
+Adding new rows
+
+Deleting leads
+
+Assigning/removing salespeople dynamically
+
+Adding new Lead Statuses (“Durum”) or renaming existing ones
+
+🧮 7. Duplication Detection
+Detect duplicated Müşteri ID or İletişim ID
+
+List them in a separate view
+
+Visualize duplicates via charts
+
+Allow resolution or flagging in reports
+
+🧾 8. Export Options
+Allow full export of filtered data and reports:
+
+Export to PDF with:
+
+All charts
+
+Titles and selected filters
+
+General breakdowns
+
+Export to Excel/CSV:
+
+Full tables with current filter
+
+Optionally include duplicated leads

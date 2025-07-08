@@ -17,6 +17,7 @@ interface InteractiveChartProps {
   onItemClick?: (item: ChartData) => void;
   colors?: string[];
   height?: number;
+  chartType?: 'pie' | 'bar' | 'line';
 }
 
 const DEFAULT_COLORS = [
