@@ -10,6 +10,7 @@ import SettingsTab from "@/components/settings-tab";
 import OlumsuzAnaliziTab from "@/components/olumsuz-analizi-tab";
 import TakipteAnaliziTab from "@/components/takipte-analizi-tab";
 import ExcelInputTab from "@/components/excel-input-tab";
+import DuplicateDetectionTab from "@/components/duplicate-detection-tab";
 import OverviewDashboardTab from "@/components/overview-dashboard-tab";
 import SalespersonPerformanceTab from "@/components/salesperson-performance-tab";
 import { useQuery } from "@tanstack/react-query";
@@ -54,7 +55,7 @@ export default function Dashboard() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="mb-6 space-y-4">
             {/* Main Navigation Tabs */}
-            <TabsList className="grid w-full grid-cols-8 h-auto p-1">
+            <TabsList className="grid w-full grid-cols-9 h-auto p-1">
               <TabsTrigger value="overview" className="flex items-center space-x-2 p-3">
                 <Home className="h-4 w-4" />
                 <span>Genel Görünüm</span>
@@ -78,6 +79,10 @@ export default function Dashboard() {
               <TabsTrigger value="takipte-analizi" className="flex items-center space-x-2 p-3">
                 <Clock className="h-4 w-4" />
                 <span>Takipte Analizi</span>
+              </TabsTrigger>
+              <TabsTrigger value="duplicate-detection" className="flex items-center space-x-2 p-3">
+                <Grid className="h-4 w-4" />
+                <span>Duplicate Analizi</span>
               </TabsTrigger>
               <TabsTrigger value="export" className="flex items-center space-x-2 p-3">
                 <Download className="h-4 w-4" />
@@ -133,6 +138,10 @@ export default function Dashboard() {
 
           <TabsContent value="takipte-analizi">
             <TakipteAnaliziTab />
+          </TabsContent>
+
+          <TabsContent value="duplicate-detection">
+            <DuplicateDetectionTab />
           </TabsContent>
 
           <TabsContent value="export">

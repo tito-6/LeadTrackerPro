@@ -3,9 +3,22 @@ import { Badge } from "@/components/ui/badge";
 import { TrendingDown, AlertTriangle, Users, FileText } from "lucide-react";
 import { useLeads } from "@/hooks/use-leads";
 import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import InteractiveChart from "@/components/interactive-chart";
+import { Progress } from "@/components/ui/progress";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function OlumsuzAnaliziTab() {
   const { data: leads = [] } = useLeads();
+
+  // Fetch comprehensive negative analysis data
+  const { data: negativeAnalysis } = useQuery({
+    queryKey: ['/api/negative-analysis'],
+    queryFn: async () => {
+      const response = await fetch('/api/negative-analysis');
+      return response.json();
+    }
+  });
 
   const olumsuzAnalysis = useMemo(() => {
     const olumsuzLeads = leads.filter(lead => 
@@ -39,6 +52,19 @@ export default function OlumsuzAnaliziTab() {
     };
   }, [leads]);
 
+  // Transform API data for interactive charts
+  const reasonChartData = negativeAnalysis?.reasonAnalysis?.map((item: any) => ({
+    name: item.reason,
+    value: item.count,
+    percentage: item.percentage
+  })) || [];
+
+  const personnelChartData = negativeAnalysis?.personnelAnalysis?.map((item: any) => ({
+    name: item.personnel,
+    value: item.count,
+    percentage: item.percentage
+  })) || [];
+
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
@@ -49,17 +75,17 @@ export default function OlumsuzAnaliziTab() {
             <TrendingDown className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{olumsuzAnalysis.total}</div>
+            <div className="text-2xl font-bold text-red-600">{negativeAnalysis?.totalNegative || olumsuzAnalysis.total}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Farklı Nedenler</CardTitle>
+            <CardTitle className="text-sm font-medium">Olumsuzluk Oranı</CardTitle>
             <AlertTriangle className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{Object.keys(olumsuzAnalysis.reasons).length}</div>
+            <div className="text-2xl font-bold text-orange-600">{negativeAnalysis?.negativePercentage || 0}%</div>
           </CardContent>
         </Card>
 
@@ -84,23 +110,41 @@ export default function OlumsuzAnaliziTab() {
         </Card>
       </div>
 
-      {/* Detailed Analysis */}
+      {/* Interactive Charts Section */}
+      <div className="grid gap-6">
+        {/* Negative Reasons Distribution Chart */}
+        <InteractiveChart
+          title="🚫 Olumsuzluk Nedenleri Dağılımı (Dönüş Olumsuzluk Nedeni)"
+          data={reasonChartData}
+          height={350}
+        />
+        
+        {/* Personnel Negative Distribution Chart */}
+        <InteractiveChart
+          title="👨‍💼 Personel Bazında Olumsuz Lead Dağılımı"
+          data={personnelChartData}
+          height={350}
+        />
+      </div>
+
+      {/* Detailed Analysis Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Negative Reasons Breakdown */}
         <Card>
           <CardHeader>
-            <CardTitle>Olumsuzluk Nedenleri</CardTitle>
+            <CardTitle>Olumsuzluk Nedenleri Detay</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {Object.entries(olumsuzAnalysis.reasons)
-                .sort(([,a], [,b]) => b - a)
-                .map(([reason, count]) => (
-                  <div key={reason} className="flex items-center justify-between">
-                    <span className="text-sm">{reason}</span>
-                    <Badge variant="destructive">{count}</Badge>
+              {negativeAnalysis?.reasonAnalysis?.map((item: any) => (
+                <div key={item.reason} className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{item.reason}</span>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="destructive">{item.count}</Badge>
+                    <span className="text-sm text-muted-foreground">{item.percentage}%</span>
                   </div>
-                ))}
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -108,18 +152,20 @@ export default function OlumsuzAnaliziTab() {
         {/* By Personnel */}
         <Card>
           <CardHeader>
-            <CardTitle>Personel Bazında Dağılım</CardTitle>
+            <CardTitle>Personel Bazında Olumsuz Dağılım</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {Object.entries(olumsuzAnalysis.byPersonnel)
-                .sort(([,a], [,b]) => b - a)
-                .map(([personnel, count]) => (
-                  <div key={personnel} className="flex items-center justify-between">
-                    <span className="text-sm">{personnel}</span>
-                    <Badge variant="outline">{count}</Badge>
+              {negativeAnalysis?.personnelAnalysis?.map((item: any) => (
+                <div key={item.personnel} className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{item.personnel}</span>
+                  <div className="flex items-center gap-2">
+                    <Progress value={item.percentage} className="w-16 h-2" />
+                    <Badge variant="outline">{item.count}</Badge>
+                    <span className="text-sm text-muted-foreground">{item.percentage}%</span>
                   </div>
-                ))}
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>

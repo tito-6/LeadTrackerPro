@@ -130,6 +130,7 @@ export class MemStorage implements IStorage {
       appointmentDate: insertLead.appointmentDate || null,
       lastMeetingNote: insertLead.lastMeetingNote || null,
       lastMeetingResult: insertLead.lastMeetingResult || null,
+      projectName: insertLead.projectName || null,
       createdAt: new Date(),
     };
     this.leads.set(id, lead);

@@ -638,6 +638,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Duplicate detection endpoint
+  app.get("/api/duplicates", async (_req, res) => {
+    try {
+      const leads = await storage.getLeads();
+      const duplicates: { [key: string]: any[] } = {};
+      const duplicateStats = {
+        totalLeads: leads.length,
+        duplicateGroups: 0,
+        duplicateCount: 0,
+        duplicatePercentage: 0
+      };
+
+      // Group by customer ID and contact ID
+      const customerIdGroups: { [key: string]: any[] } = {};
+      const contactIdGroups: { [key: string]: any[] } = {};
+
+      leads.forEach(lead => {
+        if (lead.customerId) {
+          if (!customerIdGroups[lead.customerId]) {
+            customerIdGroups[lead.customerId] = [];
+          }
+          customerIdGroups[lead.customerId].push(lead);
+        }
+        
+        if (lead.contactId) {
+          if (!contactIdGroups[lead.contactId]) {
+            contactIdGroups[lead.contactId] = [];
+          }
+          contactIdGroups[lead.contactId].push(lead);
+        }
+      });
+
+      // Find duplicates
+      Object.entries(customerIdGroups).forEach(([id, group]) => {
+        if (group.length > 1) {
+          duplicates[`customer_${id}`] = group;
+          duplicateStats.duplicateGroups++;
+          duplicateStats.duplicateCount += group.length - 1;
+        }
+      });
+
+      Object.entries(contactIdGroups).forEach(([id, group]) => {
+        if (group.length > 1 && !duplicates[`customer_${id}`]) {
+          duplicates[`contact_${id}`] = group;
+          duplicateStats.duplicateGroups++;
+          duplicateStats.duplicateCount += group.length - 1;
+        }
+      });
+
+      duplicateStats.duplicatePercentage = leads.length > 0 
+        ? Math.round((duplicateStats.duplicateCount / leads.length) * 100) 
+        : 0;
+
+      res.json({ duplicates, stats: duplicateStats });
+    } catch (error) {
+      console.error("Error detecting duplicates:", error);
+      res.status(500).json({ error: "Failed to detect duplicates" });
+    }
+  });
+
+  // Negative lead analysis endpoint
+  app.get("/api/negative-analysis", async (_req, res) => {
+    try {
+      const leads = await storage.getLeads();
+      const negativeLeads = leads.filter(lead => 
+        lead.status?.toLowerCase().includes('olumsuz') || 
+        lead.negativeReason
+      );
+
+      const reasonCounts: { [key: string]: number } = {};
+      const personnelCounts: { [key: string]: number } = {};
+
+      negativeLeads.forEach(lead => {
+        const reason = lead.negativeReason || 'Belirtilmemiş';
+        const personnel = lead.assignedPersonnel || 'Atanmamış';
+        
+        reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;
+        personnelCounts[personnel] = (personnelCounts[personnel] || 0) + 1;
+      });
+
+      const totalNegative = negativeLeads.length;
+      const reasonAnalysis = Object.entries(reasonCounts).map(([reason, count]) => ({
+        reason,
+        count,
+        percentage: totalNegative > 0 ? Math.round((count / totalNegative) * 100) : 0
+      }));
+
+      const personnelAnalysis = Object.entries(personnelCounts).map(([personnel, count]) => ({
+        personnel,
+        count,
+        percentage: totalNegative > 0 ? Math.round((count / totalNegative) * 100) : 0
+      }));
+
+      res.json({
+        totalNegative,
+        totalLeads: leads.length,
+        negativePercentage: leads.length > 0 ? Math.round((totalNegative / leads.length) * 100) : 0,
+        reasonAnalysis: reasonAnalysis.sort((a, b) => b.count - a.count),
+        personnelAnalysis: personnelAnalysis.sort((a, b) => b.count - a.count),
+        negativeLeads
+      });
+    } catch (error) {
+      console.error("Error in negative analysis:", error);
+      res.status(500).json({ error: "Failed to perform negative analysis" });
+    }
+  });
+
+  // Project analysis endpoint
+  app.get("/api/project-analysis", async (_req, res) => {
+    try {
+      const leads = await storage.getLeads();
+      const projectCounts: { [key: string]: number } = {};
+      const projectLeadTypes: { [key: string]: { kiralama: number, satis: number } } = {};
+
+      leads.forEach(lead => {
+        const project = lead.projectName || 'Proje Belirtilmemiş';
+        projectCounts[project] = (projectCounts[project] || 0) + 1;
+        
+        if (!projectLeadTypes[project]) {
+          projectLeadTypes[project] = { kiralama: 0, satis: 0 };
+        }
+        
+        if (lead.leadType === 'kiralama') {
+          projectLeadTypes[project].kiralama++;
+        } else if (lead.leadType === 'satis') {
+          projectLeadTypes[project].satis++;
+        }
+      });
+
+      const projectAnalysis = Object.entries(projectCounts).map(([project, count]) => ({
+        project,
+        count,
+        percentage: leads.length > 0 ? Math.round((count / leads.length) * 100) : 0,
+        kiralama: projectLeadTypes[project].kiralama,
+        satis: projectLeadTypes[project].satis
+      }));
+
+      res.json({
+        totalProjects: Object.keys(projectCounts).length,
+        projectAnalysis: projectAnalysis.sort((a, b) => b.count - a.count)
+      });
+    } catch (error) {
+      console.error("Error in project analysis:", error);
+      res.status(500).json({ error: "Failed to perform project analysis" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

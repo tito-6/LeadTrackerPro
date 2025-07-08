@@ -53,6 +53,7 @@ export const leads = pgTable("leads", {
   // Derived fields
   leadType: text("lead_type").notNull(), // 'kiralama' or 'satis' (derived from webFormNote)
   status: text("status").notNull(), // 'yeni', 'bilgi-verildi', 'olumsuz', 'satis', 'takipte', 'randevu'
+  projectName: text("project_name"), // Extracted from WebForm Notu
   
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -108,6 +109,7 @@ export const insertLeadSchema = createInsertSchema(leads).omit({
   appointmentDate: z.string().optional(),
   lastMeetingNote: z.string().optional(),
   lastMeetingResult: z.string().optional(),
+  projectName: z.string().optional(),
 });
 
 export const insertSalesRepSchema = createInsertSchema(salesReps).omit({

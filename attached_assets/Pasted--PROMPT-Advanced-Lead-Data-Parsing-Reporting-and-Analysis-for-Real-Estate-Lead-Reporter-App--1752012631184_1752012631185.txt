@@ -1,0 +1,155 @@
+🚀 PROMPT: Advanced Lead Data Parsing, Reporting, and Analysis for Real Estate Lead Reporter App
+📥 1. WebForm Notu Parsing for Lead Type & Project Detection
+After importing the Excel/CSV/JSON file, the system must automatically:
+
+Detect if the lead is Kiralık (Renting) or Satılık (Sales) by scanning the content of:
+
+nginx
+Copy
+Edit
+WebForm Notu
+Examples to detect:
+
+Contains: Kiralık → mark as "Renting"
+
+Contains: Satılık → mark as "Sales"
+
+Missing or unclear → mark as “Bilinmeyen” (Unknown)
+
+Detect and assign Project Name from same WebForm Notu field, by capturing strings such as:
+
+“Model Sanayi Merkezi”
+
+“Model Kuyum Merkezi”
+
+Any text after last / in line
+
+This parsed data must be used across the entire app in:
+
+Charts
+
+Reports tab
+
+Genel Görünüm tab
+
+Salesperson sub-tabs
+
+Filtering options
+
+⚠️ 2. Detect and Visualize Duplicated Entries
+A duplicate is identified when:
+
+Müşteri ID or İletişim ID is repeated
+
+System must:
+
+Highlight duplicates in a separate table
+
+Show duplicate summary in the Reports tab and Overview
+
+Chart showing the ratio of duplicates over total leads
+
+Provide option to filter, edit or delete duplicates manually
+
+📊 3. Individual Salesperson Reports with Charts
+Each salesperson's report (in their tab) must include:
+
+Total leads assigned
+
+Status distribution chart (based on SON GORUSME SONUCU)
+
+Deal type breakdown (Kiralık vs Satılık)
+
+Project allocation chart
+
+Lead duplication summary (if any)
+
+All charts must:
+
+Include legends + data labels (count + percentage)
+
+Be toggleable (pie, bar, line)
+
+Support dark/light themes
+
+✏️ 4. In-App Editable Table View of Imported Data
+After importing, user should see a full table view of the raw data
+
+Table must:
+
+Support in-place editing of any cell (like Airtable/Notion)
+
+Dynamically reflect changes in:
+
+Genel Görünüm charts
+
+Raporlar tab
+
+Personal reports
+
+Olumsuz Analizi
+
+Allow sorting, searching, and filtering
+
+📉 5. Olumsuz Analizi (Lost Lead Analysis)
+Use column:
+
+mathematica
+Copy
+Edit
+Dönüş Olumsuzluk Nedeni
+System must:
+
+Automatically group and count reasons (e.g., “Yanlış Numara”, “Bütçe Yetersiz”, “Gerekirse Kendisi Arayacak”)
+
+Reflect the data with:
+
+A 3D pie chart or bar chart
+
+Written breakdown on the left side:
+
+Reason
+
+Count
+
+Percentage of total lost leads
+
+Place these charts in the Olumsuz Analizi tab
+
+Support chart type toggle and downloadable reports
+
+🔁 6. Sync and Fix Reporting Logic
+Fix issue where Raporlar tab incorrectly shows all statuses as “Yeni”
+
+Must reflect real statuses from SON GORUSME SONUCU
+
+Ensure Genel Görünüm and Raporlar show:
+
+Identical, synced charts and stats
+
+Dynamic filtering by:
+
+Talep Geliş Tarihi
+
+Atanan Personel
+
+Lead Type (Kiralık/Satılık)
+
+Project Name
+
+Durum
+
+📤 7. Exporting Reports
+Ensure charts and tables can be exported:
+
+As Excel and CSV
+
+As PDF with:
+
+Charts
+
+Written summaries
+
+Dynamic date range title
+
+Salesperson name and performance breakdown

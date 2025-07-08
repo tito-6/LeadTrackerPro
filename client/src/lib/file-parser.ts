@@ -48,11 +48,51 @@ function mapRowToLead(row: any): ParsedLead {
 
   // Derive lead type from webFormNote or other indicators
   const webFormNote = row['WebForm Notu'] || row['webFormNote'] || '';
-  const leadType = webFormNote.toLowerCase().includes('satılık') || webFormNote.toLowerCase().includes('satis') 
-    ? 'satis' 
-    : webFormNote.toLowerCase().includes('kiralık') || webFormNote.toLowerCase().includes('kirala')
-    ? 'kiralama'
-    : 'kiralama'; // default
+  // Advanced lead type detection with project parsing
+  let leadType = 'Bilinmeyen';
+  let projectName = '';
+  
+  if (webFormNote) {
+    const noteText = webFormNote.toLowerCase();
+    // Enhanced lead type detection
+    if (noteText.includes('kiralık') || noteText.includes('kiralama') || noteText.includes('kira')) {
+      leadType = 'kiralama';
+    } else if (noteText.includes('satılık') || noteText.includes('satış') || noteText.includes('satis')) {
+      leadType = 'satis';
+    } else {
+      leadType = 'kiralama'; // default fallback
+    }
+    
+    // Extract project name from WebForm Notu
+    const projectPatterns = [
+      /model\s+\w+\s+merkezi/i,
+      /\w+\s+merkezi/i,
+      /\w+\s+projesi/i,
+      /\w+\s+plaza/i,
+      /\w+\s+residence/i,
+      /\w+\s+sitesi/i,
+      /\w+\s+complex/i
+    ];
+    
+    for (const pattern of projectPatterns) {
+      const match = webFormNote.match(pattern);
+      if (match) {
+        projectName = match[0].trim();
+        break;
+      }
+    }
+    
+    // If no pattern match, try to get text after last '/' 
+    if (!projectName && webFormNote.includes('/')) {
+      const parts = webFormNote.split('/');
+      const lastPart = parts[parts.length - 1].trim();
+      if (lastPart && lastPart.length > 2) {
+        projectName = lastPart;
+      }
+    }
+  } else {
+    leadType = 'kiralama'; // default
+  }
 
   // FIXED: Derive status EXCLUSIVELY from SON GORUSME SONUCU column
   let status = 'Tanımsız'; // Default to undefined if no SON GORUSME SONUCU
@@ -75,6 +115,7 @@ function mapRowToLead(row: any): ParsedLead {
     // Optional comprehensive fields
     customerId: row['Müşteri ID'] || row['customerId'] || '',
     contactId: row['İletişim ID'] || row['contactId'] || '',
+    projectName,
     firstCustomerSource: row['İlk Müşteri Kaynağı'] || row['firstCustomerSource'] || '',
     formCustomerSource: row['Form Müşteri Kaynağı'] || row['formCustomerSource'] || '',
     webFormNote,
@@ -118,6 +159,7 @@ export interface ParsedLead {
   // Optional comprehensive fields
   customerId?: string;
   contactId?: string;
+  projectName?: string;
   firstCustomerSource?: string;
   formCustomerSource?: string;
   webFormNote?: string;
