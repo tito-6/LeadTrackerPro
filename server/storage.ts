@@ -20,6 +20,7 @@ export interface IStorage {
   getSalesReps(): Promise<SalesRep[]>;
   getSalesRepById(id: number): Promise<SalesRep | undefined>;
   createSalesRep(salesRep: InsertSalesRep): Promise<SalesRep>;
+  createSalesRepByName(name: string): Promise<SalesRep>;
   updateSalesRep(id: number, salesRep: Partial<InsertSalesRep>): Promise<SalesRep | undefined>;
   deleteSalesRep(id: number): Promise<boolean>;
 
@@ -204,6 +205,19 @@ export class MemStorage implements IStorage {
     };
     this.salesReps.set(id, salesRep);
     return salesRep;
+  }
+
+  async createSalesRepByName(name: string): Promise<SalesRep> {
+    // Check if salesperson already exists
+    const existing = Array.from(this.salesReps.values()).find(rep => rep.name === name);
+    if (existing) return existing;
+    
+    // Create new salesperson with default target
+    return this.createSalesRep({
+      name,
+      monthlyTarget: 50,
+      isActive: true,
+    });
   }
 
   async updateSalesRep(id: number, updateData: Partial<InsertSalesRep>): Promise<SalesRep | undefined> {

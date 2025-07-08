@@ -47,6 +47,18 @@ function mapRowToLead(row: any): any {
     else if (normalized.includes('ulaşılamıyor')) status = 'ulasilamiyor';
   }
   
+  // Helper function to safely get value or undefined
+  const getValue = (val: any) => {
+    if (val === null || val === undefined || val === '') return undefined;
+    return val;
+  };
+
+  const getIntValue = (val: any) => {
+    if (val === null || val === undefined || val === '') return undefined;
+    const parsed = parseInt(val);
+    return isNaN(parsed) ? undefined : parsed;
+  };
+
   return {
     customerName,
     requestDate,
@@ -54,39 +66,39 @@ function mapRowToLead(row: any): any {
     assignedPersonnel,
     status,
     // Comprehensive Turkish column mapping - all 37 fields
-    customerId: row['Müşteri ID'] || row.customerId || null,
-    contactId: row['İletişim ID'] || row.contactId || null,
-    firstCustomerSource: row['İlk Müşteri Kaynağı'] || row.firstCustomerSource || null,
-    formCustomerSource: row['Form Müşteri Kaynağı'] || row.formCustomerSource || null,
-    webFormNote: row['WebForm Notu'] || row['Web Form Notu'] || row.webFormNote || null,
-    infoFormLocation1: row['İnfo Form Geliş Yeri'] || row.infoFormLocation1 || null,
-    infoFormLocation2: row['İnfo Form Geliş Yeri 2'] || row.infoFormLocation2 || null,
-    infoFormLocation3: row['İnfo Form Geliş Yeri 3'] || row.infoFormLocation3 || null,
-    infoFormLocation4: row['İnfo Form Geliş Yeri 4'] || row.infoFormLocation4 || null,
-    reminderPersonnel: row['Hatıırlatma Personeli'] || row.reminderPersonnel || null,
-    wasCalledBack: row['GERİ DÖNÜŞ YAPILDI MI? (Müşteri Arandı mı?)'] || row.wasCalledBack || null,
-    webFormPoolDate: row['Web Form Havuz Oluşturma Tarihi'] || row.webFormPoolDate || null,
-    formSystemDate: row['Form Sistem Olusturma Tarihi'] || row.formSystemDate || null,
-    assignmentTimeDiff: row['Atama Saat Farkı'] || row.assignmentTimeDiff || null,
-    responseTimeDiff: row['Dönüş Saat Farkı'] || row.responseTimeDiff || null,
-    outgoingCallSystemDate: row['Giden Arama Sistem Oluşturma Tarihi'] || row.outgoingCallSystemDate || null,
-    customerResponseDate: row['Müşteri Geri Dönüş Tarihi (Giden Arama)'] || row.customerResponseDate || null,
-    wasEmailSent: row['GERİ DÖNÜŞ YAPILDI MI? (Müşteriye Mail Gönderildi mi?)'] || row.wasEmailSent || null,
-    customerEmailResponseDate: row['Müşteri Mail Geri Dönüş Tarihi'] || row.customerEmailResponseDate || null,
-    unreachableByPhone: row['Telefonla Ulaşılamayan Müşteriler'] || row.unreachableByPhone || null,
-    daysWaitingResponse: parseInt(row['Kaç Gündür Geri Dönüş Bekliyor'] || row.daysWaitingResponse || '0') || null,
-    daysToResponse: parseInt(row['Kaç Günde Geri Dönüş Yapılmış (Süre)'] || row.daysToResponse || '0') || null,
-    callNote: row['GERİ DÖNÜŞ NOTU (Giden Arama Notu)'] || row['Arama Notu'] || row.callNote || null,
-    emailNote: row['GERİ DÖNÜŞ NOTU (Giden Mail Notu)'] || row.emailNote || null,
-    oneOnOneMeeting: row['Birebir Görüşme Yapıldı mı ?'] || row['Birebir Görüşme Yapıldı mı?'] || row.oneOnOneMeeting || null,
-    meetingDate: row['Birebir Görüşme Tarihi'] || row.meetingDate || null,
-    responseResult: row['Dönüş Görüşme Sonucu'] || row.responseResult || null,
-    negativeReason: row['Dönüş Olumsuzluk Nedeni'] || row.negativeReason || null,
-    wasSaleMade: row['Müşteriye Satış Yapıldı Mı ?'] || row['Müşteriye Satış Yapıldı Mı?'] || row.wasSaleMade || null,
-    saleCount: parseInt(row['Satış Adedi'] || row.saleCount || '0') || null,
-    appointmentDate: row['Randevu Tarihi'] || row.appointmentDate || null,
-    lastMeetingNote: row['SON GORUSME NOTU'] || row['Son Görüşme Notu'] || row.lastMeetingNote || null,
-    lastMeetingResult: row['SON GORUSME SONUCU'] || row['Son Görüşme Sonucu'] || row.lastMeetingResult || null,
+    customerId: getValue(row['Müşteri ID']) || getValue(row.customerId),
+    contactId: getValue(row['İletişim ID']) || getValue(row.contactId),
+    firstCustomerSource: getValue(row['İlk Müşteri Kaynağı']) || getValue(row.firstCustomerSource),
+    formCustomerSource: getValue(row['Form Müşteri Kaynağı']) || getValue(row.formCustomerSource),
+    webFormNote: getValue(row['WebForm Notu']) || getValue(row['Web Form Notu']) || getValue(row.webFormNote),
+    infoFormLocation1: getValue(row['İnfo Form Geliş Yeri']) || getValue(row.infoFormLocation1),
+    infoFormLocation2: getValue(row['İnfo Form Geliş Yeri 2']) || getValue(row.infoFormLocation2),
+    infoFormLocation3: getValue(row['İnfo Form Geliş Yeri 3']) || getValue(row.infoFormLocation3),
+    infoFormLocation4: getValue(row['İnfo Form Geliş Yeri 4']) || getValue(row.infoFormLocation4),
+    reminderPersonnel: getValue(row['Hatıırlatma Personeli']) || getValue(row.reminderPersonnel),
+    wasCalledBack: getValue(row['GERİ DÖNÜŞ YAPILDI MI? (Müşteri Arandı mı?)']) || getValue(row.wasCalledBack),
+    webFormPoolDate: getValue(row['Web Form Havuz Oluşturma Tarihi']) || getValue(row.webFormPoolDate),
+    formSystemDate: getValue(row['Form Sistem Olusturma Tarihi']) || getValue(row.formSystemDate),
+    assignmentTimeDiff: getValue(row['Atama Saat Farkı']) || getValue(row.assignmentTimeDiff),
+    responseTimeDiff: getValue(row['Dönüş Saat Farkı']) || getValue(row.responseTimeDiff),
+    outgoingCallSystemDate: getValue(row['Giden Arama Sistem Oluşturma Tarihi']) || getValue(row.outgoingCallSystemDate),
+    customerResponseDate: getValue(row['Müşteri Geri Dönüş Tarihi (Giden Arama)']) || getValue(row.customerResponseDate),
+    wasEmailSent: getValue(row['GERİ DÖNÜŞ YAPILDI MI? (Müşteriye Mail Gönderildi mi?)']) || getValue(row.wasEmailSent),
+    customerEmailResponseDate: getValue(row['Müşteri Mail Geri Dönüş Tarihi']) || getValue(row.customerEmailResponseDate),
+    unreachableByPhone: getValue(row['Telefonla Ulaşılamayan Müşteriler']) || getValue(row.unreachableByPhone),
+    daysWaitingResponse: getIntValue(row['Kaç Gündür Geri Dönüş Bekliyor']) || getIntValue(row.daysWaitingResponse),
+    daysToResponse: getIntValue(row['Kaç Günde Geri Dönüş Yapılmış (Süre)']) || getIntValue(row.daysToResponse),
+    callNote: getValue(row['GERİ DÖNÜŞ NOTU (Giden Arama Notu)']) || getValue(row['Arama Notu']) || getValue(row.callNote),
+    emailNote: getValue(row['GERİ DÖNÜŞ NOTU (Giden Mail Notu)']) || getValue(row.emailNote),
+    oneOnOneMeeting: getValue(row['Birebir Görüşme Yapıldı mı ?']) || getValue(row['Birebir Görüşme Yapıldı mı?']) || getValue(row.oneOnOneMeeting),
+    meetingDate: getValue(row['Birebir Görüşme Tarihi']) || getValue(row.meetingDate),
+    responseResult: getValue(row['Dönüş Görüşme Sonucu']) || getValue(row.responseResult),
+    negativeReason: getValue(row['Dönüş Olumsuzluk Nedeni']) || getValue(row.negativeReason),
+    wasSaleMade: getValue(row['Müşteriye Satış Yapıldı Mı ?']) || getValue(row['Müşteriye Satış Yapıldı Mı?']) || getValue(row.wasSaleMade),
+    saleCount: getIntValue(row['Satış Adedi']) || getIntValue(row.saleCount),
+    appointmentDate: getValue(row['Randevu Tarihi']) || getValue(row.appointmentDate),
+    lastMeetingNote: getValue(row['SON GORUSME NOTU']) || getValue(row['Son Görüşme Notu']) || getValue(row.lastMeetingNote),
+    lastMeetingResult: getValue(row['SON GORUSME SONUCU']) || getValue(row['Son Görüşme Sonucu']) || getValue(row.lastMeetingResult),
   };
 }
 
@@ -198,6 +210,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log successful file processing
       console.log(`Processing ${originalname}: ${leads.length} leads found`);
 
+      // Extract unique sales personnel names and auto-create them
+      const uniquePersonnel = new Set<string>();
+      leads.forEach(lead => {
+        const mappedData = mapRowToLead(lead);
+        if (mappedData.assignedPersonnel && mappedData.assignedPersonnel.trim()) {
+          uniquePersonnel.add(mappedData.assignedPersonnel.trim());
+        }
+      });
+
+      // Auto-create sales reps for any new personnel
+      for (const personnelName of Array.from(uniquePersonnel)) {
+        try {
+          await storage.createSalesRepByName(personnelName);
+        } catch (error) {
+          console.log(`Note: Sales rep ${personnelName} already exists or could not be created`);
+        }
+      }
+
       // Validate and save leads
       const createdLeads = [];
       const errors = [];
@@ -264,6 +294,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(salesRep);
     } catch (error) {
       res.status(400).json({ message: "Invalid sales rep data", error });
+    }
+  });
+
+  // Export endpoints
+  app.get("/api/export/:format", async (req, res) => {
+    try {
+      const { format } = req.params;
+      const { startDate, endDate, salesRep } = req.query;
+      
+      const leads = await storage.getLeadsByFilter({
+        startDate: startDate as string,
+        endDate: endDate as string,
+        salesRep: salesRep as string,
+      });
+      
+      const salesReps = await storage.getSalesReps();
+      
+      if (format === 'json') {
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="lead-report-${new Date().toISOString().split('T')[0]}.json"`);
+        res.json({ leads, salesReps, exportDate: new Date().toISOString() });
+      } else if (format === 'excel') {
+        // For Excel export, we'll send structured data that the frontend can convert
+        res.setHeader('Content-Type', 'application/json');
+        res.json({ 
+          format: 'excel',
+          data: { leads, salesReps },
+          exportDate: new Date().toISOString()
+        });
+      } else if (format === 'pdf') {
+        // For PDF export, send structured data for frontend rendering
+        res.setHeader('Content-Type', 'application/json');
+        res.json({ 
+          format: 'pdf',
+          data: { leads, salesReps },
+          exportDate: new Date().toISOString()
+        });
+      } else {
+        res.status(400).json({ message: "Unsupported export format" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Export failed", error: (error as Error).message });
     }
   });
 

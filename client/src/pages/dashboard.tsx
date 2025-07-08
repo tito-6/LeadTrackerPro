@@ -52,40 +52,64 @@ export default function Dashboard() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-8 mb-6 h-auto p-1">
-            <TabsTrigger value="overview" className="flex items-center space-x-2 p-3">
-              <Home className="h-4 w-4" />
-              <span>Genel Görünüm</span>
-            </TabsTrigger>
-            <TabsTrigger value="excel-input" className="flex items-center space-x-2 p-3">
-              <Grid className="h-4 w-4" />
-              <span>Excel Girişi</span>
-            </TabsTrigger>
-            <TabsTrigger value="data-entry" className="flex items-center space-x-2 p-3">
-              <Plus className="h-4 w-4" />
-              <span>Veri Girişi</span>
-            </TabsTrigger>
-            <TabsTrigger value="reports" className="flex items-center space-x-2 p-3">
-              <BarChart className="h-4 w-4" />
-              <span>Raporlar</span>
-            </TabsTrigger>
-            <TabsTrigger value="olumsuz-analizi" className="flex items-center space-x-2 p-3">
-              <TrendingDown className="h-4 w-4" />
-              <span>Olumsuz Analizi</span>
-            </TabsTrigger>
-            <TabsTrigger value="takipte-analizi" className="flex items-center space-x-2 p-3">
-              <Clock className="h-4 w-4" />
-              <span>Takipte Analizi</span>
-            </TabsTrigger>
-            <TabsTrigger value="export" className="flex items-center space-x-2 p-3">
-              <Download className="h-4 w-4" />
-              <span>Dışa Aktar</span>
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center space-x-2 p-3">
-              <Settings className="h-4 w-4" />
-              <span>Ayarlar</span>
-            </TabsTrigger>
-          </TabsList>
+          <div className="mb-6 space-y-4">
+            {/* Main Navigation Tabs */}
+            <TabsList className="grid w-full grid-cols-8 h-auto p-1">
+              <TabsTrigger value="overview" className="flex items-center space-x-2 p-3">
+                <Home className="h-4 w-4" />
+                <span>Genel Görünüm</span>
+              </TabsTrigger>
+              <TabsTrigger value="excel-input" className="flex items-center space-x-2 p-3">
+                <Grid className="h-4 w-4" />
+                <span>Excel Girişi</span>
+              </TabsTrigger>
+              <TabsTrigger value="data-entry" className="flex items-center space-x-2 p-3">
+                <Plus className="h-4 w-4" />
+                <span>Veri Girişi</span>
+              </TabsTrigger>
+              <TabsTrigger value="reports" className="flex items-center space-x-2 p-3">
+                <BarChart className="h-4 w-4" />
+                <span>Raporlar</span>
+              </TabsTrigger>
+              <TabsTrigger value="olumsuz-analizi" className="flex items-center space-x-2 p-3">
+                <TrendingDown className="h-4 w-4" />
+                <span>Olumsuz Analizi</span>
+              </TabsTrigger>
+              <TabsTrigger value="takipte-analizi" className="flex items-center space-x-2 p-3">
+                <Clock className="h-4 w-4" />
+                <span>Takipte Analizi</span>
+              </TabsTrigger>
+              <TabsTrigger value="export" className="flex items-center space-x-2 p-3">
+                <Download className="h-4 w-4" />
+                <span>Dışa Aktar</span>
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="flex items-center space-x-2 p-3">
+                <Settings className="h-4 w-4" />
+                <span>Ayarlar</span>
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Dynamic Salesperson Tabs - Separate TabsList */}
+            {salesReps.length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Satış Temsilcisi Performans Raporları:</h3>
+                <div className="flex flex-wrap gap-2">
+                  {salesReps.map((rep) => (
+                    <Button
+                      key={`salesperson-${rep.id}`}
+                      variant={activeTab === `salesperson-${rep.id}` ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setActiveTab(`salesperson-${rep.id}`)}
+                      className="flex items-center space-x-2"
+                    >
+                      <UserCircle className="h-3 w-3" />
+                      <span>{rep.name}</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           <TabsContent value="overview">
             <OverviewDashboardTab />
@@ -127,25 +151,7 @@ export default function Dashboard() {
           ))}
         </Tabs>
 
-        {/* Add dynamic tabs for each salesperson */}
-        {salesReps.length > 0 && (
-          <div className="mt-4">
-            <h3 className="text-lg font-medium mb-2">Personel Sekmeleri:</h3>
-            <div className="flex flex-wrap gap-2">
-              {salesReps.map((rep) => (
-                <Button
-                  key={rep.id}
-                  variant={activeTab === `salesperson-${rep.id}` ? "default" : "outline"}
-                  onClick={() => setActiveTab(`salesperson-${rep.id}`)}
-                  size="sm"
-                >
-                  <UserCircle className="h-4 w-4 mr-2" />
-                  {rep.name}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
+
       </div>
     </div>
   );
