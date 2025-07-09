@@ -35,13 +35,37 @@ export default function EnhancedOverviewDashboardTab() {
 
   const hasSecondaryData = enhancedStats?.takipte?.hasData || false;
 
-  // Personnel status breakdown calculation
-  const personnelStatusData = useMemo(() => {
+  // Get all unique statuses from the data
+  const allStatuses = useMemo(() => {
+    if (!enhancedStats?.leads?.byStatus) return [];
+    return Object.keys(enhancedStats.leads.byStatus);
+  }, [enhancedStats]);
+
+  // Personnel status matrix calculation
+  const personnelStatusMatrix = useMemo(() => {
     if (!leadsData.length || !enhancedStats) return [];
     
+    const { takipte, leads } = enhancedStats;
     const personnelStats = {};
-    const { takipte } = enhancedStats;
     
+    // Initialize all personnel with all statuses set to 0
+    const allPersonnel = Object.keys(leads.byPersonnel || {});
+    if (allPersonnel.length === 0) return [];
+    
+    allPersonnel.forEach(personnel => {
+      personnelStats[personnel] = {
+        name: personnel,
+        totalLeads: 0,
+        takipteCount: takipte.byPersonnel?.[personnel] || 0
+      };
+      
+      // Initialize all statuses to 0
+      allStatuses.forEach(status => {
+        personnelStats[personnel][status] = 0;
+      });
+    });
+    
+    // Count actual lead statuses
     leadsData.forEach(lead => {
       const personnel = lead.assignedPersonnel || 'Atanmamış';
       const status = lead.status || 'Bilinmiyor';
@@ -50,20 +74,23 @@ export default function EnhancedOverviewDashboardTab() {
         personnelStats[personnel] = {
           name: personnel,
           totalLeads: 0,
-          statusBreakdown: {},
           takipteCount: takipte.byPersonnel?.[personnel] || 0
         };
+        
+        // Initialize all statuses to 0 for new personnel
+        allStatuses.forEach(s => {
+          personnelStats[personnel][s] = 0;
+        });
       }
       
       personnelStats[personnel].totalLeads++;
-      if (!personnelStats[personnel].statusBreakdown[status]) {
-        personnelStats[personnel].statusBreakdown[status] = 0;
+      if (personnelStats[personnel][status] !== undefined) {
+        personnelStats[personnel][status]++;
       }
-      personnelStats[personnel].statusBreakdown[status]++;
     });
     
     return Object.values(personnelStats);
-  }, [leadsData, enhancedStats]);
+  }, [leadsData, enhancedStats, allStatuses]);
 
   // Memoized calculations for performance
   const dashboardMetrics = useMemo(() => {
@@ -280,68 +307,59 @@ export default function EnhancedOverviewDashboardTab() {
           <CardDescription>Her personelin lead dağılımı ve durum analizi</CardDescription>
         </CardHeader>
         <CardContent>
-          {personnelStatusData && personnelStatusData.length > 0 ? (
+          {personnelStatusMatrix && personnelStatusMatrix.length > 0 ? (
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
+              <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b bg-gray-100">
-                    <th className="text-left p-3 font-medium">Personel</th>
-                    <th className="text-center p-3 font-medium">Toplam Lead</th>
-                    <th className="text-center p-3 font-medium">Takip Kayıtları</th>
-                    <th className="text-center p-3 font-medium">Tüm Durumlar</th>
-                    <th className="text-center p-3 font-medium">Aktivite</th>
+                    <th className="text-left p-2 font-medium border-r">Personel</th>
+                    <th className="text-center p-2 font-medium border-r">Toplam Lead</th>
+                    {allStatuses.map((status) => (
+                      <th key={status} className="text-center p-2 font-medium border-r min-w-[80px]">
+                        {status}
+                      </th>
+                    ))}
+                    <th className="text-center p-2 font-medium">Takip Kayıtları</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {personnelStatusData.map((person, index) => (
+                  {personnelStatusMatrix.map((person, index) => (
                     <tr key={person.name} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                      <td className="p-3 font-medium">{person.name}</td>
-                      <td className="text-center p-3">
-                        <Badge variant="outline" className="font-bold">{person.totalLeads}</Badge>
-                      </td>
-                      <td className="text-center p-3">
+                      <td className="p-2 font-medium border-r">{person.name}</td>
+                      <td className="text-center p-2 border-r font-bold">{person.totalLeads}</td>
+                      {allStatuses.map((status) => (
+                        <td key={status} className="text-center p-2 border-r">
+                          <span className={person[status] > 0 ? 'font-semibold text-blue-600' : 'text-gray-400'}>
+                            {person[status] || 0}
+                          </span>
+                        </td>
+                      ))}
+                      <td className="text-center p-2">
                         <Badge variant={person.takipteCount > 0 ? "default" : "secondary"}>
                           {person.takipteCount}
                         </Badge>
                       </td>
-                      <td className="p-3">
-                        <div className="flex flex-wrap gap-1 justify-center">
-                          {Object.entries(person.statusBreakdown).map(([status, count]) => (
-                            <Badge 
-                              key={status} 
-                              variant="outline" 
-                              className="text-xs"
-                              title={`${status}: ${count} leads`}
-                            >
-                              {status}: {count}
-                            </Badge>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="text-center p-3">
-                        {person.takipteCount > 0 ? (
-                          <Badge className="bg-green-100 text-green-800">✅ Aktif</Badge>
-                        ) : (
-                          <Badge variant="secondary">⚠️ Takip Yok</Badge>
-                        )}
-                      </td>
                     </tr>
                   ))}
                 </tbody>
+                {/* Totals Row */}
+                <tfoot>
+                  <tr className="border-t-2 bg-gray-200 font-bold">
+                    <td className="p-2 border-r">Toplam:</td>
+                    <td className="text-center p-2 border-r">
+                      {personnelStatusMatrix.reduce((sum, person) => sum + person.totalLeads, 0)}
+                    </td>
+                    {allStatuses.map((status) => (
+                      <td key={status} className="text-center p-2 border-r">
+                        {personnelStatusMatrix.reduce((sum, person) => sum + (person[status] || 0), 0)}
+                      </td>
+                    ))}
+                    <td className="text-center p-2">
+                      {personnelStatusMatrix.reduce((sum, person) => sum + person.takipteCount, 0)}
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
-              
-              {/* Status Legend */}
-              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                <h4 className="text-sm font-medium mb-2">Durum Açıklamaları:</h4>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-xs">
-                  {dashboardMetrics.statusData.map((status) => (
-                    <div key={status.name} className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                      <span className="truncate">{status.name}: {status.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500">
