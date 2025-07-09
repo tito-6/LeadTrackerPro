@@ -51,7 +51,8 @@ export default function UnifiedTakipteTab() {
   console.log('Unified Takipte Tab - Data loaded:', {
     takipteDataLength: takipteData.length,
     hasData,
-    sampleData: takipteData.slice(0, 2)
+    sampleData: takipteData.slice(0, 2),
+    allKeys: takipteData[0] ? Object.keys(takipteData[0]) : []
   });
 
   // Comprehensive analytics calculations
@@ -82,51 +83,51 @@ export default function UnifiedTakipteTab() {
     // Calculate comprehensive metrics
     const totalRecords = filteredData.length;
     
-    // Customer criteria analysis (using actual Kriter column)
+    // Customer criteria analysis (using correct field names)
     const kriterCounts = filteredData.reduce((acc, item) => {
-      const kriter = item['Kriter'] || 'Belirtilmemiş';
+      const kriter = item.kriter || item['Kriter'] || 'Belirtilmemiş';
       acc[kriter] = (acc[kriter] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    // Source analysis (Instagram, Facebook, etc.)
+    // Source analysis (using correct field names)
     const sourceCounts = filteredData.reduce((acc, item) => {
-      const source = item['İrtibat Müşteri Kaynağı'] || item['İletişim Müşteri Kaynağı'] || 'Bilinmiyor';
+      const source = item.irtibatMusteriKaynagi || item['İrtibat Müşteri Kaynağı'] || 'Bilinmiyor';
       acc[source] = (acc[source] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    // Meeting type analysis (using actual Görüşme Tipi column)
+    // Meeting type analysis (using correct field names)
     const meetingTypeCounts = filteredData.reduce((acc, item) => {
-      const meetingType = item['Görüşme Tipi'] || item['Müşteri Haberleşme Tipi'] || 'Belirtilmemiş';
+      const meetingType = item.gorusmeTipi || item['Görüşme Tipi'] || 'Belirtilmemiş';
       acc[meetingType] = (acc[meetingType] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    // Office performance (using actual Ofis column)
+    // Office performance (using correct field names)
     const officeCounts = filteredData.reduce((acc, item) => {
-      const office = item['Ofis'] || item['Randevu Ofisi'] || 'Ana Ofis';
+      const office = item.ofisName || item['Ofis'] || 'Ana Ofis';
       acc[office] = (acc[office] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    // Personnel analysis
+    // Personnel analysis (using correct field names)
     const personnelCounts = filteredData.reduce((acc, item) => {
-      const personnel = item['Personel Adı(203)'] || item['Hatırlatma Personeli'] || 'Atanmamış';
+      const personnel = item.assignedPersonnel || item['Müşteri Adı Soyadı(203)'] || 'Atanmamış';
       acc[personnel] = (acc[personnel] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    // Profession analysis
+    // Profession analysis (using correct field names)
     const professionCounts = filteredData.reduce((acc, item) => {
-      const profession = item['Meslek Adı'] || 'Belirtilmemiş';
+      const profession = item.meslekAdi || item['Meslek Adı'] || 'Belirtilmemiş';
       acc[profession] = (acc[profession] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    // Result analysis
+    // Result analysis (using correct field names)
     const resultCounts = filteredData.reduce((acc, item) => {
-      const result = item['Son Sonuç Adı'] || 'Devam Ediyor';
+      const result = item.sonSonuc || item['Son Sonuç'] || 'Devam Ediyor';
       acc[result] = (acc[result] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -137,9 +138,9 @@ export default function UnifiedTakipteTab() {
     let finalReminderCount = 0;
     
     filteredData.forEach(item => {
-      const hasReminder = item['Hatırlatma Var Mı'] === 'TRUE';
-      const reminderDate = item['Hatırlatma Tarihi'];
-      const isFinal = item['Hatırlatma Son Mu ?'] === 'TRUE';
+      const hasReminder = item.hatirlatmaVarMi === true || item['Hatırlatma Var Mı'] === 'TRUE';
+      const reminderDate = item.hatirlatmaTarihi || item['Hatırlatma Tarihi'];
+      const isFinal = item.hatirlatmaSonMu === true || item['Hatırlatma Son Mu ?'] === 'TRUE';
       
       if (hasReminder) reminderCount++;
       if (isFinal) finalReminderCount++;
@@ -148,9 +149,9 @@ export default function UnifiedTakipteTab() {
 
     // Average call duration analysis
     const totalDuration = filteredData.reduce((acc, item) => {
-      // Convert time string to minutes if needed, or use score as proxy
-      const score = parseInt(item['Puan'] || '0');
-      return acc + score;
+      // Use actual call duration field
+      const duration = item.konusmaSuresi || parseInt(item['Konuşma Süresi'] || '0');
+      return acc + (typeof duration === 'number' ? duration : 0);
     }, 0);
     const averageResponseTime = totalRecords > 0 ? Math.round(totalDuration / totalRecords) : 0;
 
