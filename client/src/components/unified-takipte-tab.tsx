@@ -61,92 +61,70 @@ export default function UnifiedTakipteTab() {
     
     if (selectedPersonnel !== 'all') {
       filteredData = filteredData.filter(item => 
-        item['Atanan Personel'] === selectedPersonnel || item.assignedPersonnel === selectedPersonnel
+        item['Personel Adı(203)'] === selectedPersonnel || item['Hatırlatma Personeli'] === selectedPersonnel
       );
     }
     
     if (selectedOffice !== 'all') {
       filteredData = filteredData.filter(item => 
-        item['İnfo Form Geliş Yeri'] === selectedOffice || item.ofis === selectedOffice
+        item['Ofis'] === selectedOffice
       );
     }
     
     if (selectedKriter !== 'all') {
       filteredData = filteredData.filter(item => 
-        item['İlk Müşteri Kaynağı'] === selectedKriter || item.kriter === selectedKriter
+        item['Kriter'] === selectedKriter || item['İrtibat Müşteri Kaynağı'] === selectedKriter
       );
     }
 
     // Calculate comprehensive metrics
     const totalRecords = filteredData.length;
     
-    // Customer criteria analysis (based on WebForm Note for lead type detection)
+    // Customer criteria analysis (using actual Kriter column)
     const kriterCounts = filteredData.reduce((acc, item) => {
-      const webFormNote = item['WebForm Notu'] || '';
-      let kriter = 'Belirtilmemiş';
-      
-      if (webFormNote.toLowerCase().includes('kiralama') || webFormNote.toLowerCase().includes('kira')) {
-        kriter = 'Kira Müşterisi';
-      } else if (webFormNote.toLowerCase().includes('satış') || webFormNote.toLowerCase().includes('satis')) {
-        kriter = 'Satış Müşterisi';
-      }
-      
+      const kriter = item['Kriter'] || 'Belirtilmemiş';
       acc[kriter] = (acc[kriter] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
     // Source analysis (Instagram, Facebook, etc.)
     const sourceCounts = filteredData.reduce((acc, item) => {
-      const source = item['İlk Müşteri Kaynağı'] || item['Form Müşteri Kaynağı'] || 'Bilinmiyor';
+      const source = item['İrtibat Müşteri Kaynağı'] || item['İletişim Müşteri Kaynağı'] || 'Bilinmiyor';
       acc[source] = (acc[source] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    // Meeting type analysis (based on conversation results)
+    // Meeting type analysis (using actual Görüşme Tipi column)
     const meetingTypeCounts = filteredData.reduce((acc, item) => {
-      const hasPhoneCall = item['GERİ DÖNÜŞ YAPILDI MI? (Müşteri Arandı mı?)'] === 'Evet';
-      const hasEmailSent = item['GERİ DÖNÜŞ YAPILDI MI? (Müşteriye Mail Gönderildi mi?)'] === 'Evet';
-      const hasInPersonMeeting = item['Birebir Görüşme Yapıldı mı ?'] === 'Evet';
-      
-      if (hasInPersonMeeting) {
-        acc['Yüz Yüze Görüşme'] = (acc['Yüz Yüze Görüşme'] || 0) + 1;
-      } else if (hasPhoneCall && hasEmailSent) {
-        acc['Telefon + Email'] = (acc['Telefon + Email'] || 0) + 1;
-      } else if (hasPhoneCall) {
-        acc['Telefon Araması'] = (acc['Telefon Araması'] || 0) + 1;
-      } else if (hasEmailSent) {
-        acc['Email İletişimi'] = (acc['Email İletişimi'] || 0) + 1;
-      } else {
-        acc['İletişim Yok'] = (acc['İletişim Yok'] || 0) + 1;
-      }
-      
+      const meetingType = item['Görüşme Tipi'] || item['Müşteri Haberleşme Tipi'] || 'Belirtilmemiş';
+      acc[meetingType] = (acc[meetingType] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    // Office performance (based on location data)
+    // Office performance (using actual Ofis column)
     const officeCounts = filteredData.reduce((acc, item) => {
-      const office = item['İnfo Form Geliş Yeri'] || item['İnfo Form Geliş Yeri 2'] || 'Ana Ofis';
+      const office = item['Ofis'] || item['Randevu Ofisi'] || 'Ana Ofis';
       acc[office] = (acc[office] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    // Personnel performance
+    // Personnel analysis
     const personnelCounts = filteredData.reduce((acc, item) => {
-      const personnel = item['Atanan Personel'] || item.assignedPersonnel || 'Atanmamış';
+      const personnel = item['Personel Adı(203)'] || item['Hatırlatma Personeli'] || 'Atanmamış';
       acc[personnel] = (acc[personnel] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
     // Profession analysis
     const professionCounts = filteredData.reduce((acc, item) => {
-      const profession = item['Meslek Adı'] || item.meslekAdi || 'Belirtilmemiş';
+      const profession = item['Meslek Adı'] || 'Belirtilmemiş';
       acc[profession] = (acc[profession] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
     // Result analysis
     const resultCounts = filteredData.reduce((acc, item) => {
-      const result = item['SON GORUSME SONUCU'] || item['Dönüş Görüşme Sonucu'] || 'Devam Ediyor';
+      const result = item['Son Sonuç Adı'] || 'Devam Ediyor';
       acc[result] = (acc[result] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -157,21 +135,22 @@ export default function UnifiedTakipteTab() {
     let finalReminderCount = 0;
     
     filteredData.forEach(item => {
-      const hasReminder = item['Randevu Tarihi'] && item['Randevu Tarihi'] !== '';
-      const reminderDate = item['Randevu Tarihi'];
-      const waitingDays = parseInt(item['Kaç Gündür Geri Dönüş Bekliyor'] || '0');
+      const hasReminder = item['Hatırlatma Var Mı'] === 'TRUE';
+      const reminderDate = item['Hatırlatma Tarihi'];
+      const isFinal = item['Hatırlatma Son Mu ?'] === 'TRUE';
       
       if (hasReminder) reminderCount++;
-      if (waitingDays > 5) finalReminderCount++;
+      if (isFinal) finalReminderCount++;
       if (reminderDate && new Date(reminderDate) < new Date()) overdueCount++;
     });
 
-    // Average response time analysis
-    const totalResponseTime = filteredData.reduce((acc, item) => {
-      const responseTime = parseInt(item['Kaç Günde Geri Dönüş Yapılmış (Süre)'] || '0');
-      return acc + responseTime;
+    // Average call duration analysis
+    const totalDuration = filteredData.reduce((acc, item) => {
+      // Convert time string to minutes if needed, or use score as proxy
+      const score = parseInt(item['Puan'] || '0');
+      return acc + score;
     }, 0);
-    const averageResponseTime = totalRecords > 0 ? Math.round(totalResponseTime / totalRecords) : 0;
+    const averageResponseTime = totalRecords > 0 ? Math.round(totalDuration / totalRecords) : 0;
 
     // Convert to chart data format
     const kriterData = Object.entries(kriterCounts).map(([name, value]) => ({
@@ -218,7 +197,7 @@ export default function UnifiedTakipteTab() {
 
     return {
       totalRecords,
-      averageDuration,
+      averageResponseTime,
       reminderStats: {
         total: reminderCount,
         overdue: overdueCount,
@@ -233,14 +212,14 @@ export default function UnifiedTakipteTab() {
       professionData,
       resultData,
       // Get unique values for filters
-      uniquePersonnel: [...new Set(filteredData.map(item => 
-        item['Atanan Personel'] || item.assignedPersonnel || 'Atanmamış'
+      uniquePersonnel: [...new Set(takipteData.map(item => 
+        item['Personel Adı(203)'] || item['Hatırlatma Personeli'] || 'Atanmamış'
       ))],
-      uniqueOffices: [...new Set(filteredData.map(item => 
-        item['Ofis'] || item.ofis || 'Ana Ofis'
+      uniqueOffices: [...new Set(takipteData.map(item => 
+        item['Ofis'] || 'Ana Ofis'
       ))],
-      uniqueKritler: [...new Set(filteredData.map(item => 
-        item['Kriter'] || item.kriter || 'Belirtilmemiş'
+      uniqueKritler: [...new Set(takipteData.map(item => 
+        item['Kriter'] || item['İrtibat Müşteri Kaynağı'] || 'Belirtilmemiş'
       ))]
     };
   }, [takipteData, selectedPersonnel, selectedOffice, selectedKriter, hasData]);
