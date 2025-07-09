@@ -11,6 +11,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { TrendingUp, Users, Target, AlertCircle, Calendar, PhoneCall, Clock, Star } from 'lucide-react';
 import InteractiveChart from './interactive-chart';
 import { DataTable } from "@/components/ui/data-table";
+import { MasterDataTable } from "@/components/ui/master-data-table";
 
 export default function EnhancedOverviewDashboardTab() {
   const [chartType, setChartType] = useState<'pie' | 'bar' | 'line'>('pie');
@@ -688,25 +689,26 @@ export default function EnhancedOverviewDashboardTab() {
               </div>
 
               {/* Master Data Table for Takipte Records */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="text-lg font-semibold mb-3 text-gray-800">📋 Ana Veri Tablosu - Tüm Takipte Kayıtları</h4>
-                <DataTable
-                  data={takipteData.map((record, index) => ({
-                    'Sıra': index + 1,
-                    'Müşteri Adı': record['Müşteri Adı Soyadı(203)'] || 'Bilinmiyor',
-                    'Kriter': record['Müşteri Haberleşme Tipi'] || record['Görüşme Tipi'] || 'Belirtilmemiş',
-                    'İrtibat Kaynağı': record['Acenta Adı'] || record['Müşteri Kaynağı'] || 'Bilinmiyor',
-                    'Görüşme Tipi': record['Görüşme Tipi'] || 'Belirtilmemiş',
-                    'Ofis': record['Ofis'] || 'Belirtilmemiş',
-                    'Meslek': record['Meslek Adı'] || 'Belirtilmemiş',
-                    'Son Sonuç': record['Son Sonuç Adı'] || 'Bekleniyor',
-                    'Atanan Personel': record['Personel Adı(203)'] || record['Hatırlatma Personeli'] || 'Atanmamış',
-                    'Güncelleme Tarihi': record['Tarih'] || record['Hatırlatma Tarihi'] || 'Bilinmiyor'
-                  }))}
-                  title="Detaylı Takipte Verileri"
-                  className="bg-white"
-                />
-              </div>
+              <MasterDataTable
+                title="📋 Ana Veri Tablosu - Tüm Takipte Kayıtları"
+                data={takipteData}
+                columns={[
+                  { key: 'Müşteri Adı Soyadı(203)', label: 'Müşteri Adı', type: 'text' },
+                  { key: 'Tarih', label: 'Tarih', type: 'date' },
+                  { key: 'Personel Adı(203)', label: 'Personel', type: 'badge' },
+                  { key: 'Ofis', label: 'Ofis', type: 'badge' },
+                  { key: 'Kriter', label: 'Kriter', type: 'badge' },
+                  { key: 'İrtibat Müşteri Kaynağı', label: 'Kaynak', type: 'text' },
+                  { key: 'Görüşme Tipi', label: 'Görüşme Tipi', type: 'text' },
+                  { key: 'Son Sonuç Adı', label: 'Son Sonuç', type: 'badge' },
+                  { key: 'Hatırlatma Var Mı', label: 'Hatırlatma', type: 'badge' },
+                  { key: 'Hatırlatma Tarihi', label: 'Hatırlatma Tarihi', type: 'date' },
+                  { key: 'Puan', label: 'Puan', type: 'number' },
+                  { key: 'Meslek Adı', label: 'Meslek', type: 'text' },
+                  { key: 'Cep Tel', label: 'Telefon', type: 'text' },
+                  { key: 'Email', label: 'Email', type: 'text' }
+                ]}
+              />
             </div>
           </CardContent>
         </Card>
