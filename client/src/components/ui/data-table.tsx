@@ -6,28 +6,36 @@ import { Download, Eye, EyeOff } from "lucide-react";
 
 interface DataTableProps {
   title: string;
-  data: Array<{
-    name: string;
-    value: number;
-    percentage: number;
-  }>;
-  totalRecords: number;
+  data: Array<Record<string, any>>;
+  totalRecords?: number;
   onExport?: () => void;
+  className?: string;
 }
 
-export function DataTable({ title, data, totalRecords, onExport }: DataTableProps) {
+export function DataTable({ title, data, totalRecords, onExport, className }: DataTableProps) {
   const [isVisible, setIsVisible] = useState(false);
 
-  const exportToCSV = () => {
-    const csvData = data.map(row => ({
-      'Kategori': row.name,
-      'Sayı': row.value,
-      'Yüzde': `${row.percentage}%`
-    }));
+  if (!data || data.length === 0) {
+    return (
+      <Card className={`mt-4 ${className || ''}`}>
+        <CardHeader>
+          <CardTitle className="text-lg font-medium flex items-center gap-2">
+            📊 {title} - Özet Tablosu
+            <Badge variant="outline">Veri Yok</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-500">Gösterilecek veri bulunamadı.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
+  const exportToCSV = () => {
+    const headers = Object.keys(data[0]);
     const csvContent = [
-      Object.keys(csvData[0]).join(','),
-      ...csvData.map(row => Object.values(row).join(','))
+      headers.join(','),
+      ...data.map(row => headers.map(header => `"${row[header] || ''}"`).join(','))
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -44,17 +52,10 @@ export function DataTable({ title, data, totalRecords, onExport }: DataTableProp
   };
 
   const exportToExcel = () => {
-    const headers = ['Kategori', 'Sayı', 'Yüzde', 'Toplam İçindeki Oran'];
-    const rows = data.map(row => [
-      row.name,
-      row.value,
-      `${row.percentage}%`,
-      `${row.value}/${totalRecords}`
-    ]);
-
+    const headers = Object.keys(data[0]);
     let excelContent = headers.join('\t') + '\n';
-    rows.forEach(row => {
-      excelContent += row.join('\t') + '\n';
+    data.forEach(row => {
+      excelContent += headers.map(header => row[header] || '').join('\t') + '\n';
     });
 
     const blob = new Blob([excelContent], { type: 'application/vnd.ms-excel' });
@@ -68,13 +69,15 @@ export function DataTable({ title, data, totalRecords, onExport }: DataTableProp
     document.body.removeChild(link);
   };
 
+  const headers = data.length > 0 ? Object.keys(data[0]) : [];
+
   return (
-    <Card className="mt-4">
+    <Card className={`mt-4 ${className || ''}`}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-medium flex items-center gap-2">
             📊 {title} - Özet Tablosu
-            <Badge variant="outline">{data.length} kategori</Badge>
+            <Badge variant="outline">{data.length} kayıt</Badge>
           </CardTitle>
           <div className="flex gap-2">
             <Button
@@ -107,46 +110,34 @@ export function DataTable({ title, data, totalRecords, onExport }: DataTableProp
           </div>
         </div>
       </CardHeader>
-      
       {isVisible && (
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse border border-gray-200">
+            <table className="w-full border-collapse border border-gray-300">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="border border-gray-200 px-4 py-2 text-left font-medium">Kategori</th>
-                  <th className="border border-gray-200 px-4 py-2 text-right font-medium">Sayı</th>
-                  <th className="border border-gray-200 px-4 py-2 text-right font-medium">Yüzde</th>
-                  <th className="border border-gray-200 px-4 py-2 text-center font-medium">Oran</th>
+                  {headers.map((header, index) => (
+                    <th key={index} className="border border-gray-300 px-3 py-2 text-left font-medium">
+                      {header}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {data.map((row, index) => (
-                  <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="border border-gray-200 px-4 py-2">{row.name}</td>
-                    <td className="border border-gray-200 px-4 py-2 text-right font-mono">{row.value}</td>
-                    <td className="border border-gray-200 px-4 py-2 text-right">
-                      <Badge variant="secondary">{row.percentage}%</Badge>
-                    </td>
-                    <td className="border border-gray-200 px-4 py-2 text-center text-sm text-gray-600">
-                      {row.value}/{totalRecords}
-                    </td>
+                  <tr key={index} className="hover:bg-gray-50">
+                    {headers.map((header, headerIndex) => (
+                      <td key={headerIndex} className="border border-gray-300 px-3 py-2">
+                        {row[header] || '-'}
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
-              <tfoot>
-                <tr className="bg-blue-50 font-medium">
-                  <td className="border border-gray-200 px-4 py-2">TOPLAM</td>
-                  <td className="border border-gray-200 px-4 py-2 text-right font-mono">{totalRecords}</td>
-                  <td className="border border-gray-200 px-4 py-2 text-right">
-                    <Badge>100%</Badge>
-                  </td>
-                  <td className="border border-gray-200 px-4 py-2 text-center text-sm text-gray-600">
-                    {totalRecords}/{totalRecords}
-                  </td>
-                </tr>
-              </tfoot>
             </table>
+          </div>
+          <div className="mt-2 text-xs text-gray-500 text-center">
+            Toplam {data.length} kayıt {totalRecords ? `• ${totalRecords} toplam veri` : ''}
           </div>
         </CardContent>
       )}

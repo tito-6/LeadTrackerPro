@@ -734,7 +734,11 @@ export default function EnhancedOverviewDashboardTab() {
                     />
                     <DataTable
                       title="Lead Durum Dağılımı"
-                      data={dashboardMetrics.statusData}
+                      data={dashboardMetrics.statusData.map(item => ({
+                        'Durum': item.name,
+                        'Adet': item.value,
+                        'Yüzde': `%${item.percentage}`
+                      }))}
                       totalRecords={dashboardMetrics.totalLeads}
                     />
                   </>
@@ -759,7 +763,11 @@ export default function EnhancedOverviewDashboardTab() {
                     />
                     <DataTable
                       title="Lead Tipi Dağılımı"
-                      data={dashboardMetrics.typeData}
+                      data={dashboardMetrics.typeData.map(item => ({
+                        'Tip': item.name,
+                        'Adet': item.value,
+                        'Yüzde': `%${item.percentage}`
+                      }))}
                       totalRecords={dashboardMetrics.totalLeads}
                     />
                   </>
