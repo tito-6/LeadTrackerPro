@@ -170,14 +170,24 @@ export default function DataEntryTab() {
       return response.json();
     },
     onSuccess: (data) => {
+      console.log('Takipte import success:', data);
       queryClient.invalidateQueries({ queryKey: ['/api/takipte'] });
       queryClient.invalidateQueries({ queryKey: ['/api/enhanced-stats'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
       setSecondaryFile(null);
-      toast({
-        title: "Takip Dosyası Yüklendi",
-        description: `${data.imported} takip kaydı başarıyla işlendi.`,
-      });
+      
+      if (data.imported === 0) {
+        toast({
+          title: "Uyarı",
+          description: "Takip dosyası yüklendi ancak 0 kayıt işlendi. Dosya formatını kontrol edin.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Takip Dosyası Yüklendi",
+          description: `${data.imported} takip kaydı başarıyla işlendi.`,
+        });
+      }
     },
     onError: (error: any) => {
       toast({

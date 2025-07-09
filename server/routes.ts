@@ -816,10 +816,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Debug: log first few items to see the structure
+      console.log('Sample data structure:', JSON.stringify(jsonData.slice(0, 1), null, 2));
+      console.log('Available columns:', Object.keys(jsonData[0] || {}));
+      
       // Store in memory (in production, this would go to database)
-      takipteStorage = jsonData.filter(item => 
-        item['Müşteri Adı Soyadı'] || item['Müşteri Adı'] || item.customerName
-      );
+      // More flexible filtering - accept any row that has at least one meaningful column
+      takipteStorage = jsonData.filter(item => {
+        const hasCustomerInfo = item['Müşteri Adı Soyadı'] || item['Müşteri Adı'] || item.customerName || item['Customer Name'];
+        const hasId = item['Müşteri ID'] || item['İletişim ID'] || item.customerId || item.contactId;
+        const hasAnyData = Object.keys(item).some(key => item[key] && item[key].toString().trim() !== '');
+        
+        return hasCustomerInfo || hasId || hasAnyData;
+      });
       
       console.log(`Processed ${takipteStorage.length} takipte records`);
       
