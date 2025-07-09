@@ -305,7 +305,7 @@ export default function EnhancedOverviewDashboardTab() {
         </TabsList>
 
         <TabsContent value="status" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             <Card>
               <CardHeader>
                 <CardTitle>Lead Durum Dağılımı</CardTitle>
@@ -317,7 +317,7 @@ export default function EnhancedOverviewDashboardTab() {
                     title="Durum Dağılımı"
                     data={dashboardMetrics.statusData}
                     chartType={chartType}
-                    height={300}
+                    height={500}
                     colors={colors}
                   />
                 )}
@@ -335,7 +335,7 @@ export default function EnhancedOverviewDashboardTab() {
                     title="Tip Dağılımı"
                     data={dashboardMetrics.typeData}
                     chartType={chartType}
-                    height={300}
+                    height={500}
                     colors={['#10b981', '#f59e0b']}
                   />
                 )}

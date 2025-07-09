@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
 import { Lead, SalesRep } from '@shared/schema';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
-import { Calendar, Filter, User, TrendingUp } from 'lucide-react';
+import { Calendar, Filter, User, TrendingUp, Users, Target, Star, PhoneCall } from 'lucide-react';
+import InteractiveChart from './interactive-chart';
 
 interface SalespersonPerformanceTabProps {
   salespersonId: number;
@@ -32,6 +34,8 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
     month: '',
     year: ''
   });
+  const [chartType, setChartType] = useState<'pie' | 'bar' | 'line'>('pie');
+  const [selectedProject, setSelectedProject] = useState<string>('all');
 
   const { data: leads = [] } = useQuery<Lead[]>({
     queryKey: ['/api/leads', dateFilters],
@@ -53,8 +57,20 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
     queryKey: ['/api/status-values'],
   });
 
+  // Fetch enhanced stats for unified data
+  const { data: enhancedStats } = useQuery({
+    queryKey: ['/api/enhanced-stats'],
+    refetchInterval: 5000,
+  });
+
+  // Fetch takipte data for complete analysis
+  const { data: takipteData = [] } = useQuery({
+    queryKey: ['/api/takipte'],
+  });
+
   const salesperson = salesReps.find(rep => rep.id === salespersonId);
   const salespersonLeads = leads.filter(lead => lead.assignedPersonnel === salesperson?.name);
+  const hasSecondaryData = takipteData.length > 0;
 
   if (!salesperson) {
     return <div>Personel bulunamadı</div>;
@@ -107,195 +123,178 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>{salesperson.name} - Performans Detayları</span>
-            <Badge variant={salesTargetPercentage >= 100 ? "default" : "secondary"}>
-              Hedef: {salesTargetPercentage}%
-            </Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{salespersonLeads.length}</div>
-              <div className="text-sm text-muted-foreground">Toplam Lead</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{salesStats.satildi + rentalStats.satildi}</div>
-              <div className="text-sm text-muted-foreground">Toplam Satış</div>
-            </div>
-            <div className="text-center">
-              <Progress value={salesTargetPercentage} className="mb-2" />
-              <div className="text-sm text-muted-foreground">Hedef İlerlemesi</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Header with unified design */}
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">📊 {salesperson.name} - Performans Raporu</h2>
+          <p className="text-gray-600 mt-1">🤖 AI-destekli performans analizi ve satış raporları</p>
+        </div>
+        <div className="flex gap-2">
+          <Badge variant="outline">📊 Real-time: {salespersonLeads.length}</Badge>
+          <Badge variant="outline">🎯 Hedef: {salesTargetPercentage}%</Badge>
+          {hasSecondaryData && <Badge variant="outline">🔗 Dual-Source</Badge>}
+        </div>
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Sales Leads Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Satış Lead Raporu</CardTitle>
+      {/* KPI Cards matching main dashboard */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center">
+              <Users className="mr-2 h-4 w-4" />
+              📊 Toplam Lead
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {/* Sales Stats Table */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>Toplam:</span>
-                    <span className="font-medium">{salesStats.total}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Yeni:</span>
-                    <span className="font-medium text-blue-600">{salesStats.yeni}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Takipte:</span>
-                    <span className="font-medium text-yellow-600">{salesStats.takipte}</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>Olumsuz:</span>
-                    <span className="font-medium text-red-600">{salesStats.olumsuz}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Toplantı:</span>
-                    <span className="font-medium text-indigo-600">{salesStats.toplanti}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Satış:</span>
-                    <span className="font-medium text-green-600">{salesStats.satildi}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Sales Pie Chart */}
-              {salesPieData.length > 0 && (
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={salesPieData}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={60}
-                        dataKey="value"
-                        label={({ name, value }) => `${value}`}
-                      >
-                        {salesPieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </div>
+            <div className="text-2xl font-bold">{salespersonLeads.length}</div>
+            <p className="text-blue-100 text-xs">Atanmış lead sayısı</p>
           </CardContent>
         </Card>
 
-        {/* Rental Leads Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Kiralama Lead Raporu</CardTitle>
+        <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center">
+              <Target className="mr-2 h-4 w-4" />
+              🎯 Hedef Progress
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {/* Rental Stats Table */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>Toplam:</span>
-                    <span className="font-medium">{rentalStats.total}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Yeni:</span>
-                    <span className="font-medium text-blue-600">{rentalStats.yeni}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Takipte:</span>
-                    <span className="font-medium text-yellow-600">{rentalStats.takipte}</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>Olumsuz:</span>
-                    <span className="font-medium text-red-600">{rentalStats.olumsuz}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Toplantı:</span>
-                    <span className="font-medium text-indigo-600">{rentalStats.toplanti}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Satış:</span>
-                    <span className="font-medium text-green-600">{rentalStats.satildi}</span>
-                  </div>
-                </div>
-              </div>
+            <div className="text-2xl font-bold">{salesTargetPercentage}%</div>
+            <Progress value={salesTargetPercentage} className="mt-2 h-2" />
+          </CardContent>
+        </Card>
 
-              {/* Rental Pie Chart */}
-              {rentalPieData.length > 0 && (
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={rentalPieData}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={60}
-                        dataKey="value"
-                        label={({ name, value }) => `${value}`}
-                      >
-                        {rentalPieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </div>
+        <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center">
+              <Star className="mr-2 h-4 w-4" />
+              💼 Satış Leads
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{salesStats.total}</div>
+            <p className="text-purple-100 text-xs">Satış odaklı leads</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center">
+              <PhoneCall className="mr-2 h-4 w-4" />
+              🏠 Kiralama Leads
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{rentalStats.total}</div>
+            <p className="text-orange-100 text-xs">Kiralama odaklı leads</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Son Aktiviteler</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {salespersonLeads.slice(0, 5).map((lead, index) => (
-              <div key={index} className="flex items-center justify-between p-2 border rounded">
-                <div>
-                  <div className="font-medium">{lead.customerName}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {lead.leadType === 'satis' ? 'Satış' : 'Kiralama'} - {lead.requestDate}
-                  </div>
-                </div>
-                <Badge variant={
-                  lead.status === 'satildi' ? 'default' :
-                  lead.status === 'olumsuz' ? 'destructive' :
-                  lead.status === 'takipte' ? 'secondary' : 'outline'
-                }>
-                  {statusConfig[lead.status as keyof typeof statusConfig]?.label || lead.status}
-                </Badge>
-              </div>
-            ))}
+      {/* Chart Type Selector */}
+      <div className="flex justify-between items-center bg-gray-50 p-4 rounded-lg">
+        <div className="flex gap-2">
+          <Select value={chartType} onValueChange={(value: 'pie' | 'bar' | 'line') => setChartType(value)}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pie">🥧 Pasta Grafik</SelectItem>
+              <SelectItem value="bar">📊 Sütun Grafik</SelectItem>
+              <SelectItem value="line">📈 Çizgi Grafik</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex gap-2">
+          <Badge variant="outline">📊 Real-time</Badge>
+          <Badge variant="outline">🤖 AI-Power</Badge>
+        </div>
+      </div>
+
+      {/* Analytics Tabs */}
+      <Tabs defaultValue="performance" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="performance">Performans Analizi</TabsTrigger>
+          <TabsTrigger value="sales">Satış Analizi</TabsTrigger>
+          <TabsTrigger value="rental">Kiralama Analizi</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="performance" className="space-y-4">
+          <div className="grid grid-cols-1 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>📈 Genel Performans Dağılımı</CardTitle>
+                <CardDescription>Tüm leadlerin durum analizi</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <InteractiveChart
+                  title="Genel Performance"
+                  data={[
+                    ...Object.entries(salesStats).filter(([key]) => key !== 'total').map(([key, value]) => ({
+                      name: `Satış ${statusConfig[key]?.label || key}`,
+                      value: value as number,
+                      percentage: Math.round(((value as number) / salespersonLeads.length) * 100)
+                    })),
+                    ...Object.entries(rentalStats).filter(([key]) => key !== 'total').map(([key, value]) => ({
+                      name: `Kiralama ${statusConfig[key]?.label || key}`,
+                      value: value as number,
+                      percentage: Math.round(((value as number) / salespersonLeads.length) * 100)
+                    }))
+                  ].filter(item => item.value > 0)}
+                  chartType={chartType}
+                  height={500}
+                />
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
+
+        <TabsContent value="sales" className="space-y-4">
+          <div className="grid grid-cols-1 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>💼 Satış Lead Dağılımı</CardTitle>
+                <CardDescription>Satış leadlerinin durum analizi</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <InteractiveChart
+                  title="Satış Performance"
+                  data={Object.entries(salesStats).filter(([key]) => key !== 'total').map(([key, value]) => ({
+                    name: statusConfig[key]?.label || key,
+                    value: value as number,
+                    percentage: Math.round(((value as number) / salesStats.total) * 100)
+                  })).filter(item => item.value > 0)}
+                  chartType={chartType}
+                  height={500}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="rental" className="space-y-4">
+          <div className="grid grid-cols-1 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>🏠 Kiralama Lead Dağılımı</CardTitle>
+                <CardDescription>Kiralama leadlerinin durum analizi</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <InteractiveChart
+                  title="Kiralama Performance"
+                  data={Object.entries(rentalStats).filter(([key]) => key !== 'total').map(([key, value]) => ({
+                    name: statusConfig[key]?.label || key,
+                    value: value as number,
+                    percentage: Math.round(((value as number) / rentalStats.total) * 100)
+                  })).filter(item => item.value > 0)}
+                  chartType={chartType}
+                  height={500}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
