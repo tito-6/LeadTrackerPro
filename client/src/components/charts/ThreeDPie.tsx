@@ -194,11 +194,10 @@ export default function ThreeDPie({
   useEffect(() => {
     const chart = chartRef.current;
     if (chart) {
-      // Apply basic 3D effect using CSS transforms
+      // Apply subtle 3D effect without blurring
       const canvas = chart.canvas;
       if (canvas) {
-        canvas.style.filter = 'drop-shadow(3px 3px 6px rgba(0,0,0,0.4))';
-        canvas.style.transform = 'perspective(400px) rotateX(5deg)';
+        canvas.style.filter = 'drop-shadow(2px 2px 4px rgba(0,0,0,0.2))';
         canvas.style.transition = 'all 0.3s ease';
       }
     }

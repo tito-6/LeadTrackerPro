@@ -8,6 +8,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Lead, SalesRep } from "@shared/schema";
 import { TrendingDown, Users, AlertCircle, BarChart3, PieChart } from "lucide-react";
 import InteractiveChart from "./interactive-chart";
+import { DataTable } from "@/components/ui/data-table";
+import SmartReasonsTable from "@/components/ui/smart-reasons-table";
 
 export default function OlumsuzAnaliziTab() {
   const { data: leads = [], isLoading } = useQuery<Lead[]>({
@@ -332,7 +334,29 @@ export default function OlumsuzAnaliziTab() {
           height={400}
           chartType={chartType}
         />
+        
+        {/* Statistics table under the chart */}
+        <div className="mt-6">
+          <DataTable
+            data={currentChartData.map(item => ({
+              [groupByOptions.find(opt => opt.value === groupBy)?.label || 'Kategori']: item.name,
+              'Adet': item.value,
+              'Yüzde': `%${item.percentage}`
+            }))}
+            title={`${groupByOptions.find(opt => opt.value === groupBy)?.label} İstatistikleri`}
+            className="border-t border-gray-200 dark:border-gray-700"
+          />
+        </div>
       </Card>
+
+      {/* Smart Reasons Table for Pie Chart Mode */}
+      {groupBy === 'reason' && reasonDistribution.length > 0 && chartType === 'pie' && reasonDistribution.length > 8 && (
+        <SmartReasonsTable
+          data={reasonDistribution}
+          title="Olumsuzluk Nedenleri Detayları"
+          className="mb-6"
+        />
+      )}
 
       {/* Detailed Breakdown */}
       {groupBy === 'reason' && reasonDistribution.length > 0 && (
