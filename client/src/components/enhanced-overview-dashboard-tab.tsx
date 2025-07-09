@@ -711,8 +711,8 @@ export default function EnhancedOverviewDashboardTab() {
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="status">Durum Analizi</TabsTrigger>
           <TabsTrigger value="personnel">Personel Performansı</TabsTrigger>
-          <TabsTrigger value="sources" disabled={!hasSecondaryData}>Kaynak Analizi</TabsTrigger>
-          <TabsTrigger value="advanced" disabled={!hasSecondaryData}>Gelişmiş Analiz</TabsTrigger>
+          <TabsTrigger value="sources">🎯 Kaynak Analizi</TabsTrigger>
+          <TabsTrigger value="advanced">🧠 Gelişmiş Analiz</TabsTrigger>
         </TabsList>
 
         <TabsContent value="status" className="space-y-4">
@@ -795,91 +795,384 @@ export default function EnhancedOverviewDashboardTab() {
 
         <TabsContent value="sources" className="space-y-4">
           {hasSecondaryData && takipteAnalytics ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Müşteri Kaynağı Analizi</CardTitle>
-                  <CardDescription>Lead kaynaklarının dağılımı</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <InteractiveChart
-                    title="Kaynak Dağılımı"
-                    data={takipteAnalytics.sourceData}
-                    chartType={chartType}
-                    height={300}
-                    colors={colors}
-                  />
-                </CardContent>
-              </Card>
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>🎯 Müşteri Kaynağı Analizi</CardTitle>
+                    <CardDescription>Lead kaynaklarının dağılımı</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <InteractiveChart
+                      title="Kaynak Dağılımı"
+                      data={takipteAnalytics.sourceData}
+                      chartType={chartType}
+                      height={300}
+                      colors={colors}
+                    />
+                    <DataTable
+                      data={takipteAnalytics.sourceData.map(item => ({
+                        'Kaynak': item.name,
+                        'Adet': item.value,
+                        'Yüzde': `%${item.percentage}`
+                      }))}
+                      title="Kaynak Detayları"
+                      className="mt-4"
+                    />
+                  </CardContent>
+                </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Görüşme Tipi Dağılımı</CardTitle>
-                  <CardDescription>İletişim yöntemlerinin analizi</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <InteractiveChart
-                    title="Görüşme Tipleri"
-                    data={takipteAnalytics.meetingTypeData}
-                    chartType={chartType}
-                    height={300}
-                    colors={colors}
-                  />
-                </CardContent>
-              </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>📞 Görüşme Tipi Dağılımı</CardTitle>
+                    <CardDescription>İletişim yöntemlerinin analizi</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <InteractiveChart
+                      title="Görüşme Tipleri"
+                      data={takipteAnalytics.meetingTypeData}
+                      chartType={chartType}
+                      height={300}
+                      colors={colors}
+                    />
+                    <DataTable
+                      data={takipteAnalytics.meetingTypeData.map(item => ({
+                        'Görüşme Tipi': item.name,
+                        'Adet': item.value,
+                        'Yüzde': `%${item.percentage}`
+                      }))}
+                      title="Görüşme Detayları"
+                      className="mt-4"
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Lead Source from Main Data */}
+              {dashboardMetrics?.leads && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>📈 Ana Lead Kaynak Analizi</CardTitle>
+                    <CardDescription>Asıl lead dosyasından kaynak verileri</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart data={Array.from(new Set(dashboardMetrics.leads.map(l => l.firstCustomerSource || 'Bilinmiyor')))
+                        .map(source => ({
+                          name: source,
+                          value: dashboardMetrics.leads.filter(l => (l.firstCustomerSource || 'Bilinmiyor') === source).length,
+                          percentage: Math.round((dashboardMetrics.leads.filter(l => (l.firstCustomerSource || 'Bilinmiyor') === source).length / dashboardMetrics.leads.length) * 100)
+                        }))
+                        .sort((a, b) => b.value - a.value)}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={120} />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="value" fill="#3b82f6" name="Lead Sayısı" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <DataTable
+                      data={Array.from(new Set(dashboardMetrics.leads.map(l => l.firstCustomerSource || 'Bilinmiyor')))
+                        .map(source => ({
+                          'Kaynak': source,
+                          'Adet': dashboardMetrics.leads.filter(l => (l.firstCustomerSource || 'Bilinmiyor') === source).length,
+                          'Yüzde': `%${Math.round((dashboardMetrics.leads.filter(l => (l.firstCustomerSource || 'Bilinmiyor') === source).length / dashboardMetrics.leads.length) * 100)}`
+                        }))
+                        .sort((a, b) => b['Adet'] - a['Adet'])}
+                      title="Ana Lead Kaynak Detayları"
+                      className="mt-4"
+                    />
+                  </CardContent>
+                </Card>
+              )}
             </div>
           ) : (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Kaynak analizi için takip dosyası gereklidir. Lütfen ikinci dosyayı yükleyin.
-              </AlertDescription>
-            </Alert>
+            <div className="space-y-6">
+              {/* Show basic source analysis from main leads data even without secondary file */}
+              {dashboardMetrics?.leads && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>📈 Lead Kaynak Analizi</CardTitle>
+                    <CardDescription>Ana lead dosyasından kaynak verileri</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart data={Array.from(new Set(dashboardMetrics.leads.map(l => l.firstCustomerSource || 'Bilinmiyor')))
+                        .map(source => ({
+                          name: source,
+                          value: dashboardMetrics.leads.filter(l => (l.firstCustomerSource || 'Bilinmiyor') === source).length,
+                          percentage: Math.round((dashboardMetrics.leads.filter(l => (l.firstCustomerSource || 'Bilinmiyor') === source).length / dashboardMetrics.leads.length) * 100)
+                        }))
+                        .sort((a, b) => b.value - a.value)}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={120} />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="value" fill="#3b82f6" name="Lead Sayısı" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <DataTable
+                      data={Array.from(new Set(dashboardMetrics.leads.map(l => l.firstCustomerSource || 'Bilinmiyor')))
+                        .map(source => ({
+                          'Kaynak': source,
+                          'Adet': dashboardMetrics.leads.filter(l => (l.firstCustomerSource || 'Bilinmiyor') === source).length,
+                          'Yüzde': `%${Math.round((dashboardMetrics.leads.filter(l => (l.firstCustomerSource || 'Bilinmiyor') === source).length / dashboardMetrics.leads.length) * 100)}`
+                        }))
+                        .sort((a, b) => b['Adet'] - a['Adet'])}
+                      title="Lead Kaynak Detayları"
+                      className="mt-4"
+                    />
+                  </CardContent>
+                </Card>
+              )}
+
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Daha detaylı kaynak analizi için takip dosyası yükleyin. Şu anda ana lead verilerinden temel analiz gösteriliyor.
+                </AlertDescription>
+              </Alert>
+            </div>
           )}
         </TabsContent>
 
         <TabsContent value="advanced" className="space-y-4">
           {hasSecondaryData && takipteAnalytics ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Müşteri Kriterleri</CardTitle>
-                  <CardDescription>Satış vs Kira müşteri analizi</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <InteractiveChart
-                    title="Kriter Dağılımı"
-                    data={takipteAnalytics.kriterData}
-                    chartType={chartType}
-                    height={300}
-                    colors={['#3b82f6', '#ef4444']}
-                  />
-                </CardContent>
-              </Card>
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>🎯 Müşteri Kriterleri</CardTitle>
+                    <CardDescription>Satış vs Kira müşteri analizi</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <InteractiveChart
+                      title="Kriter Dağılımı"
+                      data={takipteAnalytics.kriterData}
+                      chartType={chartType}
+                      height={300}
+                      colors={['#3b82f6', '#ef4444']}
+                    />
+                    <DataTable
+                      data={takipteAnalytics.kriterData.map(item => ({
+                        'Kriter': item.name,
+                        'Adet': item.value,
+                        'Yüzde': `%${item.percentage}`
+                      }))}
+                      title="Kriter Detayları"
+                      className="mt-4"
+                    />
+                  </CardContent>
+                </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Ofis Performansı</CardTitle>
-                  <CardDescription>Şube bazlı aktivite analizi</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <InteractiveChart
-                    title="Ofis Dağılımı"
-                    data={takipteAnalytics.officeData}
-                    chartType={chartType}
-                    height={300}
-                    colors={colors}
-                  />
-                </CardContent>
-              </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>🏢 Ofis Performansı</CardTitle>
+                    <CardDescription>Şube bazlı aktivite analizi</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <InteractiveChart
+                      title="Ofis Dağılımı"
+                      data={takipteAnalytics.officeData}
+                      chartType={chartType}
+                      height={300}
+                      colors={colors}
+                    />
+                    <DataTable
+                      data={takipteAnalytics.officeData.map(item => ({
+                        'Ofis': item.name,
+                        'Adet': item.value,
+                        'Yüzde': `%${item.percentage}`
+                      }))}
+                      title="Ofis Detayları"
+                      className="mt-4"
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Advanced Status Analysis from Main Data */}
+              {dashboardMetrics?.leads && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>📊 Gelişmiş Durum Analizi</CardTitle>
+                      <CardDescription>Lead durumlarının detaylı incelemesi</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                          <Pie
+                            data={Object.entries(
+                              dashboardMetrics.leads.reduce((acc: any, lead) => {
+                                const status = lead.status || 'Tanımsız';
+                                acc[status] = (acc[status] || 0) + 1;
+                                return acc;
+                              }, {})
+                            ).map(([status, count]) => ({
+                              name: status,
+                              value: count,
+                              percentage: Math.round((count as number / dashboardMetrics.leads.length) * 100)
+                            }))}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={({ name, percentage }) => `${name}: %${percentage}`}
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                          >
+                            {Object.entries(
+                              dashboardMetrics.leads.reduce((acc: any, lead) => {
+                                const status = lead.status || 'Tanımsız';
+                                acc[status] = (acc[status] || 0) + 1;
+                                return acc;
+                              }, {})
+                            ).map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>🏠 Proje Analizi</CardTitle>
+                      <CardDescription>En popüler projeler</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={Array.from(new Set(dashboardMetrics.leads.map(l => l.projectName || 'Bilinmiyor')))
+                          .map(project => ({
+                            name: project.length > 15 ? project.substring(0, 15) + '...' : project,
+                            value: dashboardMetrics.leads.filter(l => (l.projectName || 'Bilinmiyor') === project).length
+                          }))
+                          .sort((a, b) => b.value - a.value)
+                          .slice(0, 10)}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                          <YAxis />
+                          <Tooltip />
+                          <Bar dataKey="value" fill="#10b981" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </div>
           ) : (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Gelişmiş analiz için takip dosyası gereklidir. Lütfen ikinci dosyayı yükleyin.
-              </AlertDescription>
-            </Alert>
+            <div className="space-y-6">
+              {/* Show basic advanced analysis from main data even without secondary file */}
+              {dashboardMetrics?.leads && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>📊 Gelişmiş Durum Analizi</CardTitle>
+                      <CardDescription>Lead durumlarının detaylı incelemesi</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                          <Pie
+                            data={Object.entries(
+                              dashboardMetrics.leads.reduce((acc: any, lead) => {
+                                const status = lead.status || 'Tanımsız';
+                                acc[status] = (acc[status] || 0) + 1;
+                                return acc;
+                              }, {})
+                            ).map(([status, count]) => ({
+                              name: status,
+                              value: count,
+                              percentage: Math.round((count as number / dashboardMetrics.leads.length) * 100)
+                            }))}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={({ name, percentage }) => `${name}: %${percentage}`}
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                          >
+                            {Object.entries(
+                              dashboardMetrics.leads.reduce((acc: any, lead) => {
+                                const status = lead.status || 'Tanımsız';
+                                acc[status] = (acc[status] || 0) + 1;
+                                return acc;
+                              }, {})
+                            ).map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <DataTable
+                        data={Object.entries(
+                          dashboardMetrics.leads.reduce((acc: any, lead) => {
+                            const status = lead.status || 'Tanımsız';
+                            acc[status] = (acc[status] || 0) + 1;
+                            return acc;
+                          }, {})
+                        ).map(([status, count]) => ({
+                          'Durum': status,
+                          'Adet': count,
+                          'Yüzde': `%${Math.round((count as number / dashboardMetrics.leads.length) * 100)}`
+                        }))}
+                        title="Durum Detay Analizi"
+                        className="mt-4"
+                      />
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>🏠 Proje Analizi</CardTitle>
+                      <CardDescription>En popüler projeler</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={Array.from(new Set(dashboardMetrics.leads.map(l => l.projectName || 'Bilinmiyor')))
+                          .map(project => ({
+                            name: project.length > 15 ? project.substring(0, 15) + '...' : project,
+                            value: dashboardMetrics.leads.filter(l => (l.projectName || 'Bilinmiyor') === project).length
+                          }))
+                          .sort((a, b) => b.value - a.value)
+                          .slice(0, 10)}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                          <YAxis />
+                          <Tooltip />
+                          <Bar dataKey="value" fill="#10b981" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                      <DataTable
+                        data={Array.from(new Set(dashboardMetrics.leads.map(l => l.projectName || 'Bilinmiyor')))
+                          .map(project => ({
+                            'Proje': project,
+                            'Adet': dashboardMetrics.leads.filter(l => (l.projectName || 'Bilinmiyor') === project).length,
+                            'Yüzde': `%${Math.round((dashboardMetrics.leads.filter(l => (l.projectName || 'Bilinmiyor') === project).length / dashboardMetrics.leads.length) * 100)}`
+                          }))
+                          .sort((a, b) => b['Adet'] - a['Adet'])
+                          .slice(0, 10)}
+                        title="Proje Detayları"
+                        className="mt-4"
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Tam gelişmiş analiz için takip dosyası yükleyin. Şu anda ana lead verilerinden temel gelişmiş analiz gösteriliyor.
+                </AlertDescription>
+              </Alert>
+            </div>
           )}
         </TabsContent>
       </Tabs>

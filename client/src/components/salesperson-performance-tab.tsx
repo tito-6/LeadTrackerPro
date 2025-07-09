@@ -266,6 +266,59 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
                   chartType={chartType}
                   height={500}
                 />
+                
+                {/* Performance Details Table */}
+                <div className="mt-6">
+                  <h4 className="text-lg font-semibold mb-4">📊 Detaylı Performans Raporu</h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse border border-gray-300">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="border border-gray-300 px-4 py-2 text-left">Durum</th>
+                          <th className="border border-gray-300 px-4 py-2 text-center">Satış Leads</th>
+                          <th className="border border-gray-300 px-4 py-2 text-center">Kiralama Leads</th>
+                          <th className="border border-gray-300 px-4 py-2 text-center">Toplam</th>
+                          <th className="border border-gray-300 px-4 py-2 text-center">Yüzde</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(statusConfig).map(([statusKey, config]) => {
+                          const salesCount = salesStats[statusKey] || 0;
+                          const rentalCount = rentalStats[statusKey] || 0;
+                          const total = salesCount + rentalCount;
+                          const percentage = salespersonLeads.length > 0 ? ((total / salespersonLeads.length) * 100).toFixed(1) : '0';
+                          
+                          if (total === 0) return null;
+                          
+                          return (
+                            <tr key={statusKey}>
+                              <td className="border border-gray-300 px-4 py-2">
+                                <div className="flex items-center">
+                                  <div 
+                                    className="w-3 h-3 rounded-full mr-2" 
+                                    style={{ backgroundColor: config.color }}
+                                  ></div>
+                                  {config.label}
+                                </div>
+                              </td>
+                              <td className="border border-gray-300 px-4 py-2 text-center">{salesCount}</td>
+                              <td className="border border-gray-300 px-4 py-2 text-center">{rentalCount}</td>
+                              <td className="border border-gray-300 px-4 py-2 text-center font-semibold">{total}</td>
+                              <td className="border border-gray-300 px-4 py-2 text-center">{percentage}%</td>
+                            </tr>
+                          );
+                        })}
+                        <tr className="bg-gray-100 font-bold">
+                          <td className="border border-gray-300 px-4 py-2">TOPLAM</td>
+                          <td className="border border-gray-300 px-4 py-2 text-center">{salesStats.total}</td>
+                          <td className="border border-gray-300 px-4 py-2 text-center">{rentalStats.total}</td>
+                          <td className="border border-gray-300 px-4 py-2 text-center">{salespersonLeads.length}</td>
+                          <td className="border border-gray-300 px-4 py-2 text-center">100%</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -289,6 +342,113 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
                   chartType={chartType}
                   height={500}
                 />
+                
+                {/* Sales Details Table */}
+                <div className="mt-6">
+                  <h4 className="text-lg font-semibold mb-4">💼 Satış Lead Detayları</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Status Distribution Table */}
+                    <div>
+                      <h5 className="font-medium mb-2">Durum Dağılımı</h5>
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse border border-gray-300 text-sm">
+                          <thead>
+                            <tr className="bg-blue-50">
+                              <th className="border border-gray-300 px-3 py-2 text-left">Durum</th>
+                              <th className="border border-gray-300 px-3 py-2 text-center">Adet</th>
+                              <th className="border border-gray-300 px-3 py-2 text-center">Yüzde</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Object.entries(salesStats).filter(([key]) => key !== 'total').map(([key, value]) => {
+                              const percentage = salesStats.total > 0 ? ((value as number / salesStats.total) * 100).toFixed(1) : '0';
+                              if (value === 0) return null;
+                              return (
+                                <tr key={key}>
+                                  <td className="border border-gray-300 px-3 py-2">
+                                    <div className="flex items-center">
+                                      <div 
+                                        className="w-2 h-2 rounded-full mr-2" 
+                                        style={{ backgroundColor: statusConfig[key]?.color || '#gray' }}
+                                      ></div>
+                                      {statusConfig[key]?.label || key}
+                                    </div>
+                                  </td>
+                                  <td className="border border-gray-300 px-3 py-2 text-center">{value}</td>
+                                  <td className="border border-gray-300 px-3 py-2 text-center">{percentage}%</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    
+                    {/* Lead Source Analysis */}
+                    <div>
+                      <h5 className="font-medium mb-2">Kaynak Analizi</h5>
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse border border-gray-300 text-sm">
+                          <thead>
+                            <tr className="bg-green-50">
+                              <th className="border border-gray-300 px-3 py-2 text-left">Kaynak</th>
+                              <th className="border border-gray-300 px-3 py-2 text-center">Adet</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Array.from(new Set(salespersonLeads.filter(l => l.leadType === 'satis').map(l => l.firstCustomerSource || 'Bilinmiyor')))
+                              .map(source => ({
+                                source,
+                                count: salespersonLeads.filter(l => l.leadType === 'satis' && (l.firstCustomerSource || 'Bilinmiyor') === source).length
+                              }))
+                              .sort((a, b) => b.count - a.count)
+                              .map(({ source, count }) => (
+                                <tr key={source}>
+                                  <td className="border border-gray-300 px-3 py-2">{source}</td>
+                                  <td className="border border-gray-300 px-3 py-2 text-center">{count}</td>
+                                </tr>
+                              ))
+                            }
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Recent Sales Activity */}
+                <div className="mt-6">
+                  <h4 className="text-lg font-semibold mb-4">🕒 Son Satış Aktiviteleri</h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse border border-gray-300 text-sm">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="border border-gray-300 px-3 py-2 text-left">Müşteri</th>
+                          <th className="border border-gray-300 px-3 py-2 text-center">Durum</th>
+                          <th className="border border-gray-300 px-3 py-2 text-center">Tarih</th>
+                          <th className="border border-gray-300 px-3 py-2 text-center">Kaynak</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {salespersonLeads.filter(l => l.leadType === 'satis').slice(0, 10).map((lead, index) => (
+                          <tr key={lead.id || index}>
+                            <td className="border border-gray-300 px-3 py-2">{lead.customerName}</td>
+                            <td className="border border-gray-300 px-3 py-2 text-center">
+                              <span 
+                                className="px-2 py-1 rounded text-xs text-white"
+                                style={{ backgroundColor: statusConfig[lead.status]?.color || '#gray' }}
+                              >
+                                {statusConfig[lead.status]?.label || lead.status}
+                              </span>
+                            </td>
+                            <td className="border border-gray-300 px-3 py-2 text-center">{lead.requestDate}</td>
+                            <td className="border border-gray-300 px-3 py-2 text-center">{lead.firstCustomerSource || 'Bilinmiyor'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -312,6 +472,113 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
                   chartType={chartType}
                   height={500}
                 />
+                
+                {/* Rental Details Table */}
+                <div className="mt-6">
+                  <h4 className="text-lg font-semibold mb-4">🏠 Kiralama Lead Detayları</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Status Distribution Table */}
+                    <div>
+                      <h5 className="font-medium mb-2">Durum Dağılımı</h5>
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse border border-gray-300 text-sm">
+                          <thead>
+                            <tr className="bg-orange-50">
+                              <th className="border border-gray-300 px-3 py-2 text-left">Durum</th>
+                              <th className="border border-gray-300 px-3 py-2 text-center">Adet</th>
+                              <th className="border border-gray-300 px-3 py-2 text-center">Yüzde</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Object.entries(rentalStats).filter(([key]) => key !== 'total').map(([key, value]) => {
+                              const percentage = rentalStats.total > 0 ? ((value as number / rentalStats.total) * 100).toFixed(1) : '0';
+                              if (value === 0) return null;
+                              return (
+                                <tr key={key}>
+                                  <td className="border border-gray-300 px-3 py-2">
+                                    <div className="flex items-center">
+                                      <div 
+                                        className="w-2 h-2 rounded-full mr-2" 
+                                        style={{ backgroundColor: statusConfig[key]?.color || '#gray' }}
+                                      ></div>
+                                      {statusConfig[key]?.label || key}
+                                    </div>
+                                  </td>
+                                  <td className="border border-gray-300 px-3 py-2 text-center">{value}</td>
+                                  <td className="border border-gray-300 px-3 py-2 text-center">{percentage}%</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    
+                    {/* Lead Source Analysis */}
+                    <div>
+                      <h5 className="font-medium mb-2">Kaynak Analizi</h5>
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse border border-gray-300 text-sm">
+                          <thead>
+                            <tr className="bg-purple-50">
+                              <th className="border border-gray-300 px-3 py-2 text-left">Kaynak</th>
+                              <th className="border border-gray-300 px-3 py-2 text-center">Adet</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Array.from(new Set(salespersonLeads.filter(l => l.leadType === 'kiralama').map(l => l.firstCustomerSource || 'Bilinmiyor')))
+                              .map(source => ({
+                                source,
+                                count: salespersonLeads.filter(l => l.leadType === 'kiralama' && (l.firstCustomerSource || 'Bilinmiyor') === source).length
+                              }))
+                              .sort((a, b) => b.count - a.count)
+                              .map(({ source, count }) => (
+                                <tr key={source}>
+                                  <td className="border border-gray-300 px-3 py-2">{source}</td>
+                                  <td className="border border-gray-300 px-3 py-2 text-center">{count}</td>
+                                </tr>
+                              ))
+                            }
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Recent Rental Activity */}
+                <div className="mt-6">
+                  <h4 className="text-lg font-semibold mb-4">🕒 Son Kiralama Aktiviteleri</h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse border border-gray-300 text-sm">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="border border-gray-300 px-3 py-2 text-left">Müşteri</th>
+                          <th className="border border-gray-300 px-3 py-2 text-center">Durum</th>
+                          <th className="border border-gray-300 px-3 py-2 text-center">Tarih</th>
+                          <th className="border border-gray-300 px-3 py-2 text-center">Kaynak</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {salespersonLeads.filter(l => l.leadType === 'kiralama').slice(0, 10).map((lead, index) => (
+                          <tr key={lead.id || index}>
+                            <td className="border border-gray-300 px-3 py-2">{lead.customerName}</td>
+                            <td className="border border-gray-300 px-3 py-2 text-center">
+                              <span 
+                                className="px-2 py-1 rounded text-xs text-white"
+                                style={{ backgroundColor: statusConfig[lead.status]?.color || '#gray' }}
+                              >
+                                {statusConfig[lead.status]?.label || lead.status}
+                              </span>
+                            </td>
+                            <td className="border border-gray-300 px-3 py-2 text-center">{lead.requestDate}</td>
+                            <td className="border border-gray-300 px-3 py-2 text-center">{lead.firstCustomerSource || 'Bilinmiyor'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
