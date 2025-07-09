@@ -34,7 +34,7 @@ export default function UnifiedTakipteTab() {
   const [chartType, setChartType] = useState<'pie' | 'bar' | 'line'>('pie');
 
   // Fetch takipte data
-  const { data: takipteData = [] } = useQuery({
+  const { data: takipteData = [], isLoading: takipteLoading } = useQuery({
     queryKey: ['/api/takipte'],
     refetchInterval: 5000,
   });
@@ -45,6 +45,12 @@ export default function UnifiedTakipteTab() {
   });
 
   const hasData = takipteData.length > 0;
+  
+  console.log('Unified Takipte Tab - Data loaded:', {
+    takipteDataLength: takipteData.length,
+    hasData,
+    sampleData: takipteData.slice(0, 2)
+  });
 
   // Comprehensive analytics calculations
   const analytics = useMemo(() => {
@@ -61,43 +67,65 @@ export default function UnifiedTakipteTab() {
     
     if (selectedOffice !== 'all') {
       filteredData = filteredData.filter(item => 
-        item['Ofis'] === selectedOffice || item.ofis === selectedOffice
+        item['İnfo Form Geliş Yeri'] === selectedOffice || item.ofis === selectedOffice
       );
     }
     
     if (selectedKriter !== 'all') {
       filteredData = filteredData.filter(item => 
-        item['Kriter'] === selectedKriter || item.kriter === selectedKriter
+        item['İlk Müşteri Kaynağı'] === selectedKriter || item.kriter === selectedKriter
       );
     }
 
     // Calculate comprehensive metrics
     const totalRecords = filteredData.length;
     
-    // Customer criteria analysis (Satış vs Kira)
+    // Customer criteria analysis (based on WebForm Note for lead type detection)
     const kriterCounts = filteredData.reduce((acc, item) => {
-      const kriter = item['Kriter'] || item.kriter || 'Belirtilmemiş';
+      const webFormNote = item['WebForm Notu'] || '';
+      let kriter = 'Belirtilmemiş';
+      
+      if (webFormNote.toLowerCase().includes('kiralama') || webFormNote.toLowerCase().includes('kira')) {
+        kriter = 'Kira Müşterisi';
+      } else if (webFormNote.toLowerCase().includes('satış') || webFormNote.toLowerCase().includes('satis')) {
+        kriter = 'Satış Müşterisi';
+      }
+      
       acc[kriter] = (acc[kriter] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
     // Source analysis (Instagram, Facebook, etc.)
     const sourceCounts = filteredData.reduce((acc, item) => {
-      const source = item['İrtibat Müşteri Kaynağı'] || item['Müşteri Kaynağı'] || 'Bilinmiyor';
+      const source = item['İlk Müşteri Kaynağı'] || item['Form Müşteri Kaynağı'] || 'Bilinmiyor';
       acc[source] = (acc[source] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    // Meeting type analysis
+    // Meeting type analysis (based on conversation results)
     const meetingTypeCounts = filteredData.reduce((acc, item) => {
-      const type = item['Görüşme Tipi'] || item.gorusmeTipi || 'Belirtilmemiş';
-      acc[type] = (acc[type] || 0) + 1;
+      const hasPhoneCall = item['GERİ DÖNÜŞ YAPILDI MI? (Müşteri Arandı mı?)'] === 'Evet';
+      const hasEmailSent = item['GERİ DÖNÜŞ YAPILDI MI? (Müşteriye Mail Gönderildi mi?)'] === 'Evet';
+      const hasInPersonMeeting = item['Birebir Görüşme Yapıldı mı ?'] === 'Evet';
+      
+      if (hasInPersonMeeting) {
+        acc['Yüz Yüze Görüşme'] = (acc['Yüz Yüze Görüşme'] || 0) + 1;
+      } else if (hasPhoneCall && hasEmailSent) {
+        acc['Telefon + Email'] = (acc['Telefon + Email'] || 0) + 1;
+      } else if (hasPhoneCall) {
+        acc['Telefon Araması'] = (acc['Telefon Araması'] || 0) + 1;
+      } else if (hasEmailSent) {
+        acc['Email İletişimi'] = (acc['Email İletişimi'] || 0) + 1;
+      } else {
+        acc['İletişim Yok'] = (acc['İletişim Yok'] || 0) + 1;
+      }
+      
       return acc;
     }, {} as Record<string, number>);
 
-    // Office performance
+    // Office performance (based on location data)
     const officeCounts = filteredData.reduce((acc, item) => {
-      const office = item['Ofis'] || item.ofis || 'Ana Ofis';
+      const office = item['İnfo Form Geliş Yeri'] || item['İnfo Form Geliş Yeri 2'] || 'Ana Ofis';
       acc[office] = (acc[office] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -118,7 +146,7 @@ export default function UnifiedTakipteTab() {
 
     // Result analysis
     const resultCounts = filteredData.reduce((acc, item) => {
-      const result = item['Son Sonuç'] || item.sonSonuc || 'Devam Ediyor';
+      const result = item['SON GORUSME SONUCU'] || item['Dönüş Görüşme Sonucu'] || 'Devam Ediyor';
       acc[result] = (acc[result] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -129,21 +157,21 @@ export default function UnifiedTakipteTab() {
     let finalReminderCount = 0;
     
     filteredData.forEach(item => {
-      const hasReminder = item['Hatırlatma Var Mı'] || item.hatirlatmaVarMi;
-      const reminderDate = item['Hatırlatma Tarihi'] || item.hatirlatmaTarihi;
-      const isFinal = item['Hatırlatma Son Mu'] || item.hatirlatmaSonMu;
+      const hasReminder = item['Randevu Tarihi'] && item['Randevu Tarihi'] !== '';
+      const reminderDate = item['Randevu Tarihi'];
+      const waitingDays = parseInt(item['Kaç Gündür Geri Dönüş Bekliyor'] || '0');
       
       if (hasReminder) reminderCount++;
-      if (isFinal) finalReminderCount++;
+      if (waitingDays > 5) finalReminderCount++;
       if (reminderDate && new Date(reminderDate) < new Date()) overdueCount++;
     });
 
-    // Average call duration
-    const totalDuration = filteredData.reduce((acc, item) => {
-      const duration = parseFloat(item['Konuşma Süresi']) || parseFloat(item.konusmaSuresi) || 0;
-      return acc + duration;
+    // Average response time analysis
+    const totalResponseTime = filteredData.reduce((acc, item) => {
+      const responseTime = parseInt(item['Kaç Günde Geri Dönüş Yapılmış (Süre)'] || '0');
+      return acc + responseTime;
     }, 0);
-    const averageDuration = totalRecords > 0 ? Math.round(totalDuration / totalRecords) : 0;
+    const averageResponseTime = totalRecords > 0 ? Math.round(totalResponseTime / totalRecords) : 0;
 
     // Convert to chart data format
     const kriterData = Object.entries(kriterCounts).map(([name, value]) => ({
@@ -290,8 +318,8 @@ export default function UnifiedTakipteTab() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{analytics?.averageDuration || 0} dk</div>
-            <p className="text-green-100 text-xs">Konuşma süresi</p>
+            <div className="text-2xl font-bold">{analytics?.averageResponseTime || 0} gün</div>
+            <p className="text-green-100 text-xs">Ortalama yanıt süresi</p>
           </CardContent>
         </Card>
 
