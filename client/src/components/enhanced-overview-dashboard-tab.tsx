@@ -28,7 +28,42 @@ export default function EnhancedOverviewDashboardTab() {
     queryKey: ['/api/takipte'],
   });
 
+  // Fetch leads data for detailed analysis
+  const { data: leadsData = [] } = useQuery({
+    queryKey: ['/api/leads'],
+  });
+
   const hasSecondaryData = enhancedStats?.takipte?.hasData || false;
+
+  // Personnel status breakdown calculation
+  const personnelStatusData = useMemo(() => {
+    if (!leadsData.length || !enhancedStats) return [];
+    
+    const personnelStats = {};
+    const { takipte } = enhancedStats;
+    
+    leadsData.forEach(lead => {
+      const personnel = lead.assignedPersonnel || 'Atanmamış';
+      const status = lead.status || 'Bilinmiyor';
+      
+      if (!personnelStats[personnel]) {
+        personnelStats[personnel] = {
+          name: personnel,
+          totalLeads: 0,
+          statusBreakdown: {},
+          takipteCount: takipte.byPersonnel?.[personnel] || 0
+        };
+      }
+      
+      personnelStats[personnel].totalLeads++;
+      if (!personnelStats[personnel].statusBreakdown[status]) {
+        personnelStats[personnel].statusBreakdown[status] = 0;
+      }
+      personnelStats[personnel].statusBreakdown[status]++;
+    });
+    
+    return Object.values(personnelStats);
+  }, [leadsData, enhancedStats]);
 
   // Memoized calculations for performance
   const dashboardMetrics = useMemo(() => {
@@ -48,7 +83,7 @@ export default function EnhancedOverviewDashboardTab() {
       percentage: Math.round(((count as number) / totalLeads) * 100)
     }));
 
-    // Personnel performance combining both sources
+    // Simple personnel data for charts (backwards compatibility)
     const personnelData = Object.entries(leads.byPersonnel).map(([person, leadCount]) => {
       const takipteCount = takipte.byPersonnel?.[person] || 0;
       return {
@@ -245,34 +280,42 @@ export default function EnhancedOverviewDashboardTab() {
           <CardDescription>Her personelin lead dağılımı ve durum analizi</CardDescription>
         </CardHeader>
         <CardContent>
-          {dashboardMetrics?.personnelData && dashboardMetrics.personnelData.length > 0 ? (
+          {personnelStatusData && personnelStatusData.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
-                  <tr className="border-b">
+                  <tr className="border-b bg-gray-100">
                     <th className="text-left p-3 font-medium">Personel</th>
                     <th className="text-center p-3 font-medium">Toplam Lead</th>
                     <th className="text-center p-3 font-medium">Takip Kayıtları</th>
-                    <th className="text-center p-3 font-medium">Verimlilik</th>
-                    <th className="text-center p-3 font-medium">Durum</th>
+                    <th className="text-center p-3 font-medium">Tüm Durumlar</th>
+                    <th className="text-center p-3 font-medium">Aktivite</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {dashboardMetrics.personnelData.map((person, index) => (
+                  {personnelStatusData.map((person, index) => (
                     <tr key={person.name} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                       <td className="p-3 font-medium">{person.name}</td>
                       <td className="text-center p-3">
-                        <Badge variant="outline">{person.leadCount}</Badge>
+                        <Badge variant="outline" className="font-bold">{person.totalLeads}</Badge>
                       </td>
                       <td className="text-center p-3">
                         <Badge variant={person.takipteCount > 0 ? "default" : "secondary"}>
                           {person.takipteCount}
                         </Badge>
                       </td>
-                      <td className="text-center p-3">
-                        <div className="flex items-center justify-center gap-2">
-                          <Progress value={Math.min(person.efficiency, 100)} className="w-16 h-2" />
-                          <span className="text-sm font-medium">{person.efficiency}%</span>
+                      <td className="p-3">
+                        <div className="flex flex-wrap gap-1 justify-center">
+                          {Object.entries(person.statusBreakdown).map(([status, count]) => (
+                            <Badge 
+                              key={status} 
+                              variant="outline" 
+                              className="text-xs"
+                              title={`${status}: ${count} leads`}
+                            >
+                              {status}: {count}
+                            </Badge>
+                          ))}
                         </div>
                       </td>
                       <td className="text-center p-3">
@@ -286,6 +329,19 @@ export default function EnhancedOverviewDashboardTab() {
                   ))}
                 </tbody>
               </table>
+              
+              {/* Status Legend */}
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                <h4 className="text-sm font-medium mb-2">Durum Açıklamaları:</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-xs">
+                  {dashboardMetrics.statusData.map((status) => (
+                    <div key={status.name} className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                      <span className="truncate">{status.name}: {status.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500">
