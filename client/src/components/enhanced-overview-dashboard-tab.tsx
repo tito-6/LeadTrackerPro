@@ -476,6 +476,236 @@ export default function EnhancedOverviewDashboardTab() {
         </CardContent>
       </Card>
 
+      {/* Advanced Takipte Records Analytics Chart */}
+      {hasSecondaryData && takipteAnalytics && (
+        <Card className="border-2 border-green-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-green-700">
+              📋 Tüm Takipte Kayıtları - Ana Veri Tablosu
+            </CardTitle>
+            <CardDescription>Takipte verilerinin gelişmiş analizi ve görselleştirmesi</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {/* Chart Type Selector */}
+              <div className="flex justify-between items-center">
+                <div className="flex gap-2">
+                  <Select value={chartType} onValueChange={(value: 'pie' | 'bar' | 'line') => setChartType(value)}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pie">Pasta Grafik</SelectItem>
+                      <SelectItem value="bar">Çubuk Grafik</SelectItem>
+                      <SelectItem value="line">Çizgi Grafik</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Badge variant="outline" className="text-green-600">
+                  {takipteData.length} Takipte Kaydı
+                </Badge>
+              </div>
+
+              {/* Advanced Charts Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Customer Source Analysis */}
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-4 rounded-lg">
+                  <h4 className="text-lg font-semibold mb-3 text-blue-800">📱 Müşteri Kaynak Analizi</h4>
+                  <ResponsiveContainer width="100%" height={300}>
+                    {chartType === 'pie' ? (
+                      <PieChart>
+                        <Pie
+                          data={takipteAnalytics.sourceData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percentage }) => `${name}: %${percentage}`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {takipteAnalytics.sourceData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    ) : (
+                      <BarChart data={takipteAnalytics.sourceData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="value" fill="#3B82F6" />
+                      </BarChart>
+                    )}
+                  </ResponsiveContainer>
+                  <DataTable
+                    data={takipteAnalytics.sourceData.map(item => ({
+                      'Kaynak': item.name,
+                      'Adet': item.value,
+                      'Yüzde': `%${item.percentage}`
+                    }))}
+                    title="Kaynak Detayları"
+                    className="mt-4"
+                  />
+                </div>
+
+                {/* Meeting Type Distribution */}
+                <div className="bg-gradient-to-br from-purple-50 to-pink-100 p-4 rounded-lg">
+                  <h4 className="text-lg font-semibold mb-3 text-purple-800">🤝 Görüşme Tipi Dağılımı</h4>
+                  <ResponsiveContainer width="100%" height={300}>
+                    {chartType === 'pie' ? (
+                      <PieChart>
+                        <Pie
+                          data={takipteAnalytics.meetingTypeData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percentage }) => `${name}: %${percentage}`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {takipteAnalytics.meetingTypeData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    ) : (
+                      <BarChart data={takipteAnalytics.meetingTypeData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="value" fill="#8B5CF6" />
+                      </BarChart>
+                    )}
+                  </ResponsiveContainer>
+                  <DataTable
+                    data={takipteAnalytics.meetingTypeData.map(item => ({
+                      'Görüşme Tipi': item.name,
+                      'Adet': item.value,
+                      'Yüzde': `%${item.percentage}`
+                    }))}
+                    title="Görüşme Detayları"
+                    className="mt-4"
+                  />
+                </div>
+
+                {/* Office Performance */}
+                <div className="bg-gradient-to-br from-green-50 to-emerald-100 p-4 rounded-lg">
+                  <h4 className="text-lg font-semibold mb-3 text-green-800">🏢 Ofis Performansı</h4>
+                  <ResponsiveContainer width="100%" height={300}>
+                    {chartType === 'pie' ? (
+                      <PieChart>
+                        <Pie
+                          data={takipteAnalytics.officeData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percentage }) => `${name}: %${percentage}`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {takipteAnalytics.officeData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    ) : (
+                      <BarChart data={takipteAnalytics.officeData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="value" fill="#10B981" />
+                      </BarChart>
+                    )}
+                  </ResponsiveContainer>
+                  <DataTable
+                    data={takipteAnalytics.officeData.map(item => ({
+                      'Ofis': item.name,
+                      'Adet': item.value,
+                      'Yüzde': `%${item.percentage}`
+                    }))}
+                    title="Ofis Detayları"
+                    className="mt-4"
+                  />
+                </div>
+
+                {/* Customer Criteria Analysis */}
+                <div className="bg-gradient-to-br from-orange-50 to-red-100 p-4 rounded-lg">
+                  <h4 className="text-lg font-semibold mb-3 text-orange-800">🎯 Müşteri Kriterleri (Satış vs Kira)</h4>
+                  <ResponsiveContainer width="100%" height={300}>
+                    {chartType === 'pie' ? (
+                      <PieChart>
+                        <Pie
+                          data={takipteAnalytics.kriterData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percentage }) => `${name}: %${percentage}`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {takipteAnalytics.kriterData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    ) : (
+                      <BarChart data={takipteAnalytics.kriterData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="value" fill="#F59E0B" />
+                      </BarChart>
+                    )}
+                  </ResponsiveContainer>
+                  <DataTable
+                    data={takipteAnalytics.kriterData.map(item => ({
+                      'Kriter': item.name,
+                      'Adet': item.value,
+                      'Yüzde': `%${item.percentage}`
+                    }))}
+                    title="Kriter Detayları"
+                    className="mt-4"
+                  />
+                </div>
+              </div>
+
+              {/* Master Data Table for Takipte Records */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="text-lg font-semibold mb-3 text-gray-800">📋 Ana Veri Tablosu - Tüm Takipte Kayıtları</h4>
+                <DataTable
+                  data={takipteData.map((record, index) => ({
+                    'Sıra': index + 1,
+                    'Müşteri Adı': record['Müşteri Adı Soyadı(203)'] || 'Bilinmiyor',
+                    'Kriter': record.kriter || 'Belirtilmemiş',
+                    'İrtibat Kaynağı': record.irtibatMusteriKaynagi || 'Bilinmiyor',
+                    'Görüşme Tipi': record.gorusmeTipi || 'Belirtilmemiş',
+                    'Ofis': record.ofisName || 'Belirtilmemiş',
+                    'Meslek': record.meslekAdi || 'Belirtilmemiş',
+                    'Son Sonuç': record.sonSonuc || 'Bekleniyor',
+                    'Atanan Personel': record.assignedPersonnel || 'Atanmamış',
+                    'Güncelleme Tarihi': record.lastUpdateDate || 'Bilinmiyor'
+                  }))}
+                  title="Detaylı Takipte Verileri"
+                  className="bg-white"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Main Analytics Tabs */}
       <Tabs defaultValue="status" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
