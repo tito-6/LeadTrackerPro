@@ -31,6 +31,9 @@ const statusConfig = {
   'Bilinmiyor': { label: 'Bilinmiyor', color: '#9e9e9e', bgColor: 'bg-gray-100' },
 };
 
+// Color palette for charts
+const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#00ff00', '#0080ff', '#ff00ff', '#ffff00', '#ff8080', '#8080ff'];
+
 export default function SalespersonPerformanceTab({ salespersonId }: SalespersonPerformanceTabProps) {
   const [dateFilters, setDateFilters] = useState({
     startDate: '',
@@ -350,6 +353,31 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
                     {/* Status Distribution Table */}
                     <div>
                       <h5 className="font-medium mb-2">Durum Dağılımı</h5>
+                      <div className="mb-4">
+                        <ResponsiveContainer width="100%" height={200}>
+                          <PieChart>
+                            <Pie
+                              data={Object.entries(salesStats).filter(([key]) => key !== 'total' && salesStats[key] > 0).map(([key, value]) => ({
+                                name: statusConfig[key]?.label || key,
+                                value: value as number,
+                                percentage: salesStats.total > 0 ? ((value as number / salesStats.total) * 100).toFixed(1) : '0'
+                              }))}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={40}
+                              outerRadius={80}
+                              paddingAngle={5}
+                              dataKey="value"
+                            >
+                              {Object.entries(salesStats).filter(([key]) => key !== 'total' && salesStats[key] > 0).map(([key], index) => (
+                                <Cell key={`cell-${index}`} fill={statusConfig[key]?.color || colors[index % colors.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(value, name) => [`${value} adet`, name]} />
+                            <Legend />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
                       <div className="overflow-x-auto">
                         <table className="w-full border-collapse border border-gray-300 text-sm">
                           <thead>
@@ -387,6 +415,24 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
                     {/* Lead Source Analysis */}
                     <div>
                       <h5 className="font-medium mb-2">Kaynak Analizi</h5>
+                      <div className="mb-4">
+                        <ResponsiveContainer width="100%" height={200}>
+                          <BarChart data={Array.from(new Set(salespersonLeads.filter(l => l.leadType === 'satis').map(l => l.firstCustomerSource || 'Bilinmiyor')))
+                            .map(source => ({
+                              name: source.length > 12 ? source.substring(0, 12) + '...' : source,
+                              fullName: source,
+                              value: salespersonLeads.filter(l => l.leadType === 'satis' && (l.firstCustomerSource || 'Bilinmiyor') === source).length
+                            }))
+                            .sort((a, b) => b.value - a.value)
+                            .slice(0, 8)}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                            <YAxis />
+                            <Tooltip formatter={(value, name, props) => [`${value} adet`, props.payload.fullName]} />
+                            <Bar dataKey="value" fill="#10b981" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
                       <div className="overflow-x-auto">
                         <table className="w-full border-collapse border border-gray-300 text-sm">
                           <thead>
@@ -480,6 +526,31 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
                     {/* Status Distribution Table */}
                     <div>
                       <h5 className="font-medium mb-2">Durum Dağılımı</h5>
+                      <div className="mb-4">
+                        <ResponsiveContainer width="100%" height={200}>
+                          <PieChart>
+                            <Pie
+                              data={Object.entries(rentalStats).filter(([key]) => key !== 'total' && rentalStats[key] > 0).map(([key, value]) => ({
+                                name: statusConfig[key]?.label || key,
+                                value: value as number,
+                                percentage: rentalStats.total > 0 ? ((value as number / rentalStats.total) * 100).toFixed(1) : '0'
+                              }))}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={40}
+                              outerRadius={80}
+                              paddingAngle={5}
+                              dataKey="value"
+                            >
+                              {Object.entries(rentalStats).filter(([key]) => key !== 'total' && rentalStats[key] > 0).map(([key], index) => (
+                                <Cell key={`cell-${index}`} fill={statusConfig[key]?.color || colors[index % colors.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(value, name) => [`${value} adet`, name]} />
+                            <Legend />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
                       <div className="overflow-x-auto">
                         <table className="w-full border-collapse border border-gray-300 text-sm">
                           <thead>
@@ -517,6 +588,24 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
                     {/* Lead Source Analysis */}
                     <div>
                       <h5 className="font-medium mb-2">Kaynak Analizi</h5>
+                      <div className="mb-4">
+                        <ResponsiveContainer width="100%" height={200}>
+                          <BarChart data={Array.from(new Set(salespersonLeads.filter(l => l.leadType === 'kiralama').map(l => l.firstCustomerSource || 'Bilinmiyor')))
+                            .map(source => ({
+                              name: source.length > 12 ? source.substring(0, 12) + '...' : source,
+                              fullName: source,
+                              value: salespersonLeads.filter(l => l.leadType === 'kiralama' && (l.firstCustomerSource || 'Bilinmiyor') === source).length
+                            }))
+                            .sort((a, b) => b.value - a.value)
+                            .slice(0, 8)}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                            <YAxis />
+                            <Tooltip formatter={(value, name, props) => [`${value} adet`, props.payload.fullName]} />
+                            <Bar dataKey="value" fill="#8b5cf6" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
                       <div className="overflow-x-auto">
                         <table className="w-full border-collapse border border-gray-300 text-sm">
                           <thead>
