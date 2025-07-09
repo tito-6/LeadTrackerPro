@@ -59,7 +59,7 @@ export default function ReportsTab() {
   const rentalLeads = filteredLeads.filter((lead: any) => lead.leadType === "kiralama");
   const salesLeads = filteredLeads.filter((lead: any) => lead.leadType === "satis");
 
-  // Calculate statistics
+  // Calculate statistics with unique keys
   const calculateStats = (leads: any[]) => {
     const total = leads.length;
     if (total === 0) return [];
@@ -69,10 +69,16 @@ export default function ReportsTab() {
       return acc;
     }, {});
 
-    return Object.entries(statusCounts).map(([status, count]) => ({
+    return Object.entries(statusCounts).map(([status, count], index) => ({
+      id: `${status}-${index}`, // Unique identifier
       status: status === "bilgi-verildi" ? "Bilgi Verildi" : 
               status === "olumsuz" ? "Olumsuz" : 
-              status === "satis" ? "Satış" : "Yeni",
+              status === "satis" ? "Satış" : 
+              status === "takipte" ? "Takipte" :
+              status === "toplanti" ? "Toplantı" :
+              status === "potansiyel" ? "Potansiyel" : 
+              status || "Tanımsız",
+      originalStatus: status, // Keep original for debugging
       count: count as number,
       percentage: Math.round(((count as number) / total) * 100),
     }));
@@ -247,8 +253,8 @@ export default function ReportsTab() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {rentalStats.map((stat, index) => (
-                  <div key={stat.status} className="flex items-center justify-between">
+                {rentalStats.map((stat) => (
+                  <div key={stat.id} className="flex items-center justify-between">
                     <span className="text-sm font-medium">{stat.status}</span>
                     <div className="flex items-center gap-2">
                       <span className="text-sm">{stat.count}</span>
@@ -270,8 +276,8 @@ export default function ReportsTab() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {salesStats.map((stat, index) => (
-                  <div key={stat.status} className="flex items-center justify-between">
+                {salesStats.map((stat) => (
+                  <div key={stat.id} className="flex items-center justify-between">
                     <span className="text-sm font-medium">{stat.status}</span>
                     <div className="flex items-center gap-2">
                       <span className="text-sm">{stat.count}</span>

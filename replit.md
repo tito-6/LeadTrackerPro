@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a full-stack web application for managing real estate leads and generating automated reports. The system is built as a React single-page application with an Express.js backend, using PostgreSQL with Drizzle ORM for data persistence. The application provides functionality for lead data entry, reporting with charts, data export capabilities, and system settings management.
+This is a comprehensive AI-powered real estate lead automation platform that transforms complex lead data into actionable insights through intelligent analytics and comprehensive performance tracking. The system features a mandatory dual-file upload capability for complete lead analysis, processing both main lead files and Takipte (follow-up) files to provide real-time dashboard capabilities, advanced Turkish language support with 37+ columns, and intelligent insights with follow-up metrics. Built as a React single-page application with Express.js backend using PostgreSQL with Drizzle ORM.
 
 ## User Preferences
 
@@ -71,13 +71,12 @@ RESTful API endpoints:
 - `/api/export` - Data export functionality
 
 ### Frontend Features
-- **Overview Dashboard Tab**: Complete summary table showing each salesperson's performance with interactive 3D charts for lead status distribution, real-time data updates, and chart type switching (Pie, Column, Line)
+- **🧠 Akıllı Dashboard**: Enhanced AI-powered overview with dual-source data analysis, requiring both main lead files and Takipte follow-up files for complete functionality, featuring real-time KPIs, data completeness scores, and intelligent warnings when second file is missing
 - **Excel Input Tab**: Dedicated Excel-style input screen with copy & paste functionality from Excel/Google Sheets, automatic total calculations, and comprehensive Turkish column support (37+ fields)
-- **🧠 Akıllı Veri Girişi Tab**: Enhanced data entry with intelligent dual file upload capability supporting both main lead files and secondary takip files, smart column detection, automatic project extraction from WebForm notes, and intelligent duplicate prevention
+- **🧠 Akıllı Veri Girişi Tab**: Enhanced data entry with mandatory dual file upload capability supporting both main lead files and secondary takip files, smart column detection, automatic project extraction from WebForm notes, and intelligent duplicate prevention
 - **Reports Tab**: Interactive charts and filtered data views with Chart.js integration and real-time synchronization
 - **Olumsuz Analizi Tab**: Advanced negative lead analysis with breakdown by reasons, personnel, and detailed notes using interactive 3D charts
-- **Takipte Analizi Tab**: Follow-up lead tracking with appointment management and urgent alerts
-- **📞 Takip Raporu Tab**: Comprehensive follow-up reporting system with SONUÇ, GÖRÜŞME, and GÖRÜŞME TARİHİ column analysis, priority-based lead tracking, personnel performance monitoring, and secondary file processing capabilities
+- **📞 Unified Takip Analizi**: Comprehensive merged analysis combining original Takipte Analizi and Takip Raporu tabs, featuring customer criteria analysis (Satış vs Kira), source analysis (Instagram, Facebook), meeting type distribution, office performance, and advanced follow-up tracking with real-time metrics
 - **Duplicate Detection Tab**: Advanced duplicate analysis with collapsible group views and intelligent matching recommendations
 - **Export Tab**: Multi-format export capabilities (Excel, JSON) with comprehensive field mapping and Turkish column support
 - **🎛️ Akıllı Ayarlar Tab**: Intelligent settings panel with advanced chart configuration (3D effects, animations, colors), smart alert system with performance thresholds, comprehensive color management for statuses and personnel, and exportable configuration profiles
