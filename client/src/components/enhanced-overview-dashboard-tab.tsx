@@ -155,12 +155,12 @@ export default function EnhancedOverviewDashboardTab() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center">
               <Users className="mr-2 h-4 w-4" />
-              Toplam Lead
+              📊 Real-time Leads
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{dashboardMetrics?.totalLeads || 0}</div>
-            <p className="text-blue-100 text-xs">Ana veri kaynağı</p>
+            <p className="text-blue-100 text-xs">Anlık lead takibi</p>
           </CardContent>
         </Card>
 
@@ -197,15 +197,15 @@ export default function EnhancedOverviewDashboardTab() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center">
               <Star className="mr-2 h-4 w-4" />
-              Analiz Durumu
+              🤖 AI-Power Status
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-lg font-bold">
-              {hasSecondaryData ? '✅ Tam' : '⚠️ Kısmi'}
+              {hasSecondaryData ? '🤖 Active' : '⚠️ Limited'}
             </div>
             <p className="text-orange-100 text-xs">
-              {hasSecondaryData ? 'Tüm özellikler aktif' : 'Bazı özellikler eksik'}
+              {hasSecondaryData ? 'Tam AI analiz aktif' : 'İkinci dosya gerekli'}
             </p>
           </CardContent>
         </Card>
@@ -228,10 +228,72 @@ export default function EnhancedOverviewDashboardTab() {
         
         <div className="flex gap-2 text-sm text-gray-600">
           <Badge variant="outline">📊 Real-time</Badge>
+          <Badge variant="outline">🤖 AI-Power</Badge>
           <Badge variant="outline">🤖 AI-Powered</Badge>
           {hasSecondaryData && <Badge variant="outline">🔗 Dual-Source</Badge>}
         </div>
       </div>
+
+      {/* Personnel Summary Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            👥 Personel Atama ve Durum Özeti
+          </CardTitle>
+          <CardDescription>Her personelin lead dağılımı ve durum analizi</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {dashboardMetrics?.personnelData && dashboardMetrics.personnelData.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-3 font-medium">Personel</th>
+                    <th className="text-center p-3 font-medium">Toplam Lead</th>
+                    <th className="text-center p-3 font-medium">Takip Kayıtları</th>
+                    <th className="text-center p-3 font-medium">Verimlilik</th>
+                    <th className="text-center p-3 font-medium">Durum</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dashboardMetrics.personnelData.map((person, index) => (
+                    <tr key={person.name} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                      <td className="p-3 font-medium">{person.name}</td>
+                      <td className="text-center p-3">
+                        <Badge variant="outline">{person.leadCount}</Badge>
+                      </td>
+                      <td className="text-center p-3">
+                        <Badge variant={person.takipteCount > 0 ? "default" : "secondary"}>
+                          {person.takipteCount}
+                        </Badge>
+                      </td>
+                      <td className="text-center p-3">
+                        <div className="flex items-center justify-center gap-2">
+                          <Progress value={Math.min(person.efficiency, 100)} className="w-16 h-2" />
+                          <span className="text-sm font-medium">{person.efficiency}%</span>
+                        </div>
+                      </td>
+                      <td className="text-center p-3">
+                        {person.takipteCount > 0 ? (
+                          <Badge className="bg-green-100 text-green-800">✅ Aktif</Badge>
+                        ) : (
+                          <Badge variant="secondary">⚠️ Takip Yok</Badge>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <p>Henüz personel verisi bulunmuyor</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Main Analytics Tabs */}
       <Tabs defaultValue="status" className="w-full">

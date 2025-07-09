@@ -160,15 +160,20 @@ export default function DataEntryTab() {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('file', file);
-      const response = await apiRequest('/api/takipte/import', {
+      const response = await fetch('/api/takipte/import', {
         method: 'POST',
         body: formData,
       });
-      return response;
+      if (!response.ok) {
+        throw new Error(`Takipte upload failed: ${response.statusText}`);
+      }
+      return response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/takipte'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/enhanced-stats'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+      setSecondaryFile(null);
       toast({
         title: "Takip Dosyası Yüklendi",
         description: `${data.imported} takip kaydı başarıyla işlendi.`,
