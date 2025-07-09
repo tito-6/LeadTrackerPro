@@ -35,13 +35,62 @@ export default function EnhancedOverviewDashboardTab() {
 
   const hasSecondaryData = enhancedStats?.takipte?.hasData || false;
 
-  // Get all unique statuses from the data
-  const allStatuses = useMemo(() => {
-    if (!enhancedStats?.leads?.byStatus) return [];
-    return Object.keys(enhancedStats.leads.byStatus);
-  }, [enhancedStats]);
+  // Define the exact status columns from the screenshot with mapping
+  const statusColumns = useMemo(() => {
+    const columns = [
+      { key: 'Toplam Lead', label: 'Toplam Lead', type: 'total' },
+      { key: 'Ulaşılmıyor - Cevap Yok', label: 'Ulaşılmıyor - Cevap Yok', type: 'status' },
+      { key: 'Aranmayan Lead', label: 'Aranmayan Lead', type: 'status' },
+      { key: 'Ulaşılmıyor - Bilgi Hatalı', label: 'Ulaşılmıyor - Bilgi Hatalı', type: 'status' },
+      { key: 'Bilgi Verildi - Tekrar Aranacak', label: 'Bilgi Verildi - Tekrar Aranacak', type: 'status' },
+      { key: 'Olumsuz', label: 'Olumsuz', type: 'status' },
+      { key: 'Toplantı - Birebir Görüşme', label: 'Toplantı - Birebir Görüşme', type: 'status' },
+      { key: 'Potansiyel Takipte', label: 'Potansiyel Takipte', type: 'status' },
+      { key: 'Satış', label: 'Satış', type: 'status' }
+    ];
+    return columns;
+  }, []);
 
-  // Personnel status matrix calculation
+  // Status mapping for data normalization
+  const normalizeStatus = (status: string): string => {
+    const statusLower = status.toLowerCase().trim();
+    
+    // Map variations to standard names
+    if (statusLower.includes('bilgi verildi') || statusLower.includes('bılgı verıldı')) {
+      return 'Bilgi Verildi - Tekrar Aranacak';
+    }
+    if (statusLower.includes('potansiyel') && statusLower.includes('takip')) {
+      return 'Potansiyel Takipte';
+    }
+    if (statusLower.includes('takipte') || statusLower.includes('takip')) {
+      return 'Potansiyel Takipte';
+    }
+    if (statusLower.includes('olumsuz')) {
+      return 'Olumsuz';
+    }
+    if (statusLower.includes('satış') || statusLower.includes('satis')) {
+      return 'Satış';
+    }
+    if (statusLower.includes('ulaşılmıyor') && statusLower.includes('cevap')) {
+      return 'Ulaşılmıyor - Cevap Yok';
+    }
+    if (statusLower.includes('ulaşılmıyor') && statusLower.includes('bilgi')) {
+      return 'Ulaşılmıyor - Bilgi Hatalı';
+    }
+    if (statusLower.includes('aranmayan')) {
+      return 'Aranmayan Lead';
+    }
+    if (statusLower.includes('toplantı') || statusLower.includes('görüşme')) {
+      return 'Toplantı - Birebir Görüşme';
+    }
+    
+    return status; // Return original if no mapping found
+  };
+
+  // Column visibility state
+  const [collapsedColumns, setCollapsedColumns] = useState<Set<string>>(new Set());
+
+  // Personnel status matrix calculation with normalized statuses
   const personnelStatusMatrix = useMemo(() => {
     if (!leadsData.length || !enhancedStats) return [];
     
@@ -59,16 +108,19 @@ export default function EnhancedOverviewDashboardTab() {
         takipteCount: takipte.byPersonnel?.[personnel] || 0
       };
       
-      // Initialize all statuses to 0
-      allStatuses.forEach(status => {
-        personnelStats[personnel][status] = 0;
+      // Initialize all status columns to 0
+      statusColumns.forEach(col => {
+        if (col.type === 'status') {
+          personnelStats[personnel][col.key] = 0;
+        }
       });
     });
     
-    // Count actual lead statuses
+    // Count actual lead statuses with normalization
     leadsData.forEach(lead => {
       const personnel = lead.assignedPersonnel || 'Atanmamış';
-      const status = lead.status || 'Bilinmiyor';
+      const originalStatus = lead.status || 'Bilinmiyor';
+      const normalizedStatus = normalizeStatus(originalStatus);
       
       if (!personnelStats[personnel]) {
         personnelStats[personnel] = {
@@ -77,20 +129,37 @@ export default function EnhancedOverviewDashboardTab() {
           takipteCount: takipte.byPersonnel?.[personnel] || 0
         };
         
-        // Initialize all statuses to 0 for new personnel
-        allStatuses.forEach(s => {
-          personnelStats[personnel][s] = 0;
+        // Initialize all status columns to 0 for new personnel
+        statusColumns.forEach(col => {
+          if (col.type === 'status') {
+            personnelStats[personnel][col.key] = 0;
+          }
         });
       }
       
       personnelStats[personnel].totalLeads++;
-      if (personnelStats[personnel][status] !== undefined) {
-        personnelStats[personnel][status]++;
+      
+      // Increment the normalized status count
+      if (personnelStats[personnel][normalizedStatus] !== undefined) {
+        personnelStats[personnel][normalizedStatus]++;
       }
     });
     
     return Object.values(personnelStats);
-  }, [leadsData, enhancedStats, allStatuses]);
+  }, [leadsData, enhancedStats, statusColumns, normalizeStatus]);
+
+  // Toggle column visibility
+  const toggleColumn = (columnKey: string) => {
+    setCollapsedColumns(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(columnKey)) {
+        newSet.delete(columnKey);
+      } else {
+        newSet.add(columnKey);
+      }
+      return newSet;
+    });
+  };
 
   // Memoized calculations for performance
   const dashboardMetrics = useMemo(() => {
@@ -308,58 +377,95 @@ export default function EnhancedOverviewDashboardTab() {
         </CardHeader>
         <CardContent>
           {personnelStatusMatrix && personnelStatusMatrix.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-sm">
-                <thead>
-                  <tr className="border-b bg-gray-100">
-                    <th className="text-left p-2 font-medium border-r">Personel</th>
-                    <th className="text-center p-2 font-medium border-r">Toplam Lead</th>
-                    {allStatuses.map((status) => (
-                      <th key={status} className="text-center p-2 font-medium border-r min-w-[80px]">
-                        {status}
-                      </th>
+            <div className="space-y-4">
+              {/* Column Controls */}
+              <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg">
+                <span className="text-sm font-medium text-gray-700 mr-2">Sütun Görünürlüğü:</span>
+                {statusColumns.filter(col => col.type === 'status').map((column) => (
+                  <button
+                    key={column.key}
+                    onClick={() => toggleColumn(column.key)}
+                    className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                      collapsedColumns.has(column.key)
+                        ? 'bg-gray-200 text-gray-500 border-gray-300'
+                        : 'bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200'
+                    }`}
+                  >
+                    {collapsedColumns.has(column.key) ? '👁️‍🗨️' : '👁️'} {column.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b bg-gray-100">
+                      <th className="text-left p-2 font-medium border-r sticky left-0 bg-gray-100">Personel</th>
+                      <th className="text-center p-2 font-medium border-r bg-blue-50">Toplam Lead</th>
+                      {statusColumns.filter(col => col.type === 'status' && !collapsedColumns.has(col.key)).map((column) => (
+                        <th key={column.key} className="text-center p-2 font-medium border-r min-w-[100px] relative">
+                          <div className="flex items-center justify-center gap-1">
+                            <span className="text-xs">{column.label}</span>
+                            <button
+                              onClick={() => toggleColumn(column.key)}
+                              className="text-gray-400 hover:text-red-500 ml-1"
+                              title="Sütunu gizle"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </th>
+                      ))}
+                      <th className="text-center p-2 font-medium bg-green-50">Takip Kayıtları</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {personnelStatusMatrix.map((person, index) => (
+                      <tr key={person.name} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                        <td className="p-2 font-medium border-r sticky left-0 bg-inherit">{person.name}</td>
+                        <td className="text-center p-2 border-r font-bold bg-blue-50">{person.totalLeads}</td>
+                        {statusColumns.filter(col => col.type === 'status' && !collapsedColumns.has(col.key)).map((column) => (
+                          <td key={column.key} className="text-center p-2 border-r">
+                            <span className={person[column.key] > 0 ? 'font-semibold text-blue-600' : 'text-gray-400'}>
+                              {person[column.key] || 0}
+                            </span>
+                          </td>
+                        ))}
+                        <td className="text-center p-2 bg-green-50">
+                          <Badge variant={person.takipteCount > 0 ? "default" : "secondary"}>
+                            {person.takipteCount}
+                          </Badge>
+                        </td>
+                      </tr>
                     ))}
-                    <th className="text-center p-2 font-medium">Takip Kayıtları</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {personnelStatusMatrix.map((person, index) => (
-                    <tr key={person.name} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                      <td className="p-2 font-medium border-r">{person.name}</td>
-                      <td className="text-center p-2 border-r font-bold">{person.totalLeads}</td>
-                      {allStatuses.map((status) => (
-                        <td key={status} className="text-center p-2 border-r">
-                          <span className={person[status] > 0 ? 'font-semibold text-blue-600' : 'text-gray-400'}>
-                            {person[status] || 0}
-                          </span>
+                  </tbody>
+                  {/* Totals Row */}
+                  <tfoot>
+                    <tr className="border-t-2 bg-gray-200 font-bold">
+                      <td className="p-2 border-r sticky left-0 bg-gray-200">Toplam:</td>
+                      <td className="text-center p-2 border-r bg-blue-100">
+                        {personnelStatusMatrix.reduce((sum, person) => sum + person.totalLeads, 0)}
+                      </td>
+                      {statusColumns.filter(col => col.type === 'status' && !collapsedColumns.has(col.key)).map((column) => (
+                        <td key={column.key} className="text-center p-2 border-r">
+                          {personnelStatusMatrix.reduce((sum, person) => sum + (person[column.key] || 0), 0)}
                         </td>
                       ))}
-                      <td className="text-center p-2">
-                        <Badge variant={person.takipteCount > 0 ? "default" : "secondary"}>
-                          {person.takipteCount}
-                        </Badge>
+                      <td className="text-center p-2 bg-green-100">
+                        {personnelStatusMatrix.reduce((sum, person) => sum + person.takipteCount, 0)}
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-                {/* Totals Row */}
-                <tfoot>
-                  <tr className="border-t-2 bg-gray-200 font-bold">
-                    <td className="p-2 border-r">Toplam:</td>
-                    <td className="text-center p-2 border-r">
-                      {personnelStatusMatrix.reduce((sum, person) => sum + person.totalLeads, 0)}
-                    </td>
-                    {allStatuses.map((status) => (
-                      <td key={status} className="text-center p-2 border-r">
-                        {personnelStatusMatrix.reduce((sum, person) => sum + (person[status] || 0), 0)}
-                      </td>
-                    ))}
-                    <td className="text-center p-2">
-                      {personnelStatusMatrix.reduce((sum, person) => sum + person.takipteCount, 0)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
+                  </tfoot>
+                </table>
+              </div>
+
+              {/* Show collapsed columns count */}
+              {collapsedColumns.size > 0 && (
+                <div className="text-sm text-gray-500 text-center">
+                  {collapsedColumns.size} sütun gizlendi. Yukarıdaki düğmelerle tekrar gösterebilirsiniz.
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500">
