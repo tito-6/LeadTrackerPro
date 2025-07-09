@@ -1,0 +1,41 @@
+Redesign the pie-charts inside the component “📋 Tüm Takipte Kayıtları – Ana Veri Tablosu” as modern 3-D charts (see the reference 3-D slide below).
+
+Requirements
+-------------
+1. **3-D style**  
+   • Use a subtle perspective tilt and drop-shadow so each slice looks raised.  
+   • Darken the front edge of every slice for depth; lighten the top surface for highlight.  
+   • Keep the inner hub/circle with a soft gradient and a thin white outline.
+
+2. **Exact data & colours**  
+   • Pull the existing labels, counts and percentages from the current tables.  
+   • Preserve the brand palette (Instagram #9b51e0, Referans #2ecc71, Facebook #3498db, etc.).  
+   • Sort slices by descending count so the biggest starts at 12 o’clock.
+
+3. **Labels & callouts**  
+   • Draw leader lines from each slice to a rounded-rectangle label (same colour as slice, 80 % opacity) positioned around the chart.  
+   • Label text: **Source – Count (Percent%)** e.g. `Instagram – 103 (51 %)`.  
+   • Font: Inter / 13 px / bold for the source, regular for the numbers.
+
+4. **Library & implementation**  
+   • Use **Chart.js v4** with `chartjs-plugin-datalabels` and `chartjs-plugin-3d`.  
+   • Canvas width = 400 px, height = 400 px; responsive = true.  
+   • Put the chart in a React functional component `<ThreeDPie title="Müşteri Kaynak Analizi" />` inside `src/components/charts/ThreeDPie.jsx`.  
+   • Export the component and replace the existing flat pie component call.
+
+5. **Reusable**  
+   • Accept props: `labels`, `counts`, `colours` so the same component renders “Görüşme Tipi Dağılımı”.  
+   • Default colours fallback to the current palette array.
+
+6. **Polish**  
+   • Add a hover tooltip that shows “X leads from Y” with the same slice colour.  
+   • Remove the legend (the callout labels replace it).  
+   • Animate on load: each slice rises from the centre over 600 ms with `easeOutBack`.
+
+Deliverables
+------------
+* `ThreeDPie.jsx` – component code.  
+* Any CSS (Tailwind classes preferred; extra styles in `charts.css` if needed).  
+* Brief README section: how to import and feed data.
+
+Goal: replicate the 3-D aesthetic in the sample slide while keeping our existing data and brand colours.

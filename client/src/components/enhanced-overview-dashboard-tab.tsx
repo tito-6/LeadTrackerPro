@@ -13,6 +13,7 @@ import { TrendingUp, Users, Target, AlertCircle, Calendar, PhoneCall, Clock, Sta
 import { DataTable } from "@/components/ui/data-table";
 import { MasterDataTable } from "@/components/ui/master-data-table";
 import { useSettings } from "@/hooks/use-settings";
+import ThreeDPie from "@/components/charts/ThreeDPie";
 
 export default function EnhancedOverviewDashboardTab() {
   const [chartType, setChartType] = useState<'pie' | 'bar' | 'line'>('pie');
@@ -517,90 +518,92 @@ export default function EnhancedOverviewDashboardTab() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Customer Source Analysis */}
                 <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-4 rounded-lg">
-                  <h4 className="text-lg font-semibold mb-3 text-blue-800">📱 Müşteri Kaynak Analizi</h4>
-                  <ResponsiveContainer width="100%" height={300}>
-                    {chartType === 'pie' ? (
-                      <PieChart>
-                        <Pie
-                          data={takipteAnalytics.sourceData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percentage }) => `${name}: %${percentage}`}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {takipteAnalytics.sourceData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    ) : (
-                      <BarChart data={takipteAnalytics.sourceData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="value" fill="#3B82F6" />
-                      </BarChart>
-                    )}
-                  </ResponsiveContainer>
-                  <DataTable
-                    data={takipteAnalytics.sourceData.map(item => ({
-                      'Kaynak': item.name,
-                      'Adet': item.value,
-                      'Yüzde': `%${item.percentage}`
-                    }))}
-                    title="Kaynak Detayları"
-                    className="mt-4"
-                  />
-                </div>
-
-                {/* Meeting Type Distribution */}
-                <div className="bg-gradient-to-br from-purple-50 to-pink-100 p-4 rounded-lg">
-                  <h4 className="text-lg font-semibold mb-3 text-purple-800">🤝 Görüşme Tipi Dağılımı</h4>
-                  <div className="mb-4">
-                    <ResponsiveContainer width="100%" height={300}>
-                      {chartType === 'pie' ? (
-                        <PieChart>
-                          <Pie
-                            data={takipteAnalytics.meetingTypeData}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            label={({ name, percentage }) => `${name}: %${percentage}`}
-                            outerRadius={100}
-                            fill="#8884d8"
-                            dataKey="value"
-                          >
-                            {takipteAnalytics.meetingTypeData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      ) : (
-                        <BarChart data={takipteAnalytics.meetingTypeData}>
+                  {chartType === 'pie' ? (
+                    <ThreeDPie
+                      title="📱 Müşteri Kaynak Analizi"
+                      labels={takipteAnalytics.sourceData.map(item => item.name)}
+                      counts={takipteAnalytics.sourceData.map(item => item.value)}
+                      colors={[
+                        '#9b51e0', // Instagram purple
+                        '#2ecc71', // Referans green  
+                        '#3498db', // Facebook blue
+                        '#e74c3c', // Red
+                        '#f39c12', // Orange
+                        '#1abc9c', // Turquoise
+                        '#34495e', // Dark gray
+                        '#9b59b6'  // Purple
+                      ]}
+                      className="three-d-pie-container"
+                    />
+                  ) : (
+                    <>
+                      <h4 className="text-lg font-semibold mb-3 text-blue-800">📱 Müşteri Kaynak Analizi</h4>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={takipteAnalytics.sourceData}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
                           <YAxis />
                           <Tooltip />
-                          <Bar dataKey="value" fill="#8B5CF6" />
+                          <Bar dataKey="value" fill="#3B82F6" />
                         </BarChart>
-                      )}
-                    </ResponsiveContainer>
-                  </div>
-                  <DataTable
-                    data={takipteAnalytics.meetingTypeData.map(item => ({
-                      'Görüşme Tipi': item.name,
-                      'Adet': item.value,
-                      'Yüzde': `%${item.percentage}`
-                    }))}
-                    title="Görüşme Detayları"
-                    className="mt-4"
-                  />
+                      </ResponsiveContainer>
+                      <DataTable
+                        data={takipteAnalytics.sourceData.map(item => ({
+                          'Kaynak': item.name,
+                          'Adet': item.value,
+                          'Yüzde': `%${item.percentage}`
+                        }))}
+                        title="Kaynak Detayları"
+                        className="mt-4"
+                      />
+                    </>
+                  )}
+                </div>
+
+                {/* Meeting Type Distribution */}
+                <div className="bg-gradient-to-br from-purple-50 to-pink-100 p-4 rounded-lg">
+                  {chartType === 'pie' ? (
+                    <ThreeDPie
+                      title="🤝 Görüşme Tipi Dağılımı"
+                      labels={takipteAnalytics.meetingTypeData.map(item => item.name)}
+                      counts={takipteAnalytics.meetingTypeData.map(item => item.value)}
+                      colors={[
+                        '#8B5CF6', // Purple
+                        '#EC4899', // Pink
+                        '#06B6D4', // Cyan
+                        '#10B981', // Emerald
+                        '#F59E0B', // Amber
+                        '#EF4444', // Red
+                        '#6366F1', // Indigo
+                        '#84CC16'  // Lime
+                      ]}
+                      className="three-d-pie-container"
+                    />
+                  ) : (
+                    <>
+                      <h4 className="text-lg font-semibold mb-3 text-purple-800">🤝 Görüşme Tipi Dağılımı</h4>
+                      <div className="mb-4">
+                        <ResponsiveContainer width="100%" height={300}>
+                          <BarChart data={takipteAnalytics.meetingTypeData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                            <YAxis />
+                            <Tooltip />
+                            <Bar dataKey="value" fill="#8B5CF6" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <DataTable
+                        data={takipteAnalytics.meetingTypeData.map(item => ({
+                          'Görüşme Tipi': item.name,
+                          'Adet': item.value,
+                          'Yüzde': `%${item.percentage}`
+                        }))}
+                        title="Görüşme Detayları"
+                        className="mt-4"
+                      />
+                    </>
+                  )}
                 </div>
 
                 {/* Office Performance */}
@@ -650,47 +653,46 @@ export default function EnhancedOverviewDashboardTab() {
 
                 {/* Customer Criteria Analysis */}
                 <div className="bg-gradient-to-br from-orange-50 to-red-100 p-4 rounded-lg">
-                  <h4 className="text-lg font-semibold mb-3 text-orange-800">🎯 Müşteri Kriterleri (Satış vs Kira)</h4>
-                  <div className="mb-4">
-                    <ResponsiveContainer width="100%" height={300}>
-                      {chartType === 'pie' ? (
-                        <PieChart>
-                          <Pie
-                            data={takipteAnalytics.kriterData}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            label={({ name, percentage }) => `${name}: %${percentage}`}
-                            outerRadius={100}
-                            fill="#8884d8"
-                            dataKey="value"
-                          >
-                            {takipteAnalytics.kriterData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      ) : (
-                        <BarChart data={takipteAnalytics.kriterData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-                          <YAxis />
-                          <Tooltip />
-                          <Bar dataKey="value" fill="#F59E0B" />
-                        </BarChart>
-                      )}
-                    </ResponsiveContainer>
-                  </div>
-                  <DataTable
-                    data={takipteAnalytics.kriterData.map(item => ({
-                      'Kriter': item.name,
-                      'Adet': item.value,
-                      'Yüzde': `%${item.percentage}`
-                    }))}
-                    title="Kriter Detayları"
-                    className="mt-4"
-                  />
+                  {chartType === 'pie' ? (
+                    <ThreeDPie
+                      title="🎯 Müşteri Kriterleri (Satış vs Kira)"
+                      labels={takipteAnalytics.kriterData.map(item => item.name)}
+                      counts={takipteAnalytics.kriterData.map(item => item.value)}
+                      colors={[
+                        '#3b82f6', // Blue for Satış
+                        '#ef4444', // Red for Kira
+                        '#10b981', // Green
+                        '#f59e0b', // Amber
+                        '#8b5cf6', // Purple
+                        '#ec4899'  // Pink
+                      ]}
+                      className="three-d-pie-container"
+                    />
+                  ) : (
+                    <>
+                      <h4 className="text-lg font-semibold mb-3 text-orange-800">🎯 Müşteri Kriterleri (Satış vs Kira)</h4>
+                      <div className="mb-4">
+                        <ResponsiveContainer width="100%" height={300}>
+                          <BarChart data={takipteAnalytics.kriterData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                            <YAxis />
+                            <Tooltip />
+                            <Bar dataKey="value" fill="#F59E0B" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <DataTable
+                        data={takipteAnalytics.kriterData.map(item => ({
+                          'Kriter': item.name,
+                          'Adet': item.value,
+                          'Yüzde': `%${item.percentage}`
+                        }))}
+                        title="Kriter Detayları"
+                        className="mt-4"
+                      />
+                    </>
+                  )}
                 </div>
               </div>
 
