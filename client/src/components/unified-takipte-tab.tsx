@@ -10,6 +10,8 @@ import { useQuery } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { Phone, Clock, AlertCircle, Calendar, Star, TrendingUp, Users, Target } from 'lucide-react';
 import InteractiveChart from './interactive-chart';
+import { DataTable } from "@/components/ui/data-table";
+import { MasterDataTable } from "@/components/ui/master-data-table";
 
 interface TakipteRecord {
   customerName: string;
@@ -401,13 +403,20 @@ export default function UnifiedTakipteTab() {
               </CardHeader>
               <CardContent>
                 {analytics?.kriterData && (
-                  <InteractiveChart
-                    title="Kriter Dağılımı"
-                    data={analytics.kriterData}
-                    chartType={chartType}
-                    height={300}
-                    colors={['#3b82f6', '#ef4444', '#10b981']}
-                  />
+                  <>
+                    <InteractiveChart
+                      title="Kriter Dağılımı"
+                      data={analytics.kriterData}
+                      chartType={chartType}
+                      height={300}
+                      colors={['#3b82f6', '#ef4444', '#10b981']}
+                    />
+                    <DataTable
+                      title="Müşteri Kriter Dağılımı"
+                      data={analytics.kriterData}
+                      totalRecords={analytics.totalRecords}
+                    />
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -419,13 +428,20 @@ export default function UnifiedTakipteTab() {
               </CardHeader>
               <CardContent>
                 {analytics?.officeData && (
-                  <InteractiveChart
-                    title="Ofis Dağılımı"
-                    data={analytics.officeData}
-                    chartType={chartType}
-                    height={300}
-                    colors={colors}
-                  />
+                  <>
+                    <InteractiveChart
+                      title="Ofis Dağılımı"
+                      data={analytics.officeData}
+                      chartType={chartType}
+                      height={300}
+                      colors={colors}
+                    />
+                    <DataTable
+                      title="Ofis Performansı"
+                      data={analytics.officeData}
+                      totalRecords={analytics.totalRecords}
+                    />
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -441,13 +457,20 @@ export default function UnifiedTakipteTab() {
               </CardHeader>
               <CardContent>
                 {analytics?.sourceData && (
-                  <InteractiveChart
-                    title="Kaynak Dağılımı"
-                    data={analytics.sourceData}
-                    chartType={chartType}
-                    height={300}
-                    colors={colors}
-                  />
+                  <>
+                    <InteractiveChart
+                      title="Kaynak Dağılımı"
+                      data={analytics.sourceData}
+                      chartType={chartType}
+                      height={300}
+                      colors={colors}
+                    />
+                    <DataTable
+                      title="İrtibat Müşteri Kaynağı"
+                      data={analytics.sourceData}
+                      totalRecords={analytics.totalRecords}
+                    />
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -459,13 +482,20 @@ export default function UnifiedTakipteTab() {
               </CardHeader>
               <CardContent>
                 {analytics?.professionData && (
-                  <InteractiveChart
-                    title="Meslek Dağılımı"
-                    data={analytics.professionData}
-                    chartType={chartType}
-                    height={300}
-                    colors={colors}
-                  />
+                  <>
+                    <InteractiveChart
+                      title="Meslek Dağılımı"
+                      data={analytics.professionData}
+                      chartType={chartType}
+                      height={300}
+                      colors={colors}
+                    />
+                    <DataTable
+                      title="Meslek Dağılımı"
+                      data={analytics.professionData}
+                      totalRecords={analytics.totalRecords}
+                    />
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -481,13 +511,20 @@ export default function UnifiedTakipteTab() {
               </CardHeader>
               <CardContent>
                 {analytics?.meetingTypeData && (
-                  <InteractiveChart
-                    title="Görüşme Tipleri"
-                    data={analytics.meetingTypeData}
-                    chartType={chartType}
-                    height={300}
-                    colors={colors}
-                  />
+                  <>
+                    <InteractiveChart
+                      title="Görüşme Tipleri"
+                      data={analytics.meetingTypeData}
+                      chartType={chartType}
+                      height={300}
+                      colors={colors}
+                    />
+                    <DataTable
+                      title="Görüşme Tipi Dağılımı"
+                      data={analytics.meetingTypeData}
+                      totalRecords={analytics.totalRecords}
+                    />
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -499,13 +536,20 @@ export default function UnifiedTakipteTab() {
               </CardHeader>
               <CardContent>
                 {analytics?.resultData && (
-                  <InteractiveChart
-                    title="Sonuç Dağılımı"
-                    data={analytics.resultData}
-                    chartType={chartType}
-                    height={300}
-                    colors={colors}
-                  />
+                  <>
+                    <InteractiveChart
+                      title="Sonuç Dağılımı"
+                      data={analytics.resultData}
+                      chartType={chartType}
+                      height={300}
+                      colors={colors}
+                    />
+                    <DataTable
+                      title="Son Sonuç Analizi"
+                      data={analytics.resultData}
+                      totalRecords={analytics.totalRecords}
+                    />
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -520,21 +564,52 @@ export default function UnifiedTakipteTab() {
             </CardHeader>
             <CardContent>
               {analytics?.personnelData && (
-                <ResponsiveContainer width="100%" height={400}>
-                  <BarChart data={analytics.personnelData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="value" fill="#8884d8" name="Takip Sayısı" />
-                  </BarChart>
-                </ResponsiveContainer>
+                <>
+                  <ResponsiveContainer width="100%" height={400}>
+                    <BarChart data={analytics.personnelData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="value" fill="#8884d8" name="Takip Sayısı" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <DataTable
+                    title="Personel Takip Performansı"
+                    data={analytics.personnelData}
+                    totalRecords={analytics.totalRecords}
+                  />
+                </>
               )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Master Data Table */}
+      {hasData && (
+        <MasterDataTable
+          title="Tüm Takipte Kayıtları - Ana Veri Tablosu"
+          data={takipteData}
+          columns={[
+            { key: 'Müşteri Adı Soyadı(203)', label: 'Müşteri Adı', type: 'text' },
+            { key: 'Tarih', label: 'Tarih', type: 'date' },
+            { key: 'Personel Adı(203)', label: 'Personel', type: 'badge' },
+            { key: 'Ofis', label: 'Ofis', type: 'badge' },
+            { key: 'Kriter', label: 'Kriter', type: 'badge' },
+            { key: 'İrtibat Müşteri Kaynağı', label: 'Kaynak', type: 'text' },
+            { key: 'Görüşme Tipi', label: 'Görüşme Tipi', type: 'text' },
+            { key: 'Son Sonuç Adı', label: 'Son Sonuç', type: 'badge' },
+            { key: 'Hatırlatma Var Mı', label: 'Hatırlatma', type: 'badge' },
+            { key: 'Hatırlatma Tarihi', label: 'Hatırlatma Tarihi', type: 'date' },
+            { key: 'Puan', label: 'Puan', type: 'number' },
+            { key: 'Meslek Adı', label: 'Meslek', type: 'text' },
+            { key: 'Cep Tel', label: 'Telefon', type: 'text' },
+            { key: 'Email', label: 'Email', type: 'text' }
+          ]}
+        />
+      )}
 
       {/* Summary Footer */}
       <Card className="bg-gradient-to-r from-slate-50 to-slate-100">

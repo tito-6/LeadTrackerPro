@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { TrendingUp, Users, Target, AlertCircle, Calendar, PhoneCall, Clock, Star } from 'lucide-react';
 import InteractiveChart from './interactive-chart';
+import { DataTable } from "@/components/ui/data-table";
 
 export default function EnhancedOverviewDashboardTab() {
   const [chartType, setChartType] = useState<'pie' | 'bar' | 'line'>('pie');
@@ -313,13 +314,20 @@ export default function EnhancedOverviewDashboardTab() {
               </CardHeader>
               <CardContent>
                 {dashboardMetrics?.statusData && (
-                  <InteractiveChart
-                    title="Durum Dağılımı"
-                    data={dashboardMetrics.statusData}
-                    chartType={chartType}
-                    height={500}
-                    colors={colors}
-                  />
+                  <>
+                    <InteractiveChart
+                      title="Durum Dağılımı"
+                      data={dashboardMetrics.statusData}
+                      chartType={chartType}
+                      height={500}
+                      colors={colors}
+                    />
+                    <DataTable
+                      title="Lead Durum Dağılımı"
+                      data={dashboardMetrics.statusData}
+                      totalRecords={dashboardMetrics.totalLeads}
+                    />
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -331,13 +339,20 @@ export default function EnhancedOverviewDashboardTab() {
               </CardHeader>
               <CardContent>
                 {dashboardMetrics?.typeData && (
-                  <InteractiveChart
-                    title="Tip Dağılımı"
-                    data={dashboardMetrics.typeData}
-                    chartType={chartType}
-                    height={500}
-                    colors={['#10b981', '#f59e0b']}
-                  />
+                  <>
+                    <InteractiveChart
+                      title="Tip Dağılımı"
+                      data={dashboardMetrics.typeData}
+                      chartType={chartType}
+                      height={500}
+                      colors={['#10b981', '#f59e0b']}
+                    />
+                    <DataTable
+                      title="Lead Tipi Dağılımı"
+                      data={dashboardMetrics.typeData}
+                      totalRecords={dashboardMetrics.totalLeads}
+                    />
+                  </>
                 )}
               </CardContent>
             </Card>
