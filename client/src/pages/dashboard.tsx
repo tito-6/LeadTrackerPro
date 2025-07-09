@@ -10,10 +10,12 @@ import SettingsTab from "@/components/settings-tab";
 import OlumsuzAnaliziTab from "@/components/olumsuz-analizi-tab";
 import TakipteAnaliziTab from "@/components/takipte-analizi-tab";
 import TakipRaporuTab from "@/components/takip-raporu-tab";
+import UnifiedTakipteTab from "@/components/unified-takipte-tab";
 import IntelligentSettingsTab from "@/components/intelligent-settings-tab";
 import ExcelInputTab from "@/components/excel-input-tab";
 import DuplicateDetectionTab from "@/components/duplicate-detection-tab";
 import OverviewDashboardTab from "@/components/overview-dashboard-tab";
+import EnhancedOverviewDashboardTab from "@/components/enhanced-overview-dashboard-tab";
 import SalespersonPerformanceTab from "@/components/salesperson-performance-tab";
 import { useQuery } from "@tanstack/react-query";
 import { SalesRep } from "@shared/schema";
@@ -62,7 +64,7 @@ export default function Dashboard() {
               <TabsList className="grid w-full grid-cols-6 h-auto p-1">
                 <TabsTrigger value="overview" className="flex items-center space-x-2 p-3">
                   <Home className="h-4 w-4" />
-                  <span>Genel Görünüm</span>
+                  <span>🧠 Akıllı Dashboard</span>
                 </TabsTrigger>
                 <TabsTrigger value="excel-input" className="flex items-center space-x-2 p-3">
                   <Grid className="h-4 w-4" />
@@ -92,13 +94,9 @@ export default function Dashboard() {
                   <TrendingDown className="h-4 w-4" />
                   <span>Olumsuz Analizi</span>
                 </TabsTrigger>
-                <TabsTrigger value="takipte-analizi" className="flex items-center space-x-2 p-3">
-                  <Clock className="h-4 w-4" />
-                  <span>Takipte Analizi</span>
-                </TabsTrigger>
-                <TabsTrigger value="takip-raporu" className="flex items-center space-x-2 p-3">
+                <TabsTrigger value="unified-takipte" className="flex items-center space-x-2 p-3">
                   <Phone className="h-4 w-4" />
-                  <span>📞 Takip Raporu</span>
+                  <span>📞 Unified Takip Analizi</span>
                 </TabsTrigger>
                 <TabsTrigger value="duplicate-detection" className="flex items-center space-x-2 p-3">
                   <Grid className="h-4 w-4" />
@@ -134,7 +132,7 @@ export default function Dashboard() {
           </div>
 
           <TabsContent value="overview">
-            <OverviewDashboardTab />
+            <EnhancedOverviewDashboardTab />
           </TabsContent>
 
           <TabsContent value="excel-input">
@@ -151,6 +149,10 @@ export default function Dashboard() {
 
           <TabsContent value="olumsuz-analizi">
             <OlumsuzAnaliziTab />
+          </TabsContent>
+
+          <TabsContent value="unified-takipte">
+            <UnifiedTakipteTab />
           </TabsContent>
 
           <TabsContent value="takipte-analizi">

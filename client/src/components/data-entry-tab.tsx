@@ -22,6 +22,7 @@ export default function DataEntryTab() {
   const { data: salesReps = [] } = useSalesReps();
   const { data: stats } = useLeads();
   const [file, setFile] = useState<File | null>(null);
+  const [secondaryFile, setSecondaryFile] = useState<File | null>(null);
   const [validationWarnings, setValidationWarnings] = useState<any>(null);
 
   const form = useForm<InsertLead>({
@@ -154,11 +155,47 @@ export default function DataEntryTab() {
     createLeadMutation.mutate(data);
   };
 
+  // Secondary file import mutation
+  const importSecondaryMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await apiRequest('/api/takipte/import', {
+        method: 'POST',
+        body: formData,
+      });
+      return response;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/takipte'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+      toast({
+        title: "Takip Dosyası Yüklendi",
+        description: `${data.imported} takip kaydı başarıyla işlendi.`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Hata",
+        description: error.message || "Takip dosyası yüklenirken bir hata oluştu.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
       setFile(selectedFile);
       importFileMutation.mutate(selectedFile);
+    }
+  };
+
+  const handleSecondaryFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+    if (selectedFile) {
+      setSecondaryFile(selectedFile);
+      importSecondaryMutation.mutate(selectedFile);
     }
   };
 
@@ -490,31 +527,33 @@ export default function DataEntryTab() {
 
               {/* Secondary Takipte File */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-green-700">2. Takip Dosyası (İsteğe Bağlı)</Label>
+                <Label className="text-sm font-medium text-green-700">2. Takip Dosyası (ZORUNLU)</Label>
                 <div className="border-2 border-dashed border-green-300 rounded-lg p-4 text-center hover:border-green-500 transition-colors bg-green-50">
                   <FileText className="mx-auto h-8 w-8 text-green-500 mb-2" />
-                  <p className="text-sm text-green-700 mb-2">SONUÇ, GÖRÜŞME kolonları</p>
+                  <p className="text-sm text-green-700 mb-2">Kriter, İrtibat Kaynağı, Görüşme Tipi kolonları</p>
                   <input
                     type="file"
                     className="hidden"
                     accept=".xlsx,.csv,.json"
-                    onChange={(e) => {
-                      if (e.target.files?.[0]) {
-                        // TODO: Handle secondary file upload
-                        console.log('Secondary file:', e.target.files[0]);
-                      }
-                    }}
+                    onChange={handleSecondaryFileUpload}
                     id="secondary-file-upload"
                   />
                   <Button 
                     type="button" 
-                    variant="outline" 
+                    variant={secondaryFile ? "default" : "outline"}
                     size="sm"
                     onClick={() => document.getElementById('secondary-file-upload')?.click()}
+                    disabled={importSecondaryMutation.isPending}
                   >
-                    Takip Dosyası Seç
+                    {importSecondaryMutation.isPending ? 'İşleniyor...' : 
+                     secondaryFile ? `✓ ${secondaryFile.name}` : 'Takip Dosyası Seç'}
                   </Button>
                 </div>
+                {!secondaryFile && (
+                  <div className="text-xs text-red-600 bg-red-50 p-2 rounded">
+                    ⚠️ Takipte Analizi için bu dosya gereklidir
+                  </div>
+                )}
               </div>
               
               <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded">

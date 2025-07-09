@@ -785,6 +785,132 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Takipte (Follow-up) data endpoints
+  let takipteStorage: any[] = [];
+
+  app.post("/api/takipte/import", upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      console.log(`Processing Takipte file: ${req.file.originalname}`);
+
+      // Parse the takipte file
+      const jsonData: any[] = [];
+      const extension = req.file.originalname.split('.').pop()?.toLowerCase();
+
+      if (extension === 'xlsx' || extension === 'xls') {
+        const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        jsonData.push(...XLSX.utils.sheet_to_json(worksheet));
+      } else if (extension === 'csv') {
+        const csvText = req.file.buffer.toString('utf8');
+        Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            jsonData.push(...results.data);
+          }
+        });
+      }
+      
+      // Store in memory (in production, this would go to database)
+      takipteStorage = jsonData.filter(item => 
+        item['Müşteri Adı Soyadı'] || item['Müşteri Adı'] || item.customerName
+      );
+      
+      console.log(`Processed ${takipteStorage.length} takipte records`);
+      
+      res.json({
+        message: "Takipte file imported successfully",
+        imported: takipteStorage.length,
+        sampleData: takipteStorage.slice(0, 3) // Return sample for verification
+      });
+    } catch (error) {
+      console.error("Error importing takipte file:", error);
+      res.status(500).json({ 
+        message: "Failed to import takipte file", 
+        error: (error as Error).message 
+      });
+    }
+  });
+
+  app.get("/api/takipte", async (req, res) => {
+    try {
+      res.json(takipteStorage);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch takipte data" });
+    }
+  });
+
+  app.get("/api/enhanced-stats", async (req, res) => {
+    try {
+      const { startDate, endDate, salesRep, leadType } = req.query;
+      
+      // Get regular lead data
+      const leads = await storage.getLeadsByFilter({
+        startDate: startDate as string,
+        endDate: endDate as string,
+        salesRep: salesRep as string,
+        leadType: leadType as string,
+      });
+
+      // Enhanced stats combining both data sources
+      const enhancedStats = {
+        leads: {
+          total: leads.length,
+          byStatus: leads.reduce((acc, lead) => {
+            acc[lead.status || 'yeni'] = (acc[lead.status || 'yeni'] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>),
+          byType: leads.reduce((acc, lead) => {
+            acc[lead.leadType] = (acc[lead.leadType] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>),
+          byPersonnel: leads.reduce((acc, lead) => {
+            const rep = lead.assignedPersonnel || 'Belirtilmemiş';
+            acc[rep] = (acc[rep] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>),
+        },
+        takipte: {
+          total: takipteStorage.length,
+          hasData: takipteStorage.length > 0,
+          byKriter: takipteStorage.reduce((acc, item) => {
+            const kriter = item['Kriter'] || item.kriter || 'Belirtilmemiş';
+            acc[kriter] = (acc[kriter] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>),
+          bySource: takipteStorage.reduce((acc, item) => {
+            const source = item['İrtibat Müşteri Kaynağı'] || item['Müşteri Kaynağı'] || 'Bilinmiyor';
+            acc[source] = (acc[source] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>),
+          byMeetingType: takipteStorage.reduce((acc, item) => {
+            const meetingType = item['Görüşme Tipi'] || item.gorusmeTipi || 'Belirtilmemiş';
+            acc[meetingType] = (acc[meetingType] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>),
+          byOffice: takipteStorage.reduce((acc, item) => {
+            const office = item['Ofis'] || item.ofis || 'Ana Ofis';
+            acc[office] = (acc[office] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>)
+        },
+        combined: {
+          hasSecondaryData: takipteStorage.length > 0,
+          personnelPerformance: {} as Record<string, any>
+        }
+      };
+
+      res.json(enhancedStats);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch enhanced stats" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
