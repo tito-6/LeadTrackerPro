@@ -12,11 +12,17 @@ import { TrendingUp, Users, Target, AlertCircle, Calendar, PhoneCall, Clock, Sta
 
 import { DataTable } from "@/components/ui/data-table";
 import { MasterDataTable } from "@/components/ui/master-data-table";
+import { useSettings } from "@/hooks/use-settings";
 
 export default function EnhancedOverviewDashboardTab() {
   const [chartType, setChartType] = useState<'pie' | 'bar' | 'line'>('pie');
   const [selectedPersonnel, setSelectedPersonnel] = useState<string>('all');
   const [selectedOffice, setSelectedOffice] = useState<string>('all');
+  
+  // Get 3D settings from chart settings
+  const { data: settings } = useSettings();
+  const enable3D = settings?.find(s => s.key === 'chart_settings')?.value ? 
+    JSON.parse(settings.find(s => s.key === 'chart_settings')?.value || '{}')?.enable3D : true;
 
   // Fetch enhanced stats that combine both data sources
   const { data: enhancedStats } = useQuery({
@@ -746,9 +752,18 @@ export default function EnhancedOverviewDashboardTab() {
                               outerRadius={120}
                               fill="#8884d8"
                               dataKey="value"
+                              style={enable3D ? {
+                                filter: 'drop-shadow(3px 3px 6px rgba(0,0,0,0.4))',
+                                transition: 'all 0.3s ease'
+                              } : {}}
                             >
                               {dashboardMetrics.statusData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                                <Cell 
+                                  key={`cell-${index}`} 
+                                  fill={colors[index % colors.length]}
+                                  stroke="white"
+                                  strokeWidth={enable3D ? 2 : 1}
+                                />
                               ))}
                             </Pie>
                             <Tooltip />
@@ -759,7 +774,20 @@ export default function EnhancedOverviewDashboardTab() {
                             <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
                             <YAxis />
                             <Tooltip />
-                            <Bar dataKey="value" fill="#8884d8" />
+                            <Bar dataKey="value" fill="#8884d8" radius={[4, 4, 0, 0]}>
+                              {enable3D && dashboardMetrics.statusData.map((entry, index) => (
+                                <Cell 
+                                  key={`cell-${index}`} 
+                                  fill={colors[index % colors.length]}
+                                  stroke={colors[index % colors.length]}
+                                  strokeWidth={2}
+                                  style={{
+                                    filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))',
+                                    transition: 'all 0.3s ease'
+                                  }}
+                                />
+                              ))}
+                            </Bar>
                           </BarChart>
                         )}
                       </ResponsiveContainer>
@@ -799,9 +827,18 @@ export default function EnhancedOverviewDashboardTab() {
                               outerRadius={120}
                               fill="#8884d8"
                               dataKey="value"
+                              style={enable3D ? {
+                                filter: 'drop-shadow(3px 3px 6px rgba(0,0,0,0.4))',
+                                transition: 'all 0.3s ease'
+                              } : {}}
                             >
                               {dashboardMetrics.typeData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={['#10b981', '#f59e0b'][index % 2]} />
+                                <Cell 
+                                  key={`cell-${index}`} 
+                                  fill={['#10b981', '#f59e0b'][index % 2]}
+                                  stroke="white"
+                                  strokeWidth={enable3D ? 2 : 1}
+                                />
                               ))}
                             </Pie>
                             <Tooltip />
@@ -812,7 +849,20 @@ export default function EnhancedOverviewDashboardTab() {
                             <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
                             <YAxis />
                             <Tooltip />
-                            <Bar dataKey="value" fill="#10b981" />
+                            <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]}>
+                              {enable3D && dashboardMetrics.typeData.map((entry, index) => (
+                                <Cell 
+                                  key={`cell-${index}`} 
+                                  fill={['#10b981', '#f59e0b'][index % 2]}
+                                  stroke={['#10b981', '#f59e0b'][index % 2]}
+                                  strokeWidth={2}
+                                  style={{
+                                    filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))',
+                                    transition: 'all 0.3s ease'
+                                  }}
+                                />
+                              ))}
+                            </Bar>
                           </BarChart>
                         )}
                       </ResponsiveContainer>
@@ -848,8 +898,16 @@ export default function EnhancedOverviewDashboardTab() {
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="leadCount" fill="#8884d8" name="Lead Sayısı" />
-                    {hasSecondaryData && <Bar dataKey="takipteCount" fill="#82ca9d" name="Takip Sayısı" />}
+                    <Bar dataKey="leadCount" fill="#8884d8" name="Lead Sayısı" radius={[4, 4, 0, 0]} 
+                         style={enable3D ? {
+                           filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))',
+                           transition: 'all 0.3s ease'
+                         } : {}} />
+                    {hasSecondaryData && <Bar dataKey="takipteCount" fill="#82ca9d" name="Takip Sayısı" radius={[4, 4, 0, 0]}
+                         style={enable3D ? {
+                           filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))',
+                           transition: 'all 0.3s ease'
+                         } : {}} />}
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -880,9 +938,18 @@ export default function EnhancedOverviewDashboardTab() {
                               outerRadius={100}
                               fill="#8884d8"
                               dataKey="value"
+                              style={enable3D ? {
+                                filter: 'drop-shadow(3px 3px 6px rgba(0,0,0,0.4))',
+                                transition: 'all 0.3s ease'
+                              } : {}}
                             >
                               {takipteAnalytics.sourceData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                                <Cell 
+                                  key={`cell-${index}`} 
+                                  fill={colors[index % colors.length]}
+                                  stroke="white"
+                                  strokeWidth={enable3D ? 2 : 1}
+                                />
                               ))}
                             </Pie>
                             <Tooltip />
@@ -893,7 +960,11 @@ export default function EnhancedOverviewDashboardTab() {
                             <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
                             <YAxis />
                             <Tooltip />
-                            <Bar dataKey="value" fill="#3B82F6" />
+                            <Bar dataKey="value" fill="#3B82F6" radius={[4, 4, 0, 0]}
+                                 style={enable3D ? {
+                                   filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))',
+                                   transition: 'all 0.3s ease'
+                                 } : {}} />
                           </BarChart>
                         )}
                       </ResponsiveContainer>
@@ -929,9 +1000,18 @@ export default function EnhancedOverviewDashboardTab() {
                               outerRadius={100}
                               fill="#8884d8"
                               dataKey="value"
+                              style={enable3D ? {
+                                filter: 'drop-shadow(3px 3px 6px rgba(0,0,0,0.4))',
+                                transition: 'all 0.3s ease'
+                              } : {}}
                             >
                               {takipteAnalytics.meetingTypeData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                                <Cell 
+                                  key={`cell-${index}`} 
+                                  fill={colors[index % colors.length]}
+                                  stroke="white"
+                                  strokeWidth={enable3D ? 2 : 1}
+                                />
                               ))}
                             </Pie>
                             <Tooltip />
@@ -942,7 +1022,11 @@ export default function EnhancedOverviewDashboardTab() {
                             <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
                             <YAxis />
                             <Tooltip />
-                            <Bar dataKey="value" fill="#8B5CF6" />
+                            <Bar dataKey="value" fill="#8B5CF6" radius={[4, 4, 0, 0]}
+                                 style={enable3D ? {
+                                   filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))',
+                                   transition: 'all 0.3s ease'
+                                 } : {}} />
                           </BarChart>
                         )}
                       </ResponsiveContainer>
@@ -1071,9 +1155,18 @@ export default function EnhancedOverviewDashboardTab() {
                               outerRadius={100}
                               fill="#8884d8"
                               dataKey="value"
+                              style={enable3D ? {
+                                filter: 'drop-shadow(3px 3px 6px rgba(0,0,0,0.4))',
+                                transition: 'all 0.3s ease'
+                              } : {}}
                             >
                               {takipteAnalytics.kriterData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={['#3b82f6', '#ef4444'][index % 2]} />
+                                <Cell 
+                                  key={`cell-${index}`} 
+                                  fill={['#3b82f6', '#ef4444'][index % 2]}
+                                  stroke="white"
+                                  strokeWidth={enable3D ? 2 : 1}
+                                />
                               ))}
                             </Pie>
                             <Tooltip />
@@ -1084,7 +1177,11 @@ export default function EnhancedOverviewDashboardTab() {
                             <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
                             <YAxis />
                             <Tooltip />
-                            <Bar dataKey="value" fill="#3b82f6" />
+                            <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]}
+                                 style={enable3D ? {
+                                   filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))',
+                                   transition: 'all 0.3s ease'
+                                 } : {}} />
                           </BarChart>
                         )}
                       </ResponsiveContainer>
@@ -1120,9 +1217,18 @@ export default function EnhancedOverviewDashboardTab() {
                               outerRadius={100}
                               fill="#8884d8"
                               dataKey="value"
+                              style={enable3D ? {
+                                filter: 'drop-shadow(3px 3px 6px rgba(0,0,0,0.4))',
+                                transition: 'all 0.3s ease'
+                              } : {}}
                             >
                               {takipteAnalytics.officeData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                                <Cell 
+                                  key={`cell-${index}`} 
+                                  fill={colors[index % colors.length]}
+                                  stroke="white"
+                                  strokeWidth={enable3D ? 2 : 1}
+                                />
                               ))}
                             </Pie>
                             <Tooltip />
@@ -1133,7 +1239,11 @@ export default function EnhancedOverviewDashboardTab() {
                             <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
                             <YAxis />
                             <Tooltip />
-                            <Bar dataKey="value" fill="#10B981" />
+                            <Bar dataKey="value" fill="#10B981" radius={[4, 4, 0, 0]}
+                                 style={enable3D ? {
+                                   filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))',
+                                   transition: 'all 0.3s ease'
+                                 } : {}} />
                           </BarChart>
                         )}
                       </ResponsiveContainer>
