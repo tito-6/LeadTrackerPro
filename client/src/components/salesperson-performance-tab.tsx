@@ -17,14 +17,18 @@ interface SalespersonPerformanceTabProps {
   salespersonId: number;
 }
 
-// Status definitions with colors
+// Status definitions with colors (using actual imported data statuses)
 const statusConfig = {
-  'ulasilamiyor': { label: 'Ulaşılmıyor', color: '#ff9800', bgColor: 'bg-orange-100' },
-  'yeni': { label: 'Yeni Lead', color: '#2196f3', bgColor: 'bg-blue-100' },
-  'takipte': { label: 'Takipte', color: '#ffeb3b', bgColor: 'bg-yellow-100' },
-  'olumsuz': { label: 'Olumsuz', color: '#f44336', bgColor: 'bg-red-100' },
-  'toplanti': { label: 'Toplantı', color: '#3f51b5', bgColor: 'bg-indigo-100' },
-  'satildi': { label: 'Satış', color: '#4caf50', bgColor: 'bg-green-100' },
+  'Ulaşılamıyor - Cevap Vermiyor': { label: 'Ulaşılamıyor', color: '#ff9800', bgColor: 'bg-orange-100' },
+  'Yeni': { label: 'Yeni Lead', color: '#2196f3', bgColor: 'bg-blue-100' },
+  'Takipte': { label: 'Takipte', color: '#ffeb3b', bgColor: 'bg-yellow-100' },
+  'Bilgi Verildi': { label: 'Bilgi Verildi', color: '#9c27b0', bgColor: 'bg-purple-100' },
+  'Olumsuz': { label: 'Olumsuz', color: '#f44336', bgColor: 'bg-red-100' },
+  'Toplantı/Birebir Görüşme': { label: 'Toplantı', color: '#3f51b5', bgColor: 'bg-indigo-100' },
+  'Potansiyel Takipte': { label: 'Potansiyel', color: '#607d8b', bgColor: 'bg-slate-100' },
+  'Satış': { label: 'Satış', color: '#4caf50', bgColor: 'bg-green-100' },
+  'Tanımsız': { label: 'Tanımsız', color: '#795548', bgColor: 'bg-gray-100' },
+  'Bilinmiyor': { label: 'Bilinmiyor', color: '#9e9e9e', bgColor: 'bg-gray-100' },
 };
 
 export default function SalespersonPerformanceTab({ salespersonId }: SalespersonPerformanceTabProps) {
@@ -76,32 +80,50 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
     return <div>Personel bulunamadı</div>;
   }
 
-  // Calculate statistics
+  // Calculate statistics using actual imported data statuses
+  // Note: All leads are currently 'kiralama' type based on imported data
   const salesLeads = salespersonLeads.filter(lead => lead.leadType === 'satis');
   const rentalLeads = salespersonLeads.filter(lead => lead.leadType === 'kiralama');
 
+  console.log('Salesperson Performance Debug:', {
+    salespersonName: salesperson.name,
+    totalLeads: salespersonLeads.length,
+    salesLeads: salesLeads.length,
+    rentalLeads: rentalLeads.length,
+    sampleStatuses: salespersonLeads.slice(0, 3).map(l => l.status),
+    uniqueStatuses: [...new Set(salespersonLeads.map(l => l.status))]
+  });
+
   const salesStats = {
     total: salesLeads.length,
-    ulasilamiyor: salesLeads.filter(l => l.status === 'ulasilamiyor').length,
-    yeni: salesLeads.filter(l => l.status === 'yeni').length,
-    takipte: salesLeads.filter(l => l.status === 'takipte').length,
-    olumsuz: salesLeads.filter(l => l.status === 'olumsuz').length,
-    toplanti: salesLeads.filter(l => l.status === 'toplanti').length,
-    satildi: salesLeads.filter(l => l.status === 'satildi').length,
+    'Ulaşılamıyor - Cevap Vermiyor': salesLeads.filter(l => l.status === 'Ulaşılamıyor - Cevap Vermiyor').length,
+    'Takipte': salesLeads.filter(l => l.status === 'Takipte').length,
+    'Bilgi Verildi': salesLeads.filter(l => l.status === 'Bilgi Verildi').length,
+    'Olumsuz': salesLeads.filter(l => l.status === 'Olumsuz').length,
+    'Toplantı/Birebir Görüşme': salesLeads.filter(l => l.status === 'Toplantı/Birebir Görüşme').length,
+    'Potansiyel Takipte': salesLeads.filter(l => l.status === 'Potansiyel Takipte').length,
+    'Satış': salesLeads.filter(l => l.status === 'Satış').length,
+    'Yeni': salesLeads.filter(l => l.status === 'Yeni').length,
+    'Tanımsız': salesLeads.filter(l => l.status === 'Tanımsız').length,
+    'Bilinmiyor': salesLeads.filter(l => l.status === 'Bilinmiyor').length,
   };
 
   const rentalStats = {
     total: rentalLeads.length,
-    ulasilamiyor: rentalLeads.filter(l => l.status === 'ulasilamiyor').length,
-    yeni: rentalLeads.filter(l => l.status === 'yeni').length,
-    takipte: rentalLeads.filter(l => l.status === 'takipte').length,
-    olumsuz: rentalLeads.filter(l => l.status === 'olumsuz').length,
-    toplanti: rentalLeads.filter(l => l.status === 'toplanti').length,
-    satildi: rentalLeads.filter(l => l.status === 'satildi').length,
+    'Ulaşılamıyor - Cevap Vermiyor': rentalLeads.filter(l => l.status === 'Ulaşılamıyor - Cevap Vermiyor').length,
+    'Takipte': rentalLeads.filter(l => l.status === 'Takipte').length,
+    'Bilgi Verildi': rentalLeads.filter(l => l.status === 'Bilgi Verildi').length,
+    'Olumsuz': rentalLeads.filter(l => l.status === 'Olumsuz').length,
+    'Toplantı/Birebir Görüşme': rentalLeads.filter(l => l.status === 'Toplantı/Birebir Görüşme').length,
+    'Potansiyel Takipte': rentalLeads.filter(l => l.status === 'Potansiyel Takipte').length,
+    'Satış': rentalLeads.filter(l => l.status === 'Satış').length,
+    'Yeni': rentalLeads.filter(l => l.status === 'Yeni').length,
+    'Tanımsız': rentalLeads.filter(l => l.status === 'Tanımsız').length,
+    'Bilinmiyor': rentalLeads.filter(l => l.status === 'Bilinmiyor').length,
   };
 
   const salesTargetPercentage = salesperson.monthlyTarget > 0 ? 
-    Math.round((salesStats.satildi / salesperson.monthlyTarget) * 100) : 0;
+    Math.round((salesStats['Satış'] / salesperson.monthlyTarget) * 100) : 0;
 
   // Pie chart data for sales leads
   const salesPieData = Object.entries(statusConfig)
