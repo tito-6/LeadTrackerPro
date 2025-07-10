@@ -400,7 +400,7 @@ export default function UnifiedTakipteTab() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tüm Personel</SelectItem>
-                  {analytics?.uniquePersonnel.map(person => (
+                  {analytics?.uniquePersonnel.filter(person => person && person.trim()).map(person => (
                     <SelectItem key={person} value={person}>{person}</SelectItem>
                   ))}
                 </SelectContent>
@@ -412,7 +412,7 @@ export default function UnifiedTakipteTab() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tüm Ofisler</SelectItem>
-                  {analytics?.uniqueOffices.map(office => (
+                  {analytics?.uniqueOffices.filter(office => office && office.trim()).map(office => (
                     <SelectItem key={office} value={office}>{office}</SelectItem>
                   ))}
                 </SelectContent>
@@ -424,7 +424,7 @@ export default function UnifiedTakipteTab() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tüm Kriterler</SelectItem>
-                  {analytics?.uniqueKritler.map(kriter => (
+                  {analytics?.uniqueKritler.filter(kriter => kriter && kriter.trim()).map(kriter => (
                     <SelectItem key={kriter} value={kriter}>{kriter}</SelectItem>
                   ))}
                 </SelectContent>

@@ -216,7 +216,7 @@ export default function ExportTab() {
                   <SelectValue placeholder="Tümü" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tümü</SelectItem>
+                  <SelectItem value="all">Tümü</SelectItem>
                   {salesReps.map((rep: any) => (
                     <SelectItem key={rep.id} value={rep.name}>{rep.name}</SelectItem>
                   ))}
