@@ -524,12 +524,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/export/:format", async (req, res) => {
     try {
       const { format } = req.params;
-      const { startDate, endDate, salesRep } = req.query;
+      const { startDate, endDate, salesRep, month, year, leadType } = req.query;
       
       const leads = await storage.getLeadsByFilter({
         startDate: startDate as string,
         endDate: endDate as string,
+        month: month as string,
+        year: year as string,
         salesRep: salesRep as string,
+        leadType: leadType as string,
       });
       
       const salesReps = await storage.getSalesReps();
@@ -539,15 +542,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.setHeader('Content-Disposition', `attachment; filename="lead-report-${new Date().toISOString().split('T')[0]}.json"`);
         res.json({ leads, salesReps, exportDate: new Date().toISOString() });
       } else if (format === 'excel') {
-        // For Excel export, we'll send structured data that the frontend can convert
-        res.setHeader('Content-Type', 'application/json');
-        res.json({ 
-          format: 'excel',
-          data: { leads, salesReps },
-          exportDate: new Date().toISOString()
-        });
+        const XLSX = require('xlsx');
+        
+        // Create workbook and worksheets
+        const wb = XLSX.utils.book_new();
+        
+        // Prepare leads data for Excel
+        const leadsData = leads.map(lead => ({
+          'Müşteri ID': lead.customerId || '',
+          'İletişim ID': lead.contactId || '',
+          'Müşteri Adı Soyadı': lead.customerName || '',
+          'İlk Müşteri Kaynağı': lead.firstCustomerSource || '',
+          'Form Müşteri Kaynağı': lead.formCustomerSource || '',
+          'WebForm Notu': lead.webFormNote || '',
+          'Talep Geliş Tarihi': lead.requestDate || '',
+          'İnfo Form Geliş Yeri 1': lead.infoFormLocation1 || '',
+          'İnfo Form Geliş Yeri 2': lead.infoFormLocation2 || '',
+          'İnfo Form Geliş Yeri 3': lead.infoFormLocation3 || '',
+          'İnfo Form Geliş Yeri 4': lead.infoFormLocation4 || '',
+          'Atanan Personel': lead.assignedPersonnel || '',
+          'Hatırlatma Personeli': lead.reminderPersonnel || '',
+          'Geri Dönüş Var mı': lead.wasCalledBack ? 'Evet' : 'Hayır',
+          'WebForm İletişim Telefon': lead.webFormContactPhone || '',
+          'WebForm İletişim Email': lead.webFormContactEmail || '',
+          'WebForm Telefon Dönüşü': lead.webFormPhoneCallback ? 'Evet' : 'Hayır',
+          'WebForm Email Dönüşü': lead.webFormEmailCallback ? 'Evet' : 'Hayır',
+          'Birebir Görüşme': lead.oneOnOneMeeting ? 'Evet' : 'Hayır',
+          'Birebir Görüşme Tarihi': lead.oneOnOneMeetingDate || '',
+          'Birebir Görüşme Sonucu': lead.oneOnOneMeetingResult || '',
+          'Son Görüşme Sonucu': lead.lastMeetingResult || '',
+          'Müşteri Cevap Tarihi': lead.customerResponseDate || '',
+          'Görüşme Notu': lead.callNote || '',
+          'Satış': lead.sale ? 'Evet' : 'Hayır',
+          'Dönüş Olumsuzluk Nedeni': lead.negativeReason || '',
+          'Randevu': lead.appointment ? 'Evet' : 'Hayır',
+          'Proje Adı': lead.projectName || '',
+          'Lead Tipi': lead.leadType || '',
+          'Status': lead.status || ''
+        }));
+        
+        // Create leads worksheet
+        const leadsWS = XLSX.utils.json_to_sheet(leadsData);
+        XLSX.utils.book_append_sheet(wb, leadsWS, 'Lead Verileri');
+        
+        // Create summary worksheet
+        const statusCounts = leads.reduce((acc, lead) => {
+          const status = lead.status || 'Belirtilmemiş';
+          acc[status] = (acc[status] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        
+        const summaryData = [
+          { 'Metrik': 'Toplam Lead Sayısı', 'Değer': leads.length },
+          { 'Metrik': 'Dışa Aktarma Tarihi', 'Değer': new Date().toLocaleDateString('tr-TR') },
+          { 'Metrik': 'Filtreleme Kriteri', 'Değer': salesRep || 'Tümü' },
+          ...Object.entries(statusCounts).map(([status, count]) => ({
+            'Metrik': `${status} Sayısı`,
+            'Değer': count
+          }))
+        ];
+        
+        const summaryWS = XLSX.utils.json_to_sheet(summaryData);
+        XLSX.utils.book_append_sheet(wb, summaryWS, 'Özet');
+        
+        // Generate Excel buffer
+        const excelBuffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="İNNO-Lead-Raporu-${new Date().toISOString().split('T')[0]}.xlsx"`);
+        res.send(excelBuffer);
       } else if (format === 'pdf') {
-        // For PDF export, send structured data for frontend rendering
+        // Return data for frontend PDF generation using jsPDF
         res.setHeader('Content-Type', 'application/json');
         res.json({ 
           format: 'pdf',
@@ -633,43 +698,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'Atanan Personel': lead.assignedPersonnel,
         'Lead Tipi': lead.leadType === 'kiralama' ? 'Kiralama' : 'Satış',
         'Son Görüşme Sonucu (Durum)': lead.status,
-        'Müşteri Geri Dönüş Tarihi': lead.customerResponseDate || '',
-        'Birebir Görüşme Yapıldı mı?': lead.oneOnOneMeeting || '',
-        'Birebir Görüşme Tarihi': lead.meetingDate || '',
-        'Dönüş Görüşme Sonucu': lead.responseResult || '',
-        'Dönüş Olumsuzluk Nedeni': lead.negativeReason || '',
-        'Müşteriye Satış Yapıldı Mı?': lead.wasSaleMade || '',
-        'Satış Adedi': lead.saleCount || 0,
-        'Randevu Tarihi': lead.appointmentDate || '',
-        'Son Görüşme Notu': lead.lastMeetingNote || '',
-        'Geri Dönüş Notu (Arama)': lead.callNote || '',
-        'Geri Dönüş Notu (Mail)': lead.emailNote || ''
+        'Proje Adı': lead.projectName || '',
+        'Görüşme Notu': lead.callNote || '',
+        'Satış': lead.sale ? 'Evet' : 'Hayır',
+        'Randevu': lead.appointment ? 'Evet' : 'Hayır',
+        'Birebir Görüşme': lead.oneOnOneMeeting ? 'Evet' : 'Hayır',
+        'Olumsuzluk Nedeni': lead.negativeReason || ''
       }));
-
-      const worksheet = XLSX.utils.json_to_sheet(worksheetData);
       
-      // Add summary statistics worksheet
-      const stats = leads.reduce((acc, lead) => {
-        acc[lead.status] = (acc[lead.status] || 0) + 1;
+      const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Lead Verileri');
+      
+      // Create summary worksheet
+      const statusCounts = leads.reduce((acc, lead) => {
+        const status = lead.status || 'Belirtilmemiş';
+        acc[status] = (acc[status] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
       
-      const summaryData = Object.entries(stats).map(([status, count]) => ({
-        'Durum': status,
-        'Adet': count,
-        'Yüzde': `${((count / leads.length) * 100).toFixed(1)}%`
-      }));
+      const summaryData = [
+        { 'Bilgi': 'Rapor Özeti', 'Değer': `İNNO Gayrimenkul Yatırım A.Ş. - ${periodInfo}` },
+        { 'Bilgi': 'Toplam Lead Sayısı', 'Değer': leads.length },
+        { 'Bilgi': 'Dışa Aktarma Tarihi', 'Değer': new Date().toLocaleDateString('tr-TR') },
+        { 'Bilgi': 'Filtreleme Kriteri', 'Değer': salesRep === 'all' || !salesRep ? 'Tüm Personel' : salesRep },
+        { 'Bilgi': '', 'Değer': '' },
+        { 'Bilgi': 'STATUS DAĞILIMI', 'Değer': '' },
+        ...Object.entries(statusCounts).map(([status, count]) => ({
+          'Bilgi': status,
+          'Değer': count
+        }))
+      ];
       
-      const summaryWorksheet = XLSX.utils.json_to_sheet(summaryData);
+      const summaryWS = XLSX.utils.json_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(workbook, summaryWS, 'Rapor Özeti');
       
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Detaylar");
-      XLSX.utils.book_append_sheet(workbook, summaryWorksheet, "Özet");
-
-      // Generate buffer
-      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+      // Write the workbook to buffer
+      const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
       
+      // Set proper headers
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', `attachment; filename="LeadRaporu_${periodInfo}.xlsx"`);
+      res.setHeader('Content-Disposition', `attachment; filename="İNNO_Lead_Raporu_${periodInfo}.xlsx"`);
       res.send(excelBuffer);
     } catch (error) {
       res.status(500).json({ message: "Failed to export Excel", error: (error as Error).message });

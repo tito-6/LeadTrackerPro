@@ -115,11 +115,76 @@ export default function ExportTab() {
   };
 
   const handleExportPDF = async () => {
-    // For now, we'll export as Excel since PDF generation requires additional setup
-    toast({
-      title: "Bilgi",
-      description: "PDF dışa aktarma özelliği yakında eklenecek.",
-    });
+    try {
+      // Import jsPDF and autoTable dynamically
+      const { default: jsPDF } = await import('jspdf');
+      const { default: autoTable } = await import('jspdf-autotable');
+
+      const params = new URLSearchParams();
+      Object.entries(dateFilters).forEach(([key, value]) => {
+        if (value) params.append(key, value);
+      });
+
+      // Get data for PDF
+      const response = await fetch(`/api/export/pdf?${params.toString()}`);
+      if (!response.ok) throw new Error("PDF data fetch failed");
+      
+      const data = await response.json();
+      const leads = data.data.leads;
+
+      // Create PDF document
+      const doc = new jsPDF();
+      
+      // Add company header
+      doc.setFontSize(20);
+      doc.text('İNNO Gayrimenkul Yatırım A.Ş.', 20, 20);
+      doc.setFontSize(16);
+      doc.text('Lead Raporu', 20, 30);
+      doc.setFontSize(12);
+      doc.text(`Rapor Tarihi: ${new Date().toLocaleDateString('tr-TR')}`, 20, 40);
+      doc.text(`Toplam Lead Sayısı: ${leads.length}`, 20, 50);
+
+      // Create table data
+      const tableData = leads.map((lead: any) => [
+        lead.customerName || '',
+        lead.assignedPersonnel || '',
+        lead.status || '',
+        lead.leadType || '',
+        lead.projectName || '',
+        lead.requestDate || ''
+      ]);
+
+      // Add table using autoTable
+      autoTable(doc, {
+        head: [['Müşteri Adı', 'Personel', 'Durum', 'Tip', 'Proje', 'Tarih']],
+        body: tableData,
+        startY: 60,
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [52, 73, 94], textColor: [255, 255, 255] },
+        columnStyles: {
+          0: { cellWidth: 40 },
+          1: { cellWidth: 25 },
+          2: { cellWidth: 25 },
+          3: { cellWidth: 20 },
+          4: { cellWidth: 30 },
+          5: { cellWidth: 25 }
+        }
+      });
+
+      // Save PDF
+      doc.save(`İNNO_Lead_Raporu_${new Date().toISOString().split('T')[0]}.pdf`);
+
+      toast({
+        title: "Başarılı",
+        description: "PDF raporu başarıyla indirildi.",
+      });
+    } catch (error) {
+      toast({
+        title: "Hata",
+        description: "PDF raporu oluşturulamadı: " + (error as Error).message,
+        variant: "destructive",
+      });
+    }
   };
 
   const handleExportJSON = async () => {
