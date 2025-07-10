@@ -308,9 +308,6 @@ export default function InteractiveChart({
                         className="w-4 h-4 rounded border border-gray-300" 
                         style={{ backgroundColor: item.color }}
                       />
-                      <span className="ml-1 text-xs text-gray-500 dark:text-gray-400 font-mono">
-                        {item.color}
-                      </span>
                     </div>
                   </td>
                 </tr>

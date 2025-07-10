@@ -617,28 +617,142 @@ export default function UnifiedTakipteTab() {
         </TabsContent>
 
         <TabsContent value="personnel" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Personel Takip Performansı</CardTitle>
-              <CardDescription>Personel bazlı takip aktivite analizi</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {analytics?.personnelData && (
-                <>
-                  <InteractiveChart
-                    title="Personel Performansı"
-                    data={analytics.personnelData}
-                    chartType={chartType}
-                    height={400}
-                    colors={analytics.personnelData.map(item => item.color)}
-                  />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Personel Takip Performansı Karşılaştırması</CardTitle>
+                <CardDescription>Satış personeli arasında takip aktivite analizi</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {analytics?.personnelData && (
+                  <>
+                    <InteractiveChart
+                      title="Personel Performans Karşılaştırması"
+                      data={analytics.personnelData}
+                      chartType={chartType}
+                      height={400}
+                      colors={analytics.personnelData.map(item => item.color)}
+                    />
+                    <div className="mt-4 space-y-2">
+                      <h4 className="font-semibold text-sm text-gray-700">Performans Metrikleri:</h4>
+                      <div className="grid grid-cols-2 gap-4 text-xs">
+                        <div>
+                          <span className="font-medium">En Aktif:</span> {analytics.personnelData[0]?.name || 'N/A'}
+                        </div>
+                        <div>
+                          <span className="font-medium">Toplam Takip:</span> {analytics.personnelData.reduce((sum, p) => sum + p.value, 0)}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Detaylı Performans Tablosu</CardTitle>
+                <CardDescription>Personel bazlı takip sayıları ve yüzdeleri</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {analytics?.personnelData && (
                   <DataTable
-                    title="Personel Takip Performansı"
+                    title="Personel Performans Detayları"
                     data={analytics.personnelData}
                     totalRecords={analytics.totalRecords}
                   />
-                </>
-              )}
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Advanced Personnel Analytics */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Gelişmiş Personel Analizi</CardTitle>
+              <CardDescription>Personel bazlı takip kalitesi ve verimlilik analizi</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Performance Comparison Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {analytics?.personnelData.slice(0, 3).map((person, index) => (
+                    <Card key={person.name} className={`relative ${
+                      index === 0 ? 'bg-gradient-to-r from-green-50 to-green-100' :
+                      index === 1 ? 'bg-gradient-to-r from-blue-50 to-blue-100' :
+                      'bg-gradient-to-r from-orange-50 to-orange-100'
+                    }`}>
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-sm font-medium">{person.name}</CardTitle>
+                          {index === 0 && <Badge variant="outline" className="text-xs">🥇 En Aktif</Badge>}
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <div className="text-2xl font-bold text-gray-900">{person.value}</div>
+                          <div className="text-xs text-gray-600">Takip Sayısı</div>
+                          <div className="text-sm">
+                            <span className="font-medium">Oran: </span>
+                            <span className="text-lg font-bold">{person.percentage}%</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Performance Metrics */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Toplam Personel</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{analytics?.personnelData.length || 0}</div>
+                      <p className="text-purple-100 text-xs">Aktif personel sayısı</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Ortalama Takip</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">
+                        {analytics?.personnelData.length ? 
+                          Math.round(analytics.personnelData.reduce((sum, p) => sum + p.value, 0) / analytics.personnelData.length) : 0}
+                      </div>
+                      <p className="text-indigo-100 text-xs">Personel başına</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-r from-teal-500 to-teal-600 text-white">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">En Yüksek</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">
+                        {analytics?.personnelData[0]?.value || 0}
+                      </div>
+                      <p className="text-teal-100 text-xs">En aktif personel</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-r from-pink-500 to-pink-600 text-white">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Verimlilik</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">
+                        {analytics?.personnelData.length && analytics.personnelData[0]?.value ? 
+                          Math.round((analytics.personnelData[0].value / analytics.totalRecords) * 100) : 0}%
+                      </div>
+                      <p className="text-pink-100 text-xs">En aktif oran</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
