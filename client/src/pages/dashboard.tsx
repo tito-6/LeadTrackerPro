@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ChartLine, Plus, BarChart, Download, Settings, Moon, UserCircle, TrendingDown, Clock, Grid, Home, Phone } from "lucide-react";
+import innoLogo from '@assets/innogylogo_1752127813201.png';
 import DataEntryTab from "@/components/data-entry-tab";
 import ReportsTab from "@/components/reports-tab";
 import ExportTab from "@/components/export-tab";
@@ -34,12 +35,16 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                <ChartLine className="text-white text-lg" />
+              <div className="w-12 h-12 rounded-lg overflow-hidden flex items-center justify-center bg-white border border-gray-200">
+                <img 
+                  src={innoLogo} 
+                  alt="INNO Logo" 
+                  className="w-10 h-10 object-contain"
+                />
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">Lead Report Automation</h1>
-                <p className="text-sm text-gray-500">Emlak Satış Raporu Sistemi</p>
+                <h1 className="text-xl font-semibold text-gray-900">İNNO Gayrimenkul Yatırım A.Ş.</h1>
+                <p className="text-sm text-gray-500">Lead Raporlama Sistemi</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">

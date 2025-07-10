@@ -1,8 +1,14 @@
-# Real Estate Lead Report Automation
+# İNNO Gayrimenkul Yatırım A.Ş. - Lead Raporlama Sistemi
 
 ## Overview
 
-This is a comprehensive AI-powered real estate lead automation platform that transforms complex lead data into actionable insights through intelligent analytics and comprehensive performance tracking. The system features a mandatory dual-file upload capability for complete lead analysis, processing both main lead files and Takipte (follow-up) files to provide real-time dashboard capabilities, advanced Turkish language support with 37+ columns, and intelligent insights with follow-up metrics. Built as a React single-page application with Express.js backend using PostgreSQL with Drizzle ORM.
+This is İNNO Gayrimenkul Yatırım A.Ş.'s comprehensive AI-powered real estate lead automation platform that transforms complex lead data into actionable insights through intelligent analytics and comprehensive performance tracking. The system features a mandatory dual-file upload capability for complete lead analysis, processing both main lead files and Takipte (follow-up) files to provide real-time dashboard capabilities, advanced Turkish language support with 37+ columns, and intelligent insights with follow-up metrics. Built as a React single-page application with Express.js backend using PostgreSQL with Drizzle ORM.
+
+### Recent Updates (January 2025)
+- **Corporate Branding**: Added İNNO Gayrimenkul Yatırım A.Ş. logo and company branding throughout the application
+- **Standardized Color System**: Implemented consistent brand colors for Instagram (purple), Facebook (blue), and Referans (green)
+- **Enhanced UI**: Added DateFilter component for consistent date filtering across all tabs
+- **Smart Color Mapping**: Replaced hardcoded colors with intelligent color mapping based on data categories
 
 ## User Preferences
 

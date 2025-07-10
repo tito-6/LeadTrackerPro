@@ -656,7 +656,7 @@ export default function EnhancedOverviewDashboardTab() {
                             dataKey="value"
                           >
                             {takipteAnalytics.officeData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                              <Cell key={`cell-${index}`} fill={getStandardColor('OFFICE', entry.name)} />
                             ))}
                           </Pie>
                           <Tooltip />
@@ -794,7 +794,7 @@ export default function EnhancedOverviewDashboardTab() {
                               {dashboardMetrics.statusData.map((entry, index) => (
                                 <Cell 
                                   key={`cell-${index}`} 
-                                  fill={colors[index % colors.length]}
+                                  fill={getStandardColor('STATUS', entry.name)}
                                   stroke="white"
                                   strokeWidth={enable3D ? 2 : 1}
                                 />
@@ -812,8 +812,8 @@ export default function EnhancedOverviewDashboardTab() {
                               {enable3D && dashboardMetrics.statusData.map((entry, index) => (
                                 <Cell 
                                   key={`cell-${index}`} 
-                                  fill={colors[index % colors.length]}
-                                  stroke={colors[index % colors.length]}
+                                  fill={getStandardColor('STATUS', entry.name)}
+                                  stroke={getStandardColor('STATUS', entry.name)}
                                   strokeWidth={2}
                                   style={{
                                     filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))',
@@ -980,7 +980,7 @@ export default function EnhancedOverviewDashboardTab() {
                               {takipteAnalytics.sourceData.map((entry, index) => (
                                 <Cell 
                                   key={`cell-${index}`} 
-                                  fill={colors[index % colors.length]}
+                                  fill={getStandardColor('SOURCE', entry.name)}
                                   stroke="white"
                                   strokeWidth={enable3D ? 2 : 1}
                                 />
@@ -1042,7 +1042,7 @@ export default function EnhancedOverviewDashboardTab() {
                               {takipteAnalytics.meetingTypeData.map((entry, index) => (
                                 <Cell 
                                   key={`cell-${index}`} 
-                                  fill={colors[index % colors.length]}
+                                  fill={getStandardColor('MEETING_TYPE', entry.name)}
                                   stroke="white"
                                   strokeWidth={enable3D ? 2 : 1}
                                 />
@@ -1259,7 +1259,7 @@ export default function EnhancedOverviewDashboardTab() {
                               {takipteAnalytics.officeData.map((entry, index) => (
                                 <Cell 
                                   key={`cell-${index}`} 
-                                  fill={colors[index % colors.length]}
+                                  fill={getStandardColor('OFFICE', entry.name)}
                                   stroke="white"
                                   strokeWidth={enable3D ? 2 : 1}
                                 />
@@ -1333,7 +1333,7 @@ export default function EnhancedOverviewDashboardTab() {
                                 return acc;
                               }, {})
                             ).map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                              <Cell key={`cell-${index}`} fill={getStandardColor("STATUS", entry[0] || entry.name)} />
                             ))}
                           </Pie>
                           <Tooltip />
@@ -1408,7 +1408,7 @@ export default function EnhancedOverviewDashboardTab() {
                                 return acc;
                               }, {})
                             ).map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                              <Cell key={`cell-${index}`} fill={getStandardColor("STATUS", entry[0] || entry.name)} />
                             ))}
                           </Pie>
                           <Tooltip />
