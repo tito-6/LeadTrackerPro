@@ -16,8 +16,13 @@ function extractDataFromWebForm(webFormNote: string | undefined): { projectName?
   // Extract lead type (Satılık/Kiralık)
   let leadType: string | undefined;
   
-  // Lead type detection patterns
+  // Enhanced lead type detection patterns for real WebForm format
   const leadTypePatterns = [
+    // Structured format: "Ilgilendigi Gayrimenkul Tipi :Satılık"  
+    { regex: /Ilgilendigi\s+Gayrimenkul\s+Tipi\s*:\s*Satılık/gi, type: 'satis' },
+    { regex: /Ilgilendigi\s+Gayrimenkul\s+Tipi\s*:\s*Kiralık/gi, type: 'kiralama' },
+    
+    // Legacy patterns for backwards compatibility
     { regex: /\b(?:satılık|satış|satilik|satis|sale|selling|sell)\b/gi, type: 'satis' },
     { regex: /\b(?:kiralık|kira|kiralik|rental|rent|leasing|lease)\b/gi, type: 'kiralama' }
   ];
@@ -32,29 +37,37 @@ function extractDataFromWebForm(webFormNote: string | undefined): { projectName?
   // Enhanced project name extraction patterns
   let projectName: string | undefined;
   
-  // Enhanced project patterns with proper Turkish Unicode character support
+  // Real WebForm patterns - handles actual format: "/ Ilgilendigi Gayrimenkul Tipi :Satılık / Model Sanayi Merkezi"
   const projectPatterns = [
-    // Specific project patterns with complete names - most important first
+    // Specific pattern for "Model Sanayi Merkezi" - highest priority
+    /\/\s*(Model\s+Sanayi\s+Merkezi)\s*$/gi,
+    
+    // General pattern for any "X Sanayi Merkezi" format
+    /\/\s*([A-Za-zÇĞIŞÖÜİçğışöüi]+\s+Sanayi\s+Merkezi)\s*$/gi,
+    
+    // Pattern for project names ending with common Turkish real estate terms
+    /\/\s*([A-Za-zÇĞIŞÖÜİçğışöüi][A-Za-zÇĞIŞÖÜİçğışöüi\s]*(?:Merkezi|Center|Residence|Plaza|Tower|City|Park|Proje|Konut|Sitesi|Complex|Mall|AVM))\s*$/gi,
+    
+    // Pattern after the last slash: "/ Project Name"
+    /\/\s*([A-Za-zÇĞIŞÖÜİçğışöüi][A-Za-zÇĞIŞÖÜİçğışöüi\s]{2,40})\s*$/gi,
+    
+    // Legacy patterns for older format support
     /\b(Vadi\s+İstanbul\s+Residence)\b/gi,
     /\b(İstanbul\s+Park\s+Residence)\b/gi,
-    /\b(Beşiktaş\s+Tower)\b/gi,
-    
-    // Multi-word project names with Turkish character classes
-    /\b([A-Za-zÇĞIŞÖÜİçğışöüi]+\s+[A-Za-zÇĞIŞÖÜİçğışöüi]+\s+(?:Residence|Plaza|Tower|City|Park|Proje|Konut|Sitesi))\b/gi,
-    
-    // Single-word project names
-    /\b([A-Za-zÇĞIŞÖÜİçğışöüi]+\s+(?:Residence|Plaza|Tower|City|Park|Proje|Konut|Sitesi))\b/gi,
-    
-    // Backup patterns with Unicode word boundaries
-    /([A-Za-zÇĞIŞÖÜİçğışöüi]+(?:\s+[A-Za-zÇĞIŞÖÜİçğışöüi]+)*)\s+(?:Residence|Plaza|Tower|City|Park|Proje|Konut|Sitesi)/gi
+    /\b(Beşiktaş\s+Tower)\b/gi
   ];
   
   // Try each project pattern
   for (const pattern of projectPatterns) {
-    const matches = originalNote.match(pattern);
-    if (matches && matches.length > 0) {
-      // Clean and format the project name
-      let candidate = matches[0].trim();
+    const execResult = pattern.exec(originalNote);
+    if (execResult) {
+      // Get the first capture group if it exists, otherwise use full match and clean it
+      let candidate = execResult[1] || execResult[0];
+      
+      // Clean up slashes and whitespace if using full match
+      if (!execResult[1]) {
+        candidate = candidate.replace(/^\/\s*/, '').replace(/\s*\/$/, '').trim();
+      }
       
       // Remove common noise words and clean up
       candidate = candidate.replace(/\b(?:için|hakkında|ile|ilgili|ve|or|and)\b/gi, '').trim();
@@ -65,6 +78,8 @@ function extractDataFromWebForm(webFormNote: string | undefined): { projectName?
         break;
       }
     }
+    // Reset the regex lastIndex for global patterns
+    pattern.lastIndex = 0;
   }
   
   // Fallback: extract any capitalized words near real estate keywords
