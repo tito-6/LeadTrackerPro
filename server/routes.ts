@@ -6,38 +6,96 @@ import multer from "multer";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
 
-// Helper function to extract project name from WebForm Notu
-function extractProjectNameFromWebForm(webFormNote: string | undefined): string | undefined {
-  if (!webFormNote || typeof webFormNote !== 'string') return undefined;
+// Enhanced function to extract both project name and lead type from WebForm Notu
+function extractDataFromWebForm(webFormNote: string | undefined): { projectName?: string; leadType?: string } {
+  if (!webFormNote || typeof webFormNote !== 'string') return {};
   
-  const cleanNote = webFormNote.trim();
+  const cleanNote = webFormNote.trim().toLowerCase();
+  const originalNote = webFormNote.trim();
   
-  // Common Turkish real estate project patterns
-  const patterns = [
-    /\b([A-ZÇĞIŞÖÜ][a-zçğışöü]+\s+(?:Residence|Plaza|Tower|City|Park|Konut|Proje|Sitesi))\b/g,
-    /\b([A-ZÇĞIŞÖÜ][a-zçğışöü]*\s*[A-ZÇĞIŞÖÜ][a-zçğışöü]+\s+(?:Residence|Plaza|Tower))\b/g,
-    /\b(\w+\s+(?:proje|konut|residence|plaza|tower|city|park|bahçe|villa|apart|sitesi|blok))\b/gi
+  // Extract lead type (Satılık/Kiralık)
+  let leadType: string | undefined;
+  
+  // Lead type detection patterns
+  const leadTypePatterns = [
+    { regex: /\b(?:satılık|satış|satilik|satis|sale|selling|sell)\b/gi, type: 'satis' },
+    { regex: /\b(?:kiralık|kira|kiralik|rental|rent|leasing|lease)\b/gi, type: 'kiralama' }
   ];
   
-  // Try each pattern
-  for (const pattern of patterns) {
-    const matches = cleanNote.match(pattern);
-    if (matches && matches.length > 0) {
-      return matches[0].trim();
+  for (const pattern of leadTypePatterns) {
+    if (pattern.regex.test(cleanNote)) {
+      leadType = pattern.type;
+      break;
     }
   }
   
-  // If no pattern matches, check for specific keywords and extract surrounding text
-  const keywords = ['proje', 'konut', 'residence', 'plaza', 'tower', 'city', 'park', 'sitesi'];
-  for (const keyword of keywords) {
-    const regex = new RegExp(`\\b\\w*${keyword}\\w*\\b`, 'gi');
-    const matches = cleanNote.match(regex);
+  // Enhanced project name extraction patterns
+  let projectName: string | undefined;
+  
+  // Enhanced project patterns with proper Turkish Unicode character support
+  const projectPatterns = [
+    // Specific project patterns with complete names - most important first
+    /\b(Vadi\s+İstanbul\s+Residence)\b/gi,
+    /\b(İstanbul\s+Park\s+Residence)\b/gi,
+    /\b(Beşiktaş\s+Tower)\b/gi,
+    
+    // Multi-word project names with Turkish character classes
+    /\b([A-Za-zÇĞIŞÖÜİçğışöüi]+\s+[A-Za-zÇĞIŞÖÜİçğışöüi]+\s+(?:Residence|Plaza|Tower|City|Park|Proje|Konut|Sitesi))\b/gi,
+    
+    // Single-word project names
+    /\b([A-Za-zÇĞIŞÖÜİçğışöüi]+\s+(?:Residence|Plaza|Tower|City|Park|Proje|Konut|Sitesi))\b/gi,
+    
+    // Backup patterns with Unicode word boundaries
+    /([A-Za-zÇĞIŞÖÜİçğışöüi]+(?:\s+[A-Za-zÇĞIŞÖÜİçğışöüi]+)*)\s+(?:Residence|Plaza|Tower|City|Park|Proje|Konut|Sitesi)/gi
+  ];
+  
+  // Try each project pattern
+  for (const pattern of projectPatterns) {
+    const matches = originalNote.match(pattern);
     if (matches && matches.length > 0) {
-      return matches[0].trim();
+      // Clean and format the project name
+      let candidate = matches[0].trim();
+      
+      // Remove common noise words and clean up
+      candidate = candidate.replace(/\b(?:için|hakkında|ile|ilgili|ve|or|and)\b/gi, '').trim();
+      candidate = candidate.replace(/\s+/g, ' '); // Normalize spaces
+      
+      if (candidate.length > 2) {
+        projectName = candidate;
+        break;
+      }
     }
   }
   
-  return undefined;
+  // Fallback: extract any capitalized words near real estate keywords
+  if (!projectName) {
+    const fallbackKeywords = ['proje', 'konut', 'residence', 'plaza', 'tower', 'city', 'park', 'sitesi', 'daire', 'ev', 'villa'];
+    
+    for (const keyword of fallbackKeywords) {
+      const regex = new RegExp(`\\b([A-ZÇĞIŞÖÜİ][A-Za-zçğışöüi]+)\\s+${keyword}\\b`, 'gi');
+      const matches = originalNote.match(regex);
+      if (matches && matches.length > 0) {
+        projectName = matches[0].trim();
+        break;
+      }
+      
+      // Try reverse pattern
+      const reverseRegex = new RegExp(`\\b${keyword}\\s+([A-ZÇĞIŞÖÜİ][A-Za-zçğışöüi]+)\\b`, 'gi');
+      const reverseMatches = originalNote.match(reverseRegex);
+      if (reverseMatches && reverseMatches.length > 0) {
+        projectName = reverseMatches[0].trim();
+        break;
+      }
+    }
+  }
+  
+  return { projectName, leadType };
+}
+
+// Legacy function for backward compatibility
+function extractProjectNameFromWebForm(webFormNote: string | undefined): string | undefined {
+  const result = extractDataFromWebForm(webFormNote);
+  return result.projectName;
 }
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -94,8 +152,10 @@ function mapRowToLead(row: any): any {
   const requestDate = parseDate(row['Talep Geliş Tarihi'] || row['Talep Tarihi'] || row.requestDate || row.date);
   const assignedPersonnel = row['Atanan Personel'] || row['Satış Temsilcisi'] || row.assignedPersonnel || row.salesRep || "";
   
-  // Determine lead type from data patterns or default to kiralama
-  let leadType = 'kiralama';
+  // Enhanced lead type detection from WebForm Notu and other columns
+  let leadType = 'kiralama'; // Default to kiralama
+  
+  // First try the Lead Tipi column if it exists
   const leadTypeValue = row['Lead Tipi'] || row.leadType || "";
   if (typeof leadTypeValue === 'string') {
     const normalized = leadTypeValue.toLowerCase().trim();
@@ -103,6 +163,16 @@ function mapRowToLead(row: any): any {
       leadType = 'satis';
     }
   }
+  
+  // Enhanced: Extract lead type from WebForm Notu if not found in Lead Tipi
+  const webFormNote = row['WebForm Notu'] || row['Web Form Notu'] || row.webFormNote || "";
+  const webFormData = extractDataFromWebForm(webFormNote);
+  if (webFormData.leadType) {
+    leadType = webFormData.leadType; // Override with WebForm detected type
+  }
+  
+  // Optional: Debug logging for WebForm extraction during file imports
+  // console.log(`WebForm Extraction - Project: "${webFormData.projectName || 'None'}", Type: "${webFormData.leadType || 'None'}"`);  
   
   // FIXED: Status derivation EXCLUSIVELY from SON GORUSME SONUCU column
   let status = 'Tanımsız'; // Default to undefined status if no SON GORUSME SONUCU
@@ -139,7 +209,7 @@ function mapRowToLead(row: any): any {
     firstCustomerSource: getValue(row['İlk Müşteri Kaynağı']) || getValue(row.firstCustomerSource),
     formCustomerSource: getValue(row['Form Müşteri Kaynağı']) || getValue(row.formCustomerSource),
     webFormNote: getValue(row['WebForm Notu']) || getValue(row['Web Form Notu']) || getValue(row.webFormNote),
-    projectName: extractProjectNameFromWebForm(getValue(row['WebForm Notu']) || getValue(row['Web Form Notu']) || getValue(row.webFormNote)),
+    projectName: webFormData.projectName || extractProjectNameFromWebForm(getValue(row['WebForm Notu']) || getValue(row['Web Form Notu']) || getValue(row.webFormNote)),
     infoFormLocation1: getValue(row['İnfo Form Geliş Yeri']) || getValue(row.infoFormLocation1),
     infoFormLocation2: getValue(row['İnfo Form Geliş Yeri 2']) || getValue(row.infoFormLocation2),
     infoFormLocation3: getValue(row['İnfo Form Geliş Yeri 3']) || getValue(row.infoFormLocation3),
@@ -210,7 +280,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/leads", async (req, res) => {
     try {
-      const leadData = insertLeadSchema.parse(req.body);
+      let leadData = insertLeadSchema.parse(req.body);
+      
+      // Apply WebForm extraction if webFormNote is present
+      if (leadData.webFormNote) {
+        const webFormData = extractDataFromWebForm(leadData.webFormNote);
+        
+        // Override project name if extracted from WebForm
+        if (webFormData.projectName) {
+          leadData.projectName = webFormData.projectName;
+        }
+        
+        // Override lead type if extracted from WebForm and not explicitly set
+        if (webFormData.leadType && (!leadData.leadType || leadData.leadType === 'kiralama')) {
+          leadData.leadType = webFormData.leadType;
+        }
+      }
+      
       const lead = await storage.createLead(leadData);
       res.status(201).json(lead);
     } catch (error) {
