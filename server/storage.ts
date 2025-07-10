@@ -36,6 +36,7 @@ export class MemStorage implements IStorage {
   private leads: Map<number, Lead>;
   private salesReps: Map<number, SalesRep>;
   private settings: Map<string, Settings>;
+  private takipteData: any[]; // Store takipte/follow-up data
   private currentLeadId: number;
   private currentSalesRepId: number;
   private currentSettingsId: number;
@@ -44,12 +45,26 @@ export class MemStorage implements IStorage {
     this.leads = new Map();
     this.salesReps = new Map();
     this.settings = new Map();
+    this.takipteData = [];
     this.currentLeadId = 1;
     this.currentSalesRepId = 1;
     this.currentSettingsId = 1;
 
     // Initialize with some default sales reps
     this.initializeDefaults();
+  }
+
+  // Takipte data methods for local storage
+  async getTakipteData(): Promise<any[]> {
+    return this.takipteData;
+  }
+
+  async setTakipteData(data: any[]): Promise<void> {
+    this.takipteData = data;
+  }
+
+  async clearTakipteData(): Promise<void> {
+    this.takipteData = [];
   }
 
   private initializeDefaults() {

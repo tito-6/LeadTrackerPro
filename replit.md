@@ -35,10 +35,11 @@ Preferred communication style: Simple, everyday language.
 - **File Processing**: Multer for file uploads, XLSX and PapaParse for Excel/CSV parsing
 
 ### Data Storage
-- **Database**: PostgreSQL (configured for Neon serverless)
-- **ORM**: Drizzle ORM with Drizzle Kit for migrations
+- **Local Development**: In-memory storage (MemStorage) for development and local VS Code setup
+- **Production**: PostgreSQL (configured for Neon serverless) when database is available
+- **ORM**: Drizzle ORM with Drizzle Kit for migrations (optional for local development)
 - **Schema Location**: Shared schema definitions in `/shared/schema.ts`
-- **Session Storage**: PostgreSQL-based session storage using connect-pg-simple
+- **Session Storage**: Memory-based session storage for local development
 
 ## Key Components
 
@@ -123,7 +124,14 @@ The application includes both memory-based storage (for development) and databas
 
 ## Deployment Strategy
 
-### Development
+### Local Development (VS Code)
+- **Quick Setup**: See `LOCAL_SETUP.md` for complete local development guide
+- **Memory Storage**: All data stored in application memory (no database required)
+- **Hot Reloading**: tsx runs the Express server with automatic restart
+- **VS Code Integration**: Pre-configured launch settings and extensions
+- **Data Persistence**: Data persists during session, resets on server restart
+
+### Development (Replit)
 - Vite dev server serves the React application
 - tsx runs the Express server with hot reloading
 - Drizzle Kit handles database migrations
@@ -136,8 +144,12 @@ The application includes both memory-based storage (for development) and databas
 - PostgreSQL database runs on Neon serverless platform
 
 ### Environment Configuration
-- Database URL configured via environment variables
-- Separate configurations for development and production
+- **Local**: Memory storage, no environment variables required
+- **Development**: Database URL configured via environment variables
+- **Production**: Separate configurations for scalability
 - Session storage integrated with PostgreSQL for scalability
 
-The application is designed to be easily deployable on platforms like Replit while maintaining the flexibility to deploy elsewhere with minimal configuration changes.
+The application is designed to work seamlessly in three environments:
+1. **Local VS Code**: Memory storage for development
+2. **Replit**: Cloud development with database
+3. **Production**: Scalable deployment with PostgreSQL
