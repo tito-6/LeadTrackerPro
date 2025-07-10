@@ -520,13 +520,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Export endpoints
+  // Advanced Export endpoints with comprehensive filtering
   app.get("/api/export/:format", async (req, res) => {
     try {
       const { format } = req.params;
-      const { startDate, endDate, salesRep, month, year, leadType } = req.query;
+      const { 
+        startDate, endDate, salesRep, month, year, leadType,
+        reportType, includeCharts, includeAnalytics, includeRawData, customTitle,
+        projects, statuses
+      } = req.query;
       
-      const leads = await storage.getLeadsByFilter({
+      // Enhanced filtering logic
+      let filteredLeads = await storage.getLeadsByFilter({
         startDate: startDate as string,
         endDate: endDate as string,
         month: month as string,
@@ -534,91 +539,246 @@ export async function registerRoutes(app: Express): Promise<Server> {
         salesRep: salesRep as string,
         leadType: leadType as string,
       });
+
+      // Apply additional advanced filters
+      if (projects && projects !== 'all') {
+        const projectList = (projects as string).split(',');
+        filteredLeads = filteredLeads.filter(lead => 
+          lead.projectName && projectList.includes(lead.projectName)
+        );
+      }
+
+      if (statuses && statuses !== 'all') {
+        const statusList = (statuses as string).split(',');
+        filteredLeads = filteredLeads.filter(lead => 
+          lead.status && statusList.includes(lead.status)
+        );
+      }
+
+      // Apply personnel filter if multiple selected
+      if (salesRep && salesRep.includes(',')) {
+        const personnelList = (salesRep as string).split(',');
+        filteredLeads = filteredLeads.filter(lead => 
+          lead.assignedPersonnel && personnelList.includes(lead.assignedPersonnel)
+        );
+      }
       
       const salesReps = await storage.getSalesReps();
-      
+      const allLeads = await storage.getLeads(); // For comprehensive analytics
+      // Generate comprehensive analytics if requested
+      let analytics = {};
+      if (includeAnalytics === 'true' || reportType === 'comprehensive' || reportType === 'analytics-only') {
+        // Calculate comprehensive statistics
+        const statusCounts = filteredLeads.reduce((acc, lead) => {
+          const status = lead.status || 'Tanımsız';
+          acc[status] = (acc[status] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+        const personnelStats = filteredLeads.reduce((acc, lead) => {
+          const personnel = lead.assignedPersonnel || 'Atanmamış';
+          if (!acc[personnel]) {
+            acc[personnel] = { total: 0, satis: 0, takipte: 0, olumsuz: 0 };
+          }
+          acc[personnel].total++;
+          if (lead.status?.toLowerCase().includes('satış') || lead.status?.toLowerCase().includes('satis')) {
+            acc[personnel].satis++;
+          }
+          if (lead.status?.toLowerCase().includes('takip')) {
+            acc[personnel].takipte++;
+          }
+          if (lead.status?.toLowerCase().includes('olumsuz')) {
+            acc[personnel].olumsuz++;
+          }
+          return acc;
+        }, {} as Record<string, any>);
+
+        const projectStats = filteredLeads.reduce((acc, lead) => {
+          const project = lead.projectName || 'Belirtilmemiş';
+          acc[project] = (acc[project] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+        const leadTypeStats = filteredLeads.reduce((acc, lead) => {
+          const type = lead.leadType || 'Belirtilmemiş';
+          acc[type] = (acc[type] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+        analytics = {
+          totalLeads: filteredLeads.length,
+          statusBreakdown: statusCounts,
+          personnelPerformance: personnelStats,
+          projectDistribution: projectStats,
+          leadTypeDistribution: leadTypeStats,
+          conversionRate: filteredLeads.length > 0 ? 
+            Math.round((Object.entries(statusCounts).filter(([status]) => 
+              status.toLowerCase().includes('satış')).reduce((sum, [, count]) => sum + count, 0) / filteredLeads.length) * 100) : 0,
+          filterSummary: {
+            dateRange: startDate && endDate ? `${startDate} - ${endDate}` : 'Tümü',
+            personnel: salesRep === 'all' || !salesRep ? 'Tümü' : salesRep,
+            projects: projects === 'all' || !projects ? 'Tümü' : projects,
+            leadType: leadType === 'all' || !leadType ? 'Tümü' : leadType,
+            statuses: statuses === 'all' || !statuses ? 'Tümü' : statuses
+          }
+        };
+      }
+
       if (format === 'json') {
+        const exportData: any = {
+          reportType: reportType || 'comprehensive',
+          exportDate: new Date().toISOString(),
+          customTitle: customTitle || 'İNNO Gayrimenkul Lead Raporu',
+          filterSummary: (analytics as any).filterSummary || {}
+        };
+
+        if (includeRawData === 'true' || reportType === 'comprehensive' || reportType === 'leads-only') {
+          exportData.leads = filteredLeads;
+          exportData.salesReps = salesReps;
+        }
+
+        if (includeAnalytics === 'true' || reportType === 'comprehensive' || reportType === 'analytics-only') {
+          exportData.analytics = analytics;
+        }
+
         res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Content-Disposition', `attachment; filename="lead-report-${new Date().toISOString().split('T')[0]}.json"`);
-        res.json({ leads, salesReps, exportDate: new Date().toISOString() });
+        res.setHeader('Content-Disposition', `attachment; filename="İNNO-Kapsamlı-Lead-Raporu-${new Date().toISOString().split('T')[0]}.json"`);
+        res.json(exportData);
       } else if (format === 'excel') {
         const XLSX = require('xlsx');
         
         // Create workbook and worksheets
         const wb = XLSX.utils.book_new();
         
-        // Prepare leads data for Excel
-        const leadsData = leads.map(lead => ({
-          'Müşteri ID': lead.customerId || '',
-          'İletişim ID': lead.contactId || '',
-          'Müşteri Adı Soyadı': lead.customerName || '',
-          'İlk Müşteri Kaynağı': lead.firstCustomerSource || '',
-          'Form Müşteri Kaynağı': lead.formCustomerSource || '',
-          'WebForm Notu': lead.webFormNote || '',
-          'Talep Geliş Tarihi': lead.requestDate || '',
-          'İnfo Form Geliş Yeri 1': lead.infoFormLocation1 || '',
-          'İnfo Form Geliş Yeri 2': lead.infoFormLocation2 || '',
-          'İnfo Form Geliş Yeri 3': lead.infoFormLocation3 || '',
-          'İnfo Form Geliş Yeri 4': lead.infoFormLocation4 || '',
-          'Atanan Personel': lead.assignedPersonnel || '',
-          'Hatırlatma Personeli': lead.reminderPersonnel || '',
-          'Geri Dönüş Var mı': lead.wasCalledBack ? 'Evet' : 'Hayır',
-          'WebForm İletişim Telefon': lead.webFormContactPhone || '',
-          'WebForm İletişim Email': lead.webFormContactEmail || '',
-          'WebForm Telefon Dönüşü': lead.webFormPhoneCallback ? 'Evet' : 'Hayır',
-          'WebForm Email Dönüşü': lead.webFormEmailCallback ? 'Evet' : 'Hayır',
-          'Birebir Görüşme': lead.oneOnOneMeeting ? 'Evet' : 'Hayır',
-          'Birebir Görüşme Tarihi': lead.oneOnOneMeetingDate || '',
-          'Birebir Görüşme Sonucu': lead.oneOnOneMeetingResult || '',
-          'Son Görüşme Sonucu': lead.lastMeetingResult || '',
-          'Müşteri Cevap Tarihi': lead.customerResponseDate || '',
-          'Görüşme Notu': lead.callNote || '',
-          'Satış': lead.sale ? 'Evet' : 'Hayır',
-          'Dönüş Olumsuzluk Nedeni': lead.negativeReason || '',
-          'Randevu': lead.appointment ? 'Evet' : 'Hayır',
-          'Proje Adı': lead.projectName || '',
-          'Lead Tipi': lead.leadType || '',
-          'Status': lead.status || ''
-        }));
-        
-        // Create leads worksheet
-        const leadsWS = XLSX.utils.json_to_sheet(leadsData);
-        XLSX.utils.book_append_sheet(wb, leadsWS, 'Lead Verileri');
-        
-        // Create summary worksheet
-        const statusCounts = leads.reduce((acc, lead) => {
-          const status = lead.status || 'Belirtilmemiş';
-          acc[status] = (acc[status] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-        
-        const summaryData = [
-          { 'Metrik': 'Toplam Lead Sayısı', 'Değer': leads.length },
-          { 'Metrik': 'Dışa Aktarma Tarihi', 'Değer': new Date().toLocaleDateString('tr-TR') },
-          { 'Metrik': 'Filtreleme Kriteri', 'Değer': salesRep || 'Tümü' },
-          ...Object.entries(statusCounts).map(([status, count]) => ({
-            'Metrik': `${status} Sayısı`,
-            'Değer': count
-          }))
+        // Add comprehensive title page
+        const titleData = [
+          { 'İNNO Gayrimenkul Yatırım A.Ş.': '' },
+          { 'İNNO Gayrimenkul Yatırım A.Ş.': customTitle || 'Kapsamlı Lead Raporu' },
+          { 'İNNO Gayrimenkul Yatırım A.Ş.': '' },
+          { 'İNNO Gayrimenkul Yatırım A.Ş.': `Rapor Tarihi: ${new Date().toLocaleDateString('tr-TR')}` },
+          { 'İNNO Gayrimenkul Yatırım A.Ş.': `Toplam Lead Sayısı: ${filteredLeads.length}` },
+          { 'İNNO Gayrimenkul Yatırım A.Ş.': '' },
+          { 'İNNO Gayrimenkul Yatırım A.Ş.': 'Filtre Özeti:' },
+          { 'İNNO Gayrimenkul Yatırım A.Ş.': `Tarih Aralığı: ${(analytics as any).filterSummary?.dateRange || 'Tümü'}` },
+          { 'İNNO Gayrimenkul Yatırım A.Ş.': `Personel: ${(analytics as any).filterSummary?.personnel || 'Tümü'}` },
+          { 'İNNO Gayrimenkul Yatırım A.Ş.': `Projeler: ${(analytics as any).filterSummary?.projects || 'Tümü'}` },
+          { 'İNNO Gayrimenkul Yatırım A.Ş.': `Lead Tipi: ${(analytics as any).filterSummary?.leadType || 'Tümü'}` },
+          { 'İNNO Gayrimenkul Yatırım A.Ş.': `Durumlar: ${(analytics as any).filterSummary?.statuses || 'Tümü'}` }
         ];
         
-        const summaryWS = XLSX.utils.json_to_sheet(summaryData);
-        XLSX.utils.book_append_sheet(wb, summaryWS, 'Özet');
+        const titleWS = XLSX.utils.json_to_sheet(titleData);
+        XLSX.utils.book_append_sheet(wb, titleWS, 'Rapor Bilgileri');
+
+        // Add analytics if requested
+        if (includeAnalytics === 'true' || reportType === 'comprehensive' || reportType === 'analytics-only') {
+          const analyticsData = analytics as any;
+          
+          // Status breakdown sheet
+          const statusData = Object.entries(analyticsData.statusBreakdown || {}).map(([status, count]) => ({
+            'Durum': status,
+            'Sayı': count,
+            'Yüzde': filteredLeads.length > 0 ? Math.round(((count as number) / filteredLeads.length) * 100) : 0
+          }));
+          const statusWS = XLSX.utils.json_to_sheet(statusData);
+          XLSX.utils.book_append_sheet(wb, statusWS, 'Durum Analizi');
+
+          // Personnel performance sheet
+          const personnelData = Object.entries(analyticsData.personnelPerformance || {}).map(([personnel, stats]: [string, any]) => ({
+            'Personel': personnel,
+            'Toplam Lead': stats.total,
+            'Satış': stats.satis,
+            'Takipte': stats.takipte,
+            'Olumsuz': stats.olumsuz,
+            'Başarı Oranı %': stats.total > 0 ? Math.round((stats.satis / stats.total) * 100) : 0
+          }));
+          const personnelWS = XLSX.utils.json_to_sheet(personnelData);
+          XLSX.utils.book_append_sheet(wb, personnelWS, 'Personel Performansı');
+
+          // Project distribution sheet
+          const projectData = Object.entries(analyticsData.projectDistribution || {}).map(([project, count]) => ({
+            'Proje': project,
+            'Lead Sayısı': count,
+            'Yüzde': filteredLeads.length > 0 ? Math.round(((count as number) / filteredLeads.length) * 100) : 0
+          }));
+          const projectWS = XLSX.utils.json_to_sheet(projectData);
+          XLSX.utils.book_append_sheet(wb, projectWS, 'Proje Dağılımı');
+
+          // Lead type distribution sheet
+          const leadTypeData = Object.entries(analyticsData.leadTypeDistribution || {}).map(([type, count]) => ({
+            'Lead Tipi': type,
+            'Sayı': count,
+            'Yüzde': filteredLeads.length > 0 ? Math.round(((count as number) / filteredLeads.length) * 100) : 0
+          }));
+          const leadTypeWS = XLSX.utils.json_to_sheet(leadTypeData);
+          XLSX.utils.book_append_sheet(wb, leadTypeWS, 'Lead Tipi Analizi');
+        }
+        
+        // Prepare leads data for Excel if requested
+        if (includeRawData === 'true' || reportType === 'comprehensive' || reportType === 'leads-only') {
+          const leadsData = filteredLeads.map(lead => ({
+            'Müşteri ID': lead.customerId || '',
+            'İletişim ID': lead.contactId || '',
+            'Müşteri Adı Soyadı': lead.customerName || '',
+            'İlk Müşteri Kaynağı': lead.firstCustomerSource || '',
+            'Form Müşteri Kaynağı': lead.formCustomerSource || '',
+            'WebForm Notu': lead.webFormNote || '',
+            'Talep Geliş Tarihi': lead.requestDate || '',
+            'İnfo Form Geliş Yeri 1': lead.infoFormLocation1 || '',
+            'İnfo Form Geliş Yeri 2': lead.infoFormLocation2 || '',
+            'İnfo Form Geliş Yeri 3': lead.infoFormLocation3 || '',
+            'İnfo Form Geliş Yeri 4': lead.infoFormLocation4 || '',
+            'Atanan Personel': lead.assignedPersonnel || '',
+            'Hatırlatma Personeli': lead.reminderPersonnel || '',
+            'Geri Dönüş Var mı': lead.wasCalledBack ? 'Evet' : 'Hayır',
+            'WebForm İletişim Telefon': lead.webFormContactPhone || '',
+            'WebForm İletişim Email': lead.webFormContactEmail || '',
+            'WebForm Telefon Dönüşü': lead.webFormPhoneCallback ? 'Evet' : 'Hayır',
+            'WebForm Email Dönüşü': lead.webFormEmailCallback ? 'Evet' : 'Hayır',
+            'Birebir Görüşme': lead.oneOnOneMeeting ? 'Evet' : 'Hayır',
+            'Birebir Görüşme Tarihi': lead.oneOnOneMeetingDate || '',
+            'Birebir Görüşme Sonucu': lead.oneOnOneMeetingResult || '',
+            'Son Görüşme Sonucu': lead.lastMeetingResult || '',
+            'Müşteri Cevap Tarihi': lead.customerResponseDate || '',
+            'Görüşme Notu': lead.callNote || '',
+            'Satış': lead.sale ? 'Evet' : 'Hayır',
+            'Dönüş Olumsuzluk Nedeni': lead.negativeReason || '',
+            'Randevu': lead.appointment ? 'Evet' : 'Hayır',
+            'Proje Adı': lead.projectName || '',
+            'Lead Tipi': lead.leadType || '',
+            'Status': lead.status || ''
+          }));
+          
+          // Create leads worksheet
+          const leadsWS = XLSX.utils.json_to_sheet(leadsData);
+          XLSX.utils.book_append_sheet(wb, leadsWS, 'Lead Verileri');
+        }
         
         // Generate Excel buffer
         const excelBuffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
         
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', `attachment; filename="İNNO-Lead-Raporu-${new Date().toISOString().split('T')[0]}.xlsx"`);
+        res.setHeader('Content-Disposition', `attachment; filename="İNNO-Kapsamlı-Lead-Raporu-${new Date().toISOString().split('T')[0]}.xlsx"`);
         res.send(excelBuffer);
       } else if (format === 'pdf') {
-        // Return data for frontend PDF generation using jsPDF
-        res.setHeader('Content-Type', 'application/json');
-        res.json({ 
+        // Return comprehensive data for frontend PDF generation using jsPDF
+        const exportData: any = {
           format: 'pdf',
-          data: { leads, salesReps },
-          exportDate: new Date().toISOString()
-        });
+          reportType: reportType || 'comprehensive',
+          customTitle: customTitle || 'İNNO Gayrimenkul Lead Raporu',
+          exportDate: new Date().toISOString(),
+          filterSummary: (analytics as any).filterSummary || {}
+        };
+
+        if (includeRawData === 'true' || reportType === 'comprehensive' || reportType === 'leads-only') {
+          exportData.data = { leads: filteredLeads, salesReps };
+        }
+
+        if (includeAnalytics === 'true' || reportType === 'comprehensive' || reportType === 'analytics-only') {
+          exportData.analytics = analytics;
+        }
+
+        res.setHeader('Content-Type', 'application/json');
+        res.json(exportData);
       } else {
         res.status(400).json({ message: "Unsupported export format" });
       }
