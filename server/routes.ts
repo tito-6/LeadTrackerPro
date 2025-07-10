@@ -10,28 +10,32 @@ import Papa from "papaparse";
 function extractDataFromWebForm(webFormNote: string | undefined): { projectName?: string; leadType?: string } {
   if (!webFormNote || typeof webFormNote !== 'string') return {};
   
-  const cleanNote = webFormNote.trim().toLowerCase();
   const originalNote = webFormNote.trim();
   
   // Extract lead type (Satılık/Kiralık)
   let leadType: string | undefined;
   
-  // Enhanced lead type detection patterns for real WebForm format
+  // Simplified and comprehensive lead type detection patterns
   const leadTypePatterns = [
-    // Structured format: "Ilgilendigi Gayrimenkul Tipi :Satılık"  
-    { regex: /Ilgilendigi\s+Gayrimenkul\s+Tipi\s*:\s*Satılık/gi, type: 'satis' },
-    { regex: /Ilgilendigi\s+Gayrimenkul\s+Tipi\s*:\s*Kiralık/gi, type: 'kiralama' },
-    
-    // Legacy patterns for backwards compatibility
-    { regex: /\b(?:satılık|satış|satilik|satis|sale|selling|sell)\b/gi, type: 'satis' },
-    { regex: /\b(?:kiralık|kira|kiralik|rental|rent|leasing|lease)\b/gi, type: 'kiralama' }
+    // KIRALIK patterns - check first for priority (all common variations)
+    { 
+      regex: /kiralık|kiraliq|kiralik|kırala|kıralı|krala|krali|kerala|keralı/i, 
+      type: 'kiralama' 
+    },
+    // SATILIK patterns (all common variations)  
+    { 
+      regex: /satılık|satıliq|satilik|satlik|satlık|satılk|satlk|satış|satis/i, 
+      type: 'satis' 
+    }
   ];
   
   for (const pattern of leadTypePatterns) {
-    if (pattern.regex.test(cleanNote)) {
+    if (pattern.regex.test(originalNote)) {
       leadType = pattern.type;
       break;
     }
+    // Reset the regex lastIndex for global patterns
+    pattern.regex.lastIndex = 0;
   }
   
   // Enhanced project name extraction patterns
@@ -306,8 +310,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           leadData.projectName = webFormData.projectName;
         }
         
-        // Override lead type if extracted from WebForm and not explicitly set
-        if (webFormData.leadType && (!leadData.leadType || leadData.leadType === 'kiralama')) {
+        // Always override lead type if extracted from WebForm (WebForm detection has priority)
+        if (webFormData.leadType) {
           leadData.leadType = webFormData.leadType;
         }
       }
