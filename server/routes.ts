@@ -530,38 +530,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
         projects, statuses
       } = req.query;
       
-      // Enhanced filtering logic
-      let filteredLeads = await storage.getLeadsByFilter({
-        startDate: startDate as string,
-        endDate: endDate as string,
-        month: month as string,
-        year: year as string,
-        salesRep: salesRep as string,
-        leadType: leadType as string,
-      });
+      console.log('Export query params:', req.query);
+      
+      // Start with all leads
+      let filteredLeads = await storage.getLeads();
+      console.log('Total leads available:', filteredLeads.length);
+      
+      // Debug: Show unique personnel names
+      const uniquePersonnel = [...new Set(filteredLeads.map(lead => lead.assignedPersonnel).filter(Boolean))];
+      console.log('Unique personnel in data:', uniquePersonnel);
 
-      // Apply additional advanced filters
-      if (projects && projects !== 'all') {
-        const projectList = (projects as string).split(',');
-        filteredLeads = filteredLeads.filter(lead => 
-          lead.projectName && projectList.includes(lead.projectName)
-        );
+      // Apply basic date/type filters only if specified
+      if (startDate || endDate || month || year || (salesRep && !salesRep.includes(',')) || leadType) {
+        filteredLeads = await storage.getLeadsByFilter({
+          startDate: startDate as string,
+          endDate: endDate as string,
+          month: month as string,
+          year: year as string,
+          salesRep: (salesRep && !salesRep.includes(',')) ? salesRep as string : undefined,
+          leadType: leadType as string,
+        });
       }
 
-      if (statuses && statuses !== 'all') {
-        const statusList = (statuses as string).split(',');
-        filteredLeads = filteredLeads.filter(lead => 
-          lead.status && statusList.includes(lead.status)
-        );
-      }
+      console.log('After basic filtering:', filteredLeads.length, 'leads');
 
-      // Apply personnel filter if multiple selected
+      // Apply advanced multi-select personnel filter
       if (salesRep && salesRep.includes(',')) {
-        const personnelList = (salesRep as string).split(',');
+        const personnelList = (salesRep as string).split(',').map(p => p.trim());
+        console.log('Filtering by personnel:', personnelList);
+        console.log('Personnel in leads:', filteredLeads.map(lead => lead.assignedPersonnel).slice(0, 10));
+        
         filteredLeads = filteredLeads.filter(lead => 
-          lead.assignedPersonnel && personnelList.includes(lead.assignedPersonnel)
+          lead.assignedPersonnel && personnelList.includes(lead.assignedPersonnel.trim())
         );
+        console.log('After personnel filtering:', filteredLeads.length, 'leads');
       }
+
+      // Apply project filtering
+      if (projects && projects !== 'all') {
+        const projectList = (projects as string).split(',').map(p => p.trim());
+        console.log('Filtering by projects:', projectList);
+        filteredLeads = filteredLeads.filter(lead => 
+          lead.projectName && projectList.includes(lead.projectName.trim())
+        );
+        console.log('After project filtering:', filteredLeads.length, 'leads');
+      }
+
+      // Apply status filtering
+      if (statuses && statuses !== 'all') {
+        const statusList = (statuses as string).split(',').map(s => s.trim());
+        console.log('Filtering by statuses:', statusList);
+        filteredLeads = filteredLeads.filter(lead => 
+          lead.status && statusList.includes(lead.status.trim())
+        );
+        console.log('After status filtering:', filteredLeads.length, 'leads');
+      }
+
+      // Apply lead type filtering if specified
+      if (leadType && leadType !== 'all') {
+        console.log('Filtering by lead type:', leadType);
+        if (leadType === 'satis') {
+          filteredLeads = filteredLeads.filter(lead => lead.leadType !== 'kiralik');
+        } else if (leadType === 'kiralik') {
+          filteredLeads = filteredLeads.filter(lead => lead.leadType === 'kiralik');
+        }
+        console.log('After lead type filtering:', filteredLeads.length, 'leads');
+      }
+
+      console.log('Final filtered leads count:', filteredLeads.length);
       
       const salesReps = await storage.getSalesReps();
       const allLeads = await storage.getLeads(); // For comprehensive analytics
