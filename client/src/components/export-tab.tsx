@@ -57,7 +57,20 @@ export default function ExportTab() {
     chartTypes: ['pie', 'bar', 'line'] as string[],
     customTitle: '',
     includeCompanyBranding: true,
-    format: 'excel' as 'excel' | 'pdf' | 'json'
+    format: 'excel' as 'excel' | 'pdf' | 'json',
+    // Section selection for comprehensive reports
+    includedSections: {
+      overviewDashboard: true,        // 👥 Personel Atama ve Durum Özeti
+      statusDistribution: true,       // Lead Durum Dağılımı
+      leadTypeDistribution: true,     // Lead Tipi Dağılımı
+      statusAnalysis: true,           // Durum Analizi
+      personnelPerformance: true,     // Personel Performansı
+      sourceAnalysis: true,           // 🎯 Kaynak Analizi
+      advancedAnalysis: true,         // 🧠 Gelişmiş Analiz
+      negativeAnalysis: true,         // Olumsuz Analizi
+      followUpAnalysis: true,         // 📞 Unified Takip Analizi
+      duplicateAnalysis: true         // Duplicate Analizi
+    }
   });
 
   const [showAdvancedDialog, setShowAdvancedDialog] = useState(false);
@@ -228,6 +241,103 @@ export default function ExportTab() {
     }
   };
 
+  const captureChartsFromAllTabs = async () => {
+    const capturedCharts: Array<{title: string, image: string, section: string}> = [];
+    const sections = advancedExportSettings.includedSections;
+    
+    // Helper function to capture chart from canvas with enhanced detection
+    const captureChart = (canvas: HTMLCanvasElement, sectionName: string, chartTitle?: string) => {
+      try {
+        if (canvas.width > 0 && canvas.height > 0 && canvas.offsetParent !== null) {
+          const imageData = canvas.toDataURL('image/png', 1.0);
+          const title = chartTitle || getChartTitle(canvas) || `${sectionName} Chart`;
+          capturedCharts.push({
+            title,
+            image: imageData,
+            section: sectionName
+          });
+          return true;
+        }
+      } catch (error) {
+        console.warn(`Failed to capture chart from ${sectionName}:`, error);
+      }
+      return false;
+    };
+
+    // Helper to get chart title from various container patterns
+    const getChartTitle = (canvas: HTMLCanvasElement): string => {
+      const container = canvas.closest('.card, .chart-container, [data-chart], .recharts-wrapper') || canvas.parentElement;
+      const titleElement = container?.querySelector('h1, h2, h3, h4, h5, h6, .chart-title, .card-title');
+      return titleElement?.textContent?.trim() || '';
+    };
+
+    // Capture charts from each section if included
+    if (sections.overviewDashboard) {
+      document.querySelectorAll('[data-tab="overview"] canvas, [data-testid="overview"] canvas').forEach(canvas => {
+        captureChart(canvas as HTMLCanvasElement, 'Personel Atama ve Durum Özeti');
+      });
+    }
+
+    if (sections.statusDistribution) {
+      document.querySelectorAll('[data-chart="status"] canvas, .status-chart canvas').forEach(canvas => {
+        captureChart(canvas as HTMLCanvasElement, 'Lead Durum Dağılımı');
+      });
+    }
+
+    if (sections.leadTypeDistribution) {
+      document.querySelectorAll('[data-chart="leadtype"] canvas, .leadtype-chart canvas').forEach(canvas => {
+        captureChart(canvas as HTMLCanvasElement, 'Lead Tipi Dağılımı');
+      });
+    }
+
+    if (sections.statusAnalysis) {
+      document.querySelectorAll('[data-tab="status-analysis"] canvas').forEach(canvas => {
+        captureChart(canvas as HTMLCanvasElement, 'Durum Analizi');
+      });
+    }
+
+    if (sections.personnelPerformance) {
+      document.querySelectorAll('[data-tab="personnel"] canvas').forEach(canvas => {
+        captureChart(canvas as HTMLCanvasElement, 'Personel Performansı');
+      });
+    }
+
+    if (sections.sourceAnalysis) {
+      document.querySelectorAll('[data-tab="source"] canvas').forEach(canvas => {
+        captureChart(canvas as HTMLCanvasElement, 'Kaynak Analizi');
+      });
+    }
+
+    if (sections.negativeAnalysis) {
+      document.querySelectorAll('[data-tab="negative"] canvas').forEach(canvas => {
+        captureChart(canvas as HTMLCanvasElement, 'Olumsuz Analizi');
+      });
+    }
+
+    if (sections.followUpAnalysis) {
+      document.querySelectorAll('[data-tab="followup"] canvas').forEach(canvas => {
+        captureChart(canvas as HTMLCanvasElement, 'Unified Takip Analizi');
+      });
+    }
+
+    if (sections.duplicateAnalysis) {
+      document.querySelectorAll('[data-tab="duplicate"] canvas').forEach(canvas => {
+        captureChart(canvas as HTMLCanvasElement, 'Duplicate Analizi');
+      });
+    }
+
+    // Fallback: capture any visible charts if none found in specific sections
+    if (capturedCharts.length === 0) {
+      document.querySelectorAll('canvas').forEach(canvas => {
+        if (canvas.offsetParent !== null && canvas.width > 0 && canvas.height > 0) {
+          captureChart(canvas as HTMLCanvasElement, 'General Charts');
+        }
+      });
+    }
+
+    return capturedCharts;
+  };
+
   const handleAdvancedPDFExport = async (params: URLSearchParams) => {
     const { default: jsPDF } = await import('jspdf');
     const { default: autoTable } = await import('jspdf-autotable');
@@ -237,6 +347,9 @@ export default function ExportTab() {
     if (!response.ok) throw new Error("PDF data fetch failed");
     
     const data = await response.json();
+    
+    // Capture all charts from selected sections
+    const capturedCharts = advancedExportSettings.includeCharts ? await captureChartsFromAllTabs() : [];
     
     // Create PDF document with landscape orientation for better chart display
     const doc = new jsPDF('landscape', 'mm', 'a4');
@@ -256,67 +369,61 @@ export default function ExportTab() {
     doc.text(`Export Date: ${new Date().toLocaleDateString('tr-TR')}`, pageWidth/2, 40, { align: 'center' });
     doc.text(`Total Leads: ${data.totalLeads || data.leads?.length || 0}`, pageWidth/2, 50, { align: 'center' });
     
-    let yPosition = 70;
+    if (capturedCharts.length > 0) {
+      doc.text(`Charts Included: ${capturedCharts.length}`, pageWidth/2, 60, { align: 'center' });
+    }
     
-    // Capture and add charts using the approach you suggested
-    if (advancedExportSettings.includeCharts) {
-      const chartElements = document.querySelectorAll('canvas');
-      let chartCount = 0;
+    let yPosition = 80;
+    
+    // Add captured charts organized by section
+    if (capturedCharts.length > 0) {
+      const sections = [...new Set(capturedCharts.map(chart => chart.section))];
       
-      for (const canvas of chartElements) {
-        if (canvas.offsetParent !== null && canvas.width > 0 && canvas.height > 0) {
-          try {
-            // Convert chart canvas to image as suggested
-            const chartImage = canvas.toDataURL('image/png', 1.0);
-            
-            // Add new page if needed
-            if (yPosition > pageHeight - 100) {
-              doc.addPage();
-              yPosition = 20;
-            }
-            
-            // Get chart title from parent container
-            const chartContainer = canvas.closest('[data-testid]') || canvas.closest('.recharts-wrapper') || canvas.parentElement;
-            const chartTitle = chartContainer?.querySelector('h3, h4, .chart-title')?.textContent || `Chart ${chartCount + 1}`;
-            
-            // Add chart title
-            doc.setFontSize(14);
-            doc.setFont("helvetica", "bold");
-            doc.text(chartTitle, 20, yPosition);
-            yPosition += 10;
-            
-            // Calculate chart dimensions maintaining aspect ratio
-            const maxWidth = pageWidth - 40;
-            const maxHeight = 80;
-            const aspectRatio = canvas.width / canvas.height;
-            
-            let chartWidth = Math.min(maxWidth, maxHeight * aspectRatio);
-            let chartHeight = chartWidth / aspectRatio;
-            
-            if (chartHeight > maxHeight) {
-              chartHeight = maxHeight;
-              chartWidth = chartHeight * aspectRatio;
-            }
-            
-            // Add chart image to PDF
-            doc.addImage(chartImage, 'PNG', 20, yPosition, chartWidth, chartHeight);
-            yPosition += chartHeight + 20;
-            chartCount++;
-            
-          } catch (error) {
-            console.warn('Could not capture chart:', error);
-          }
+      for (const section of sections) {
+        const sectionCharts = capturedCharts.filter(chart => chart.section === section);
+        
+        // Add section header
+        if (yPosition > pageHeight - 60) {
+          doc.addPage();
+          yPosition = 20;
         }
-      }
-      
-      if (chartCount > 0) {
-        doc.addPage();
-        yPosition = 20;
+        
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text(section, 20, yPosition);
+        yPosition += 15;
+        
+        // Add charts for this section
+        for (const chart of sectionCharts) {
+          if (yPosition > pageHeight - 120) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          
+          // Add chart title
+          doc.setFontSize(12);
+          doc.setFont("helvetica", "bold");
+          doc.text(chart.title, 20, yPosition);
+          yPosition += 10;
+          
+          // Calculate chart dimensions maintaining aspect ratio
+          const maxWidth = pageWidth - 40;
+          const maxHeight = 100;
+          
+          // Add chart image
+          doc.addImage(chart.image, 'PNG', 20, yPosition, maxWidth * 0.6, maxHeight * 0.8);
+          yPosition += maxHeight + 10;
+        }
+        
+        yPosition += 10; // Extra space between sections
       }
     }
     
     // Add analytics summary
     if (advancedExportSettings.includeAnalytics && data.analytics) {
+      doc.addPage();
+      yPosition = 20;
+      
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
       doc.text("Analytics Summary", 20, yPosition);
@@ -345,10 +452,8 @@ export default function ExportTab() {
     
     // Add lead data table if requested
     if (advancedExportSettings.includeRawData && data.leads && data.leads.length > 0) {
-      if (yPosition > pageHeight - 60) {
-        doc.addPage();
-        yPosition = 20;
-      }
+      doc.addPage();
+      yPosition = 20;
       
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
@@ -829,6 +934,166 @@ export default function ExportTab() {
 
                           <Separator />
 
+                          {/* Section Selection */}
+                          <div className="space-y-3">
+                            <Label className="text-base font-medium flex items-center gap-2">
+                              <BarChart3 className="h-4 w-4" />
+                              Rapor Bölümleri Seçimi
+                            </Label>
+                            <div className="grid grid-cols-1 gap-3 max-h-64 overflow-y-auto border rounded-lg p-3">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id="overviewDashboard"
+                                  checked={advancedExportSettings.includedSections.overviewDashboard}
+                                  onCheckedChange={(checked) => setAdvancedExportSettings(prev => ({ 
+                                    ...prev, 
+                                    includedSections: { ...prev.includedSections, overviewDashboard: checked as boolean }
+                                  }))}
+                                />
+                                <Label htmlFor="overviewDashboard" className="text-sm">👥 Personel Atama ve Durum Özeti</Label>
+                              </div>
+                              
+                              <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id="statusDistribution"
+                                  checked={advancedExportSettings.includedSections.statusDistribution}
+                                  onCheckedChange={(checked) => setAdvancedExportSettings(prev => ({ 
+                                    ...prev, 
+                                    includedSections: { ...prev.includedSections, statusDistribution: checked as boolean }
+                                  }))}
+                                />
+                                <Label htmlFor="statusDistribution" className="text-sm">📊 Lead Durum Dağılımı</Label>
+                              </div>
+                              
+                              <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id="leadTypeDistribution"
+                                  checked={advancedExportSettings.includedSections.leadTypeDistribution}
+                                  onCheckedChange={(checked) => setAdvancedExportSettings(prev => ({ 
+                                    ...prev, 
+                                    includedSections: { ...prev.includedSections, leadTypeDistribution: checked as boolean }
+                                  }))}
+                                />
+                                <Label htmlFor="leadTypeDistribution" className="text-sm">🏠 Lead Tipi Dağılımı</Label>
+                              </div>
+                              
+                              <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id="statusAnalysis"
+                                  checked={advancedExportSettings.includedSections.statusAnalysis}
+                                  onCheckedChange={(checked) => setAdvancedExportSettings(prev => ({ 
+                                    ...prev, 
+                                    includedSections: { ...prev.includedSections, statusAnalysis: checked as boolean }
+                                  }))}
+                                />
+                                <Label htmlFor="statusAnalysis" className="text-sm">📈 Durum Analizi</Label>
+                              </div>
+                              
+                              <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id="personnelPerformance"
+                                  checked={advancedExportSettings.includedSections.personnelPerformance}
+                                  onCheckedChange={(checked) => setAdvancedExportSettings(prev => ({ 
+                                    ...prev, 
+                                    includedSections: { ...prev.includedSections, personnelPerformance: checked as boolean }
+                                  }))}
+                                />
+                                <Label htmlFor="personnelPerformance" className="text-sm">⭐ Personel Performansı</Label>
+                              </div>
+                              
+                              <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id="sourceAnalysis"
+                                  checked={advancedExportSettings.includedSections.sourceAnalysis}
+                                  onCheckedChange={(checked) => setAdvancedExportSettings(prev => ({ 
+                                    ...prev, 
+                                    includedSections: { ...prev.includedSections, sourceAnalysis: checked as boolean }
+                                  }))}
+                                />
+                                <Label htmlFor="sourceAnalysis" className="text-sm">🎯 Kaynak Analizi</Label>
+                              </div>
+                              
+                              <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id="advancedAnalysis"
+                                  checked={advancedExportSettings.includedSections.advancedAnalysis}
+                                  onCheckedChange={(checked) => setAdvancedExportSettings(prev => ({ 
+                                    ...prev, 
+                                    includedSections: { ...prev.includedSections, advancedAnalysis: checked as boolean }
+                                  }))}
+                                />
+                                <Label htmlFor="advancedAnalysis" className="text-sm">🧠 Gelişmiş Analiz</Label>
+                              </div>
+                              
+                              <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id="negativeAnalysis"
+                                  checked={advancedExportSettings.includedSections.negativeAnalysis}
+                                  onCheckedChange={(checked) => setAdvancedExportSettings(prev => ({ 
+                                    ...prev, 
+                                    includedSections: { ...prev.includedSections, negativeAnalysis: checked as boolean }
+                                  }))}
+                                />
+                                <Label htmlFor="negativeAnalysis" className="text-sm">❌ Olumsuz Analizi</Label>
+                              </div>
+                              
+                              <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id="followUpAnalysis"
+                                  checked={advancedExportSettings.includedSections.followUpAnalysis}
+                                  onCheckedChange={(checked) => setAdvancedExportSettings(prev => ({ 
+                                    ...prev, 
+                                    includedSections: { ...prev.includedSections, followUpAnalysis: checked as boolean }
+                                  }))}
+                                />
+                                <Label htmlFor="followUpAnalysis" className="text-sm">📞 Unified Takip Analizi</Label>
+                              </div>
+                              
+                              <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id="duplicateAnalysis"
+                                  checked={advancedExportSettings.includedSections.duplicateAnalysis}
+                                  onCheckedChange={(checked) => setAdvancedExportSettings(prev => ({ 
+                                    ...prev, 
+                                    includedSections: { ...prev.includedSections, duplicateAnalysis: checked as boolean }
+                                  }))}
+                                />
+                                <Label htmlFor="duplicateAnalysis" className="text-sm">🔍 Duplicate Analizi</Label>
+                              </div>
+                            </div>
+                            
+                            <div className="flex gap-2 mt-3">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => setAdvancedExportSettings(prev => ({
+                                  ...prev,
+                                  includedSections: Object.keys(prev.includedSections).reduce((acc, key) => ({
+                                    ...acc,
+                                    [key]: true
+                                  }), {} as typeof prev.includedSections)
+                                }))}
+                              >
+                                Tümünü Seç
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => setAdvancedExportSettings(prev => ({
+                                  ...prev,
+                                  includedSections: Object.keys(prev.includedSections).reduce((acc, key) => ({
+                                    ...acc,
+                                    [key]: false
+                                  }), {} as typeof prev.includedSections)
+                                }))}
+                              >
+                                Hiçbirini Seçme
+                              </Button>
+                            </div>
+                          </div>
+
+                          <Separator />
+
                           {/* Report Options */}
                           <div className="space-y-3">
                             <Label className="text-base font-medium">Rapor İçeriği</Label>
@@ -909,10 +1174,12 @@ export default function ExportTab() {
                             <h4 className="font-medium text-blue-900 mb-2">Rapor Özeti</h4>
                             <div className="text-sm text-blue-800 space-y-1">
                               <p>• Rapor Türü: {advancedExportSettings.reportType === 'comprehensive' ? 'Kapsamlı' : advancedExportSettings.reportType === 'leads-only' ? 'Sadece Lead' : 'Sadece Analitik'}</p>
+                              <p>• Dahil Edilen Bölümler: {Object.values(advancedExportSettings.includedSections).filter(Boolean).length} / {Object.keys(advancedExportSettings.includedSections).length}</p>
                               <p>• Personel: {advancedExportSettings.personnelFilter === 'all' ? 'Tümü' : `${advancedExportSettings.selectedPersonnel.length} seçili`}</p>
                               <p>• Proje: {advancedExportSettings.projectFilter === 'all' ? 'Tümü' : `${advancedExportSettings.selectedProjects.length} seçili`}</p>
                               <p>• Lead Tipi: {advancedExportSettings.leadTypeFilter === 'all' ? 'Tümü' : advancedExportSettings.leadTypeFilter}</p>
                               <p>• Format: {advancedExportSettings.format.toUpperCase()}</p>
+                              <p>• Grafik Dahil: {advancedExportSettings.includeCharts ? 'Evet' : 'Hayır'}</p>
                             </div>
                           </div>
 

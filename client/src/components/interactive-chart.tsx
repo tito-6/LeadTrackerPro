@@ -89,6 +89,19 @@ export default function InteractiveChart({
     }
   };
 
+  // Generate chart section identifier for export
+  const getChartSection = (title: string) => {
+    const titleLower = title.toLowerCase();
+    if (titleLower.includes('personel') || titleLower.includes('atama')) return 'overview';
+    if (titleLower.includes('durum') && titleLower.includes('dağılım')) return 'status';
+    if (titleLower.includes('lead') && titleLower.includes('tip')) return 'leadtype';
+    if (titleLower.includes('kaynak')) return 'source';
+    if (titleLower.includes('olumsuz')) return 'negative';
+    if (titleLower.includes('takip')) return 'followup';
+    if (titleLower.includes('duplicate')) return 'duplicate';
+    return 'general';
+  };
+
   const renderChart = () => {
     switch (chartType) {
       case 'bar':
@@ -200,9 +213,13 @@ export default function InteractiveChart({
   };
 
   return (
-    <div className="w-full">
+    <div 
+      className="w-full chart-container" 
+      data-chart={getChartSection(title)}
+      data-chart-title={title}
+    >
       {title && (
-        <h3 className="text-lg font-semibold mb-4 text-center text-gray-900 dark:text-gray-100">
+        <h3 className="text-lg font-semibold mb-4 text-center text-gray-900 dark:text-gray-100 chart-title">
           {title}
         </h3>
       )}
@@ -286,29 +303,21 @@ export default function InteractiveChart({
                 <th className="text-left py-1">Renk</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+            <tbody>
               {enhancedData.map((item, index) => (
                 <tr 
-                  key={index}
+                  key={index} 
                   className="hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
                   onClick={() => handleClick(item)}
                 >
-                  <td className="py-1 font-medium text-gray-900 dark:text-gray-100">
-                    {item.name}
-                  </td>
-                  <td className="py-1 text-right text-gray-600 dark:text-gray-400">
-                    {item.value}
-                  </td>
-                  <td className="py-1 text-right text-gray-600 dark:text-gray-400">
-                    {item.percentage}%
-                  </td>
+                  <td className="py-1 font-medium text-gray-900 dark:text-gray-100">{item.name}</td>
+                  <td className="text-right py-1 text-gray-700 dark:text-gray-300">{item.value}</td>
+                  <td className="text-right py-1 text-gray-700 dark:text-gray-300">{item.percentage}%</td>
                   <td className="py-1">
-                    <div className="flex items-center">
-                      <div 
-                        className="w-4 h-4 rounded border border-gray-300" 
-                        style={{ backgroundColor: item.color }}
-                      />
-                    </div>
+                    <div 
+                      className="w-4 h-4 rounded border border-gray-300" 
+                      style={{ backgroundColor: item.color }}
+                    />
                   </td>
                 </tr>
               ))}
