@@ -1269,6 +1269,203 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Excel-style takipte data import
+  app.post('/api/takipte/import-excel', async (req, res) => {
+    try {
+      const { data } = req.body;
+      
+      if (!data || !Array.isArray(data)) {
+        return res.status(400).json({ error: 'Invalid data format' });
+      }
+
+      // Filter out empty rows
+      const validData = data.filter(row => {
+        return Object.values(row).some(value => value && value.toString().trim() !== '');
+      });
+
+      console.log(`Excel takipte data:`, JSON.stringify(validData.slice(0, 2), null, 2));
+      console.log(`Processed ${validData.length} Excel takipte records`);
+
+      // Store takipte data
+      takipteStorage = validData;
+
+      res.json({ 
+        message: 'Excel takipte data imported successfully', 
+        recordCount: validData.length
+      });
+    } catch (error) {
+      console.error('Excel takipte import error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Main lead data import from Excel Input tab
+  app.post('/api/leads/import-main', async (req, res) => {
+    try {
+      const { data } = req.body;
+      
+      if (!data || !Array.isArray(data)) {
+        return res.status(400).json({ error: 'Invalid data format' });
+      }
+
+      // Filter out empty rows
+      const validData = data.filter(row => {
+        return Object.values(row).some(value => value && value.toString().trim() !== '');
+      });
+
+      console.log(`Excel main lead data:`, JSON.stringify(validData.slice(0, 2), null, 2));
+      console.log(`Processed ${validData.length} Excel main lead records`);
+
+      // Convert to standard lead format and save
+      const leads = [];
+      for (const row of validData) {
+        try {
+          const lead = mapMainDataToLead(row);
+          if (lead.customerName || lead.customerId) {
+            const savedLead = await storage.createLead(lead);
+            leads.push(savedLead);
+          }
+        } catch (error) {
+          console.error('Error processing lead row:', error);
+        }
+      }
+
+      res.json({ 
+        message: 'Excel main lead data imported successfully', 
+        recordCount: leads.length
+      });
+    } catch (error) {
+      console.error('Excel main lead import error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Main lead data mapping function for Excel input
+  function mapMainDataToLead(row: any): any {
+    const parseDate = (dateStr: string): string => {
+      if (!dateStr || dateStr.trim() === '') return '';
+      
+      try {
+        // Try DD/MM/YYYY format (Turkish standard)
+        if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+          const [day, month, year] = dateStr.split('/');
+          return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }
+        
+        // Try DD.MM.YYYY format
+        if (dateStr.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
+          const [day, month, year] = dateStr.split('.');
+          return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }
+        
+        // Try YYYY-MM-DD format (already correct)
+        if (dateStr.match(/^\d{4}-\d{1,2}-\d{1,2}$/)) {
+          const parts = dateStr.split('-');
+          return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+        }
+        
+        // Try parsing as Date object for other formats
+        const parsedDate = new Date(dateStr);
+        if (!isNaN(parsedDate.getTime())) {
+          return parsedDate.toISOString().split('T')[0];
+        }
+        
+        return '';
+      } catch {
+        return '';
+      }
+    };
+
+    // Extract project name from WebForm Notu
+    function extractProjectFromWebForm(webFormNote: string): string | undefined {
+      if (!webFormNote) return undefined;
+      
+      const projectPatterns = [
+        /proje[:\s]+([^\n,]+)/i,
+        /project[:\s]+([^\n,]+)/i,
+        /([A-Z][a-zA-ZğüşıöçĞÜŞİÖÇ\s]+(?:Residence|Rezidans|Plaza|Tower|Park|Sitesi|Projesi))/i
+      ];
+      
+      for (const pattern of projectPatterns) {
+        const match = webFormNote.match(pattern);
+        if (match) {
+          return match[1].trim();
+        }
+      }
+      
+      return undefined;
+    }
+
+    // Determine lead type from WebForm Notu
+    function determineLeadType(webFormNote: string): string {
+      if (!webFormNote) return 'kiralama';
+      
+      const normalized = webFormNote.toLowerCase();
+      if (normalized.includes('satış') || normalized.includes('satis') || normalized.includes('sale')) {
+        return 'satis';
+      }
+      return 'kiralama';
+    }
+
+    const customerName = row['Müşteri Adı Soyadı'] || '';
+    const requestDate = parseDate(row['Talep Geliş Tarihi'] || '');
+    const assignedPersonnel = row['Atanan Personel'] || '';
+    const webFormNote = row['WebForm Notu'] || '';
+    const lastMeetingResult = row['SON GORUSME SONUCU'] || '';
+    
+    // Extract project and lead type
+    const projectName = extractProjectFromWebForm(webFormNote);
+    const leadType = determineLeadType(webFormNote);
+    
+    // Determine status from last meeting result
+    let status = 'Tanımsız';
+    if (lastMeetingResult && lastMeetingResult.trim()) {
+      status = lastMeetingResult.trim();
+    }
+
+    return {
+      customerName,
+      requestDate,
+      assignedPersonnel,
+      leadType,
+      status,
+      projectName,
+      customerId: row['Müşteri ID'] || undefined,
+      contactId: row['İletişim ID'] || undefined,
+      firstCustomerSource: row['İlk Müşteri Kaynağı'] || undefined,
+      formCustomerSource: row['Form Müşteri Kaynağı'] || undefined,
+      webFormNote,
+      infoFormLocation1: row['İnfo Form Geliş Yeri'] || undefined,
+      infoFormLocation2: row['İnfo Form Geliş Yeri 2'] || undefined,
+      infoFormLocation3: row['İnfo Form Geliş Yeri 3'] || undefined,
+      infoFormLocation4: row['İnfo Form Geliş Yeri 4'] || undefined,
+      reminderPersonnel: row['Hatırlatma Personeli'] || undefined,
+      wasCalledBack: row['GERİ DÖNÜŞ YAPILDI MI? (Müşteri Arandı mı?)'] || undefined,
+      webFormPoolDate: row['Web Form Havuz Oluşturma Tarihi'] || undefined,
+      formSystemDate: row['Form Sistem Olusturma Tarihi'] || undefined,
+      assignmentTimeDiff: row['Atama Saat Farkı'] || undefined,
+      responseTimeDiff: row['Dönüş Saat Farkı'] || undefined,
+      outgoingCallSystemDate: row['Giden Arama Sistem Oluşturma Tarihi'] || undefined,
+      customerResponseDate: row['Müşteri Geri Dönüş Tarihi (Giden Arama)'] || undefined,
+      wasEmailSent: row['GERİ DÖNÜŞ YAPILDI MI? (Müşteriye Mail Gönderildi mi?)'] || undefined,
+      customerEmailResponseDate: row['Müşteri Mail Geri Dönüş Tarihi'] || undefined,
+      unreachableByPhone: row['Telefonla Ulaşılamayan Müşteriler'] || undefined,
+      daysWaitingResponse: parseInt(row['Kaç Gündür Geri Dönüş Bekliyor']) || undefined,
+      daysToResponse: parseInt(row['Kaç Günde Geri Dönüş Yapılmış (Süre)']) || undefined,
+      callNote: row['GERİ DÖNÜŞ NOTU (Giden Arama Notu)'] || undefined,
+      emailNote: row['GERİ DÖNÜŞ NOTU (Giden Mail Notu)'] || undefined,
+      oneOnOneMeeting: row['Birebir Görüşme Yapıldı mı ?'] || undefined,
+      meetingDate: row['Birebir Görüşme Tarihi'] || undefined,
+      responseResult: row['Dönüş Görüşme Sonucu'] || undefined,
+      negativeReason: row['Dönüş Olumsuzluk Nedeni'] || undefined,
+      wasSaleMade: row['Müşteriye Satış Yapıldı Mı ?'] || undefined,
+      saleCount: parseInt(row['Satış Adedi']) || undefined,
+      appointmentDate: row['Randevu Tarihi'] || undefined,
+      lastMeetingNote: row['SON GORUSME NOTU'] || undefined,
+      lastMeetingResult: row['SON GORUSME SONUCU'] || undefined,
+    };
+  }
+
   app.get("/api/takipte", async (req, res) => {
     try {
       const { startDate, endDate, month, year } = req.query;
