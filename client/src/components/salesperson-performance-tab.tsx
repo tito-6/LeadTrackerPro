@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
 import { Lead, SalesRep } from '@shared/schema';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
-import { Calendar, Filter, User, TrendingUp, Users, Target, Star, PhoneCall } from 'lucide-react';
+import { Calendar, Filter, User, TrendingUp, Users, Target, Star, PhoneCall, DollarSign, Calculator } from 'lucide-react';
 import InteractiveChart from './interactive-chart';
 import DateFilter from './ui/date-filter';
 import { getStandardColor, getPersonnelColor, getStatusColor, getSmartCategoryColors, generateChartColors } from '@/lib/color-system';
@@ -88,6 +88,23 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
       const response = await fetch(`/api/takipte?${params.toString()}`);
       return response.json();
     },
+  });
+
+  // Fetch expense stats for this salesperson's leads
+  const { data: expenseStats } = useQuery({
+    queryKey: ['/api/lead-expenses/stats', salesperson?.name, dateFilters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (salesperson?.name) {
+        params.append('salesRep', salesperson.name);
+      }
+      Object.entries(dateFilters).forEach(([key, value]) => {
+        if (value) params.append(key, value);
+      });
+      const response = await fetch(`/api/lead-expenses/stats?${params.toString()}`);
+      return response.json();
+    },
+    enabled: !!salesperson?.name,
   });
 
   const salesperson = salesReps.find(rep => rep.id === salespersonId);
@@ -178,57 +195,69 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
 
       {/* KPI Cards matching main dashboard */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center">
-              <Users className="mr-2 h-4 w-4" />
-              📊 Toplam Lead
-            </CardTitle>
+        {/* Total Leads */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Toplam Lead</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{salespersonLeads.length}</div>
-            <p className="text-blue-100 text-xs">Atanmış lead sayısı</p>
+            <p className="text-xs text-muted-foreground">
+              Atanan toplam lead sayısı
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center">
-              <Target className="mr-2 h-4 w-4" />
-              🎯 Hedef Progress
-            </CardTitle>
+        {/* Sales Count */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Satış Başarısı</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{salesTargetPercentage}%</div>
-            <Progress value={salesTargetPercentage} className="mt-2 h-2" />
+            <div className="text-2xl font-bold text-green-600">{salesStats['Satış']}</div>
+            <p className="text-xs text-muted-foreground">
+              Başarıyla tamamlanan satış
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center">
-              <Star className="mr-2 h-4 w-4" />
-              💼 Satış Leads
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{salesStats.total}</div>
-            <p className="text-purple-100 text-xs">Satış odaklı leads</p>
-          </CardContent>
-        </Card>
+        {/* Lead Expenses (USD) */}
+        {expenseStats && (
+          <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Lead Giderleri (USD)</CardTitle>
+              <DollarSign className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                ${expenseStats.expenses?.usd?.totalExpenses?.toFixed(2) || '0.00'}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Toplam lead maliyeti
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
-        <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center">
-              <PhoneCall className="mr-2 h-4 w-4" />
-              🏠 Kiralama Leads
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{rentalStats.total}</div>
-            <p className="text-orange-100 text-xs">Kiralama odaklı leads</p>
-          </CardContent>
-        </Card>
+        {/* Cost Per Lead (USD) */}
+        {expenseStats && (
+          <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Lead Başına Maliyet</CardTitle>
+              <Calculator className="h-4 w-4 text-purple-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-purple-600">
+                ${expenseStats.expenses?.usd?.avgCostPerLead?.toFixed(2) || '0.00'}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Ortalama lead maliyeti
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Date Filter and Chart Controls */}

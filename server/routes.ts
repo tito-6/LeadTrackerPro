@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertLeadSchema, insertSalesRepSchema, insertSettingsSchema } from "@shared/schema";
+import { usdExchangeService } from "./usd-exchange-service";
 import multer from "multer";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
@@ -1595,6 +1596,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(enhancedStats);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch enhanced stats" });
+    }
+  });
+
+  // USD Exchange Rate API endpoints
+  app.get("/api/exchange-rate/usd", async (req, res) => {
+    try {
+      const rate = await usdExchangeService.getCurrentRate();
+      const fullRateInfo = await usdExchangeService.getUSDToTRYRate();
+      
+      res.json({
+        rate: rate,
+        buyingRate: fullRateInfo.buyingRate,
+        sellingRate: fullRateInfo.sellingRate,
+        lastUpdated: fullRateInfo.lastUpdated,
+        source: "Turkey Central Bank (TCMB)"
+      });
+    } catch (error) {
+      console.error("Error fetching USD exchange rate:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch exchange rate", 
+        error: (error as Error).message 
+      });
+    }
+  });
+
+  // Convert TL to USD endpoint
+  app.post("/api/exchange-rate/convert-tl-to-usd", async (req, res) => {
+    try {
+      const { tlAmount } = req.body;
+      
+      if (!tlAmount || isNaN(parseFloat(tlAmount))) {
+        return res.status(400).json({ error: "Valid TL amount is required" });
+      }
+      
+      const usdAmount = await usdExchangeService.convertTLToUSD(parseFloat(tlAmount));
+      const currentRate = await usdExchangeService.getCurrentRate();
+      
+      res.json({
+        tlAmount: parseFloat(tlAmount),
+        usdAmount: Math.round(usdAmount * 100) / 100, // Round to 2 decimal places
+        exchangeRate: currentRate,
+        convertedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error converting TL to USD:", error);
+      res.status(500).json({ 
+        message: "Failed to convert currency", 
+        error: (error as Error).message 
+      });
+    }
+  });
+
+  // Lead expenses statistics endpoint
+  app.get("/api/lead-expenses/stats", async (req, res) => {
+    try {
+      const { startDate, endDate, salesRep, leadType, month, year } = req.query;
+      
+      // Enhanced filtering with automatic month logic
+      let finalStartDate = startDate as string;
+      let finalEndDate = endDate as string;
+      
+      if (month && year) {
+        const monthNum = parseInt(month as string);
+        const yearNum = parseInt(year as string);
+        finalStartDate = `${yearNum}-${monthNum.toString().padStart(2, '0')}-01`;
+        const lastDay = new Date(yearNum, monthNum, 0).getDate();
+        finalEndDate = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${lastDay}`;
+      }
+      
+      const leads = await storage.getLeadsByFilter({
+        startDate: finalStartDate,
+        endDate: finalEndDate,
+        salesRep: salesRep as string,
+        leadType: leadType as string,
+      });
+
+      // Calculate total expenses in TL
+      let totalAgencyFees = 0;
+      let totalAdsExpenses = 0;
+      let leadCount = 0;
+
+      leads.forEach(lead => {
+        if (lead.agencyMonthlyFees) {
+          totalAgencyFees += parseFloat(lead.agencyMonthlyFees.toString());
+        }
+        if (lead.adsExpenses) {
+          totalAdsExpenses += parseFloat(lead.adsExpenses.toString());
+        }
+        leadCount++;
+      });
+
+      const totalExpensesTL = totalAgencyFees + totalAdsExpenses;
+      
+      // Convert to USD
+      const totalExpensesUSD = await usdExchangeService.convertTLToUSD(totalExpensesTL);
+      const avgCostPerLeadUSD = leadCount > 0 ? totalExpensesUSD / leadCount : 0;
+      const currentRate = await usdExchangeService.getCurrentRate();
+
+      res.json({
+        leadCount,
+        expenses: {
+          tl: {
+            totalAgencyFees: Math.round(totalAgencyFees * 100) / 100,
+            totalAdsExpenses: Math.round(totalAdsExpenses * 100) / 100,
+            totalExpenses: Math.round(totalExpensesTL * 100) / 100
+          },
+          usd: {
+            totalExpenses: Math.round(totalExpensesUSD * 100) / 100,
+            avgCostPerLead: Math.round(avgCostPerLeadUSD * 100) / 100
+          }
+        },
+        exchangeRate: {
+          rate: currentRate,
+          lastUpdated: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.error("Error calculating lead expenses:", error);
+      res.status(500).json({ 
+        message: "Failed to calculate lead expenses", 
+        error: (error as Error).message 
+      });
     }
   });
 

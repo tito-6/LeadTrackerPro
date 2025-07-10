@@ -55,6 +55,10 @@ export const leads = pgTable("leads", {
   status: text("status").notNull(), // 'yeni', 'bilgi-verildi', 'olumsuz', 'satis', 'takipte', 'randevu'
   projectName: text("project_name"), // Extracted from WebForm Notu
   
+  // Lead Expenses (in Turkish Lira)
+  agencyMonthlyFees: decimal("agency_monthly_fees", { precision: 10, scale: 2 }).default("0.00"), // Agency monthly fees in TL
+  adsExpenses: decimal("ads_expenses", { precision: 10, scale: 2 }).default("0.00"), // Advertising expenses in TL
+  
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -98,6 +102,8 @@ export const insertLeadSchema = createInsertSchema(leads).omit({
   unreachableByPhone: z.string().optional(),
   daysWaitingResponse: z.number().optional(),
   daysToResponse: z.number().optional(),
+  agencyMonthlyFees: z.string().optional(),
+  adsExpenses: z.string().optional(),
   callNote: z.string().optional(),
   emailNote: z.string().optional(),
   oneOnOneMeeting: z.string().optional(),

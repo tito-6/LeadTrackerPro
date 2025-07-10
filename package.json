@@ -45,6 +45,7 @@
     "@tanstack/react-query": "^5.60.5",
     "@types/multer": "^2.0.0",
     "@types/papaparse": "^5.3.16",
+    "@xmldom/xmldom": "^0.9.8",
     "chart.js": "^4.5.0",
     "chartjs-plugin-datalabels": "^2.2.0",
     "class-variance-authority": "^0.7.1",

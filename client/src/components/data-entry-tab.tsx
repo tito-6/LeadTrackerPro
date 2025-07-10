@@ -487,6 +487,49 @@ export default function DataEntryTab() {
                         </FormItem>
                       )}
                     />
+
+                    <FormField
+                      control={form.control}
+                      name="agencyMonthlyFees"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>💰 Acenta Aylık Ücretleri (TL)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              step="0.01"
+                              placeholder="0.00" 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="adsExpenses"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>📢 Reklam Giderleri (TL)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              step="0.01"
+                              placeholder="0.00" 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="text-sm text-muted-foreground bg-blue-50 p-3 rounded-md mt-4">
+                    <p className="font-medium text-blue-800 mb-1">ℹ️ Lead Gider Bilgisi:</p>
+                    <p>Bu giderler Türk Lirası (TL) olarak girilmelidir. Raporlarda USD karşılığı Türkiye Cumhuriyet Merkez Bankası güncel kuru ile hesaplanacaktır.</p>
                   </div>
                 </div>
 
