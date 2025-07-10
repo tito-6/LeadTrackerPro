@@ -78,14 +78,47 @@ export const STANDARD_COLORS = {
     'Şube 1': '#10b981',              // Green for branch 1
     'Şube 2': '#f59e0b',              // Amber for branch 2
     'Şube 3': '#8b5cf6',              // Purple for branch 3
+    'Kapaklı': '#22c55e',             // Green for Kapaklı office
+    'Diğer': '#6b7280'                // Gray for others
+  },
+
+  // Source colors (mapping to CUSTOMER_SOURCE for compatibility)
+  SOURCE: {
+    'Instagram': '#9b51e0',           // Instagram purple
+    'Facebook': '#3498db',            // Facebook blue
+    'Referans': '#2ecc71',            // Green for referrals
+    'Website': '#e74c3c',             // Red for website
+    'Google': '#4285f4',              // Google blue
+    'Whatsapp': '#25d366',            // WhatsApp green
+    'Telefon': '#f39c12',             // Orange for phone
+    'Email': '#95a5a6',               // Gray for email
+    'Diğer': '#34495e'                // Dark gray for others
+  },
+
+  // Meeting type colors
+  MEETING_TYPE: {
+    'Giden Arama': '#3b82f6',         // Blue for outgoing calls
+    'Gelen Arama': '#10b981',         // Green for incoming calls
+    'WhatsApp': '#25d366',            // WhatsApp green
+    'Email': '#95a5a6',               // Gray for email
+    'Yüz Yüze': '#8b5cf6',            // Purple for face-to-face
     'Diğer': '#6b7280'                // Gray for others
   }
 };
 
 // Helper function to get color by category and value
 export function getStandardColor(category: keyof typeof STANDARD_COLORS, value: string): string {
-  const categoryColors = STANDARD_COLORS[category] as Record<string, string>;
-  return categoryColors[value] || categoryColors['Defaut'] || categoryColors['Diğer'] || '#6b7280';
+  if (!category || !value || typeof value !== 'string') {
+    return '#6b7280'; // Default gray
+  }
+  
+  const categoryColors = STANDARD_COLORS[category];
+  if (!categoryColors) {
+    return '#6b7280'; // Default gray
+  }
+  
+  const typedCategoryColors = categoryColors as Record<string, string>;
+  return typedCategoryColors[value] || typedCategoryColors['Defaut'] || typedCategoryColors['Diğer'] || '#6b7280';
 }
 
 // Helper function to get personnel color
