@@ -11,6 +11,8 @@ export interface IStorage {
   getLeadsByFilter(filters: {
     startDate?: string;
     endDate?: string;
+    month?: string;
+    year?: string;
     salesRep?: string;
     leadType?: string;
     status?: string;
@@ -158,18 +160,34 @@ export class MemStorage implements IStorage {
   async getLeadsByFilter(filters: {
     startDate?: string;
     endDate?: string;
+    month?: string;
+    year?: string;
     salesRep?: string;
     leadType?: string;
     status?: string;
   }): Promise<Lead[]> {
     let filteredLeads = Array.from(this.leads.values());
 
-    if (filters.startDate) {
-      filteredLeads = filteredLeads.filter(lead => lead.requestDate >= filters.startDate!);
-    }
-
-    if (filters.endDate) {
-      filteredLeads = filteredLeads.filter(lead => lead.requestDate <= filters.endDate!);
+    // Date filtering
+    if (filters.startDate || filters.endDate || filters.month || filters.year) {
+      filteredLeads = filteredLeads.filter(lead => {
+        if (!lead.requestDate) return true; // Include leads without dates
+        
+        const leadDate = new Date(lead.requestDate);
+        if (isNaN(leadDate.getTime())) return true; // Include leads with invalid dates
+        
+        // Year filter
+        if (filters.year && leadDate.getFullYear().toString() !== filters.year) return false;
+        
+        // Month filter (1-12 to 01-12)
+        if (filters.month && (leadDate.getMonth() + 1).toString().padStart(2, '0') !== filters.month) return false;
+        
+        // Date range filter
+        if (filters.startDate && leadDate < new Date(filters.startDate)) return false;
+        if (filters.endDate && leadDate > new Date(filters.endDate)) return false;
+        
+        return true;
+      });
     }
 
     if (filters.salesRep) {

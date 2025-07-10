@@ -7,19 +7,34 @@ import { useQuery } from "@tanstack/react-query";
 import { Lead, SalesRep } from "@shared/schema";
 import { Calendar, Users, AlertTriangle, TrendingUp, Target } from "lucide-react";
 import InteractiveChart from "./interactive-chart";
+import DateFilter from "./ui/date-filter";
 
 export default function TakipteAnaliziTab() {
+  const [dateFilters, setDateFilters] = useState({
+    startDate: '',
+    endDate: '',
+    month: '',
+    year: ''
+  });
+  const [chartType, setChartType] = useState<'pie' | 'bar' | 'line'>('pie');
+  const [selectedSalesperson, setSelectedSalesperson] = useState<string>('all');
+  const [selectedProject, setSelectedProject] = useState<string>('all');
+
   const { data: leads = [], isLoading } = useQuery<Lead[]>({
-    queryKey: ['/api/leads'],
+    queryKey: ['/api/leads', dateFilters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      Object.entries(dateFilters).forEach(([key, value]) => {
+        if (value) params.append(key, value);
+      });
+      const response = await fetch(`/api/leads?${params.toString()}`);
+      return response.json();
+    },
   });
   
   const { data: salesReps = [] } = useQuery<SalesRep[]>({
     queryKey: ['/api/sales-reps'],
   });
-
-  const [chartType, setChartType] = useState<'pie' | 'bar' | 'line'>('pie');
-  const [selectedSalesperson, setSelectedSalesperson] = useState<string>('all');
-  const [selectedProject, setSelectedProject] = useState<string>('all');
 
   // Follow-up status mapping
   const followUpStatuses = [
@@ -176,7 +191,14 @@ export default function TakipteAnaliziTab() {
         </div>
         
         {/* Filters */}
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <DateFilter 
+              onFilterChange={setDateFilters}
+              initialFilters={dateFilters}
+            />
+          </div>
+          
           <div>
             <Label htmlFor="salesperson-filter">Personel Filtresi</Label>
             <Select value={selectedSalesperson} onValueChange={setSelectedSalesperson}>

@@ -883,7 +883,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/takipte", async (req, res) => {
     try {
-      res.json(takipteStorage);
+      const { startDate, endDate, month, year } = req.query;
+      
+      let filteredData = takipteStorage;
+      
+      // Apply date filtering if parameters are provided
+      if (startDate || endDate || month || year) {
+        filteredData = takipteStorage.filter(item => {
+          const dateStr = item.Tarih || item.date || '';
+          if (!dateStr) return true; // Include items without dates
+          
+          const itemDate = new Date(dateStr);
+          if (isNaN(itemDate.getTime())) return true; // Include items with invalid dates
+          
+          // Year filter
+          if (year && itemDate.getFullYear().toString() !== year) return false;
+          
+          // Month filter (1-12 to 01-12)
+          if (month && (itemDate.getMonth() + 1).toString().padStart(2, '0') !== month) return false;
+          
+          // Date range filter
+          if (startDate && itemDate < new Date(startDate as string)) return false;
+          if (endDate && itemDate > new Date(endDate as string)) return false;
+          
+          return true;
+        });
+      }
+      
+      res.json(filteredData);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch takipte data" });
     }
@@ -891,17 +918,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/enhanced-stats", async (req, res) => {
     try {
-      const { startDate, endDate, salesRep, leadType } = req.query;
+      const { startDate, endDate, month, year, salesRep, leadType } = req.query;
       
-      // Get regular lead data
+      // Get regular lead data with all possible filters
       const leads = await storage.getLeadsByFilter({
         startDate: startDate as string,
         endDate: endDate as string,
+        month: month as string,
+        year: year as string,
         salesRep: salesRep as string,
         leadType: leadType as string,
       });
 
-      // Enhanced stats combining both data sources
+      // Apply date filtering to takipte data as well
+      let filteredTakipte = takipteStorage;
+      if (startDate || endDate || month || year) {
+        filteredTakipte = takipteStorage.filter(item => {
+          const dateStr = item.Tarih || item.date || '';
+          if (!dateStr) return true; // Include items without dates
+          
+          const itemDate = new Date(dateStr);
+          if (isNaN(itemDate.getTime())) return true; // Include items with invalid dates
+          
+          // Year filter
+          if (year && itemDate.getFullYear().toString() !== year) return false;
+          
+          // Month filter (1-12 to 01-12)
+          if (month && (itemDate.getMonth() + 1).toString().padStart(2, '0') !== month) return false;
+          
+          // Date range filter
+          if (startDate && itemDate < new Date(startDate as string)) return false;
+          if (endDate && itemDate > new Date(endDate as string)) return false;
+          
+          return true;
+        });
+      }
+
+      // Enhanced stats combining both data sources with date filtering applied
       const enhancedStats = {
         leads: {
           total: leads.length,
@@ -920,31 +973,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }, {} as Record<string, number>),
         },
         takipte: {
-          total: takipteStorage.length,
-          hasData: takipteStorage.length > 0,
-          byKriter: takipteStorage.reduce((acc, item) => {
+          total: filteredTakipte.length,
+          hasData: filteredTakipte.length > 0,
+          byKriter: filteredTakipte.reduce((acc, item) => {
             const kriter = item['Kriter'] || item.kriter || 'Belirtilmemiş';
             acc[kriter] = (acc[kriter] || 0) + 1;
             return acc;
           }, {} as Record<string, number>),
-          bySource: takipteStorage.reduce((acc, item) => {
+          bySource: filteredTakipte.reduce((acc, item) => {
             const source = item['İrtibat Müşteri Kaynağı'] || item['Müşteri Kaynağı'] || 'Bilinmiyor';
             acc[source] = (acc[source] || 0) + 1;
             return acc;
           }, {} as Record<string, number>),
-          byMeetingType: takipteStorage.reduce((acc, item) => {
+          byMeetingType: filteredTakipte.reduce((acc, item) => {
             const meetingType = item['Görüşme Tipi'] || item.gorusmeTipi || 'Belirtilmemiş';
             acc[meetingType] = (acc[meetingType] || 0) + 1;
             return acc;
           }, {} as Record<string, number>),
-          byOffice: takipteStorage.reduce((acc, item) => {
+          byOffice: filteredTakipte.reduce((acc, item) => {
             const office = item['Ofis'] || item.ofis || 'Ana Ofis';
             acc[office] = (acc[office] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>),
+          byPersonnel: filteredTakipte.reduce((acc, item) => {
+            const personnel = item['Personel Adı(203)'] || item['Atanan Personel'] || 'Belirtilmemiş';
+            acc[personnel] = (acc[personnel] || 0) + 1;
             return acc;
           }, {} as Record<string, number>)
         },
         combined: {
-          hasSecondaryData: takipteStorage.length > 0,
+          hasSecondaryData: filteredTakipte.length > 0,
           personnelPerformance: {} as Record<string, any>
         }
       };

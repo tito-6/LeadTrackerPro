@@ -43,15 +43,31 @@ export default function UnifiedTakipteTab() {
     year: ''
   });
 
-  // Fetch takipte data
+  // Fetch takipte data with date filtering
   const { data: takipteData = [], isLoading: takipteLoading } = useQuery({
-    queryKey: ['/api/takipte'],
+    queryKey: ['/api/takipte', dateFilters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      Object.entries(dateFilters).forEach(([key, value]) => {
+        if (value) params.append(key, value);
+      });
+      const response = await fetch(`/api/takipte?${params.toString()}`);
+      return response.json();
+    },
     refetchInterval: 5000,
   });
 
-  // Fetch enhanced stats
+  // Fetch enhanced stats with date filtering
   const { data: enhancedStats } = useQuery({
-    queryKey: ['/api/enhanced-stats'],
+    queryKey: ['/api/enhanced-stats', dateFilters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      Object.entries(dateFilters).forEach(([key, value]) => {
+        if (value) params.append(key, value);
+      });
+      const response = await fetch(`/api/enhanced-stats?${params.toString()}`);
+      return response.json();
+    },
   });
 
   const hasData = takipteData.length > 0;

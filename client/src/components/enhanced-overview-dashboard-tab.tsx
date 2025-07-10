@@ -185,27 +185,55 @@ export default function EnhancedOverviewDashboardTab() {
     });
   };
 
-  // Memoized calculations for performance
+  // Memoized calculations for performance - NOW USING FILTERED DATA
   const dashboardMetrics = useMemo(() => {
-    if (!enhancedStats) return null;
+    if (!leadsData || leadsData.length === 0) return null;
 
-    const { leads, takipte } = enhancedStats;
+    // Apply date filtering to ALL calculations
+    const filteredLeads = leadsData;
+    const filteredTakipte = takipteData.filter(t => {
+      if (!dateFilters.startDate && !dateFilters.endDate && !dateFilters.month && !dateFilters.year) return true;
+      
+      const itemDate = new Date(t.Tarih || t.date || '');
+      if (isNaN(itemDate.getTime())) return true;
+      
+      if (dateFilters.year && itemDate.getFullYear().toString() !== dateFilters.year) return false;
+      if (dateFilters.month && (itemDate.getMonth() + 1).toString().padStart(2, '0') !== dateFilters.month) return false;
+      if (dateFilters.startDate && itemDate < new Date(dateFilters.startDate)) return false;
+      if (dateFilters.endDate && itemDate > new Date(dateFilters.endDate)) return false;
+      
+      return true;
+    });
 
-    // Core KPIs
-    const totalLeads = leads.total;
-    const totalTakipte = takipte.total;
+    // Core KPIs from filtered data
+    const totalLeads = filteredLeads.length;
+    const totalTakipte = filteredTakipte.length;
     const dataCompletnessScore = totalTakipte > 0 ? Math.min(100, Math.round((totalTakipte / totalLeads) * 100)) : 0;
 
-    // Status distribution for charts
-    const statusData = Object.entries(leads.byStatus).map(([status, count]) => ({
+    // Status distribution for charts from filtered leads
+    const statusCounts = filteredLeads.reduce((acc: any, lead) => {
+      const status = lead.status || 'Tanımsız';
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, {});
+    
+    const statusData = Object.entries(statusCounts).map(([status, count]) => ({
       name: status,
       value: count as number,
       percentage: Math.round(((count as number) / totalLeads) * 100)
     }));
 
-    // Simple personnel data for charts (backwards compatibility)
-    const personnelData = Object.entries(leads.byPersonnel).map(([person, leadCount]) => {
-      const takipteCount = takipte.byPersonnel?.[person] || 0;
+    // Personnel data for charts from filtered data
+    const personnelCounts = filteredLeads.reduce((acc: any, lead) => {
+      const personnel = lead.assignedPersonnel || 'Atanmamış';
+      acc[personnel] = (acc[personnel] || 0) + 1;
+      return acc;
+    }, {});
+    
+    const personnelData = Object.entries(personnelCounts).map(([person, leadCount]) => {
+      const takipteCount = filteredTakipte.filter(t => 
+        (t['Personel Adı(203)'] || t.assignedPersonnel) === person
+      ).length;
       return {
         name: person,
         leadCount: leadCount as number,
@@ -214,8 +242,14 @@ export default function EnhancedOverviewDashboardTab() {
       };
     });
 
-    // Lead type distribution
-    const typeData = Object.entries(leads.byType).map(([type, count]) => ({
+    // Lead type distribution from filtered data
+    const typeCounts = filteredLeads.reduce((acc: any, lead) => {
+      const type = lead.leadType || 'Bilinmiyor';
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {});
+    
+    const typeData = Object.entries(typeCounts).map(([type, count]) => ({
       name: type === 'kiralama' ? 'Kiralık' : 'Satış',
       value: count as number,
       percentage: Math.round(((count as number) / totalLeads) * 100)
@@ -227,42 +261,83 @@ export default function EnhancedOverviewDashboardTab() {
       dataCompletnessScore,
       statusData,
       personnelData,
-      typeData
+      typeData,
+      leads: filteredLeads
     };
-  }, [enhancedStats]);
+  }, [leadsData, takipteData, dateFilters]);
 
-  // Advanced Takipte Analytics
+  // Advanced Takipte Analytics - NOW USING FILTERED DATA
   const takipteAnalytics = useMemo(() => {
-    if (!hasSecondaryData || !enhancedStats?.takipte) return null;
+    if (!hasSecondaryData || takipteData.length === 0) return null;
 
-    const { takipte } = enhancedStats;
+    // Apply date filtering to takipte data
+    const filteredTakipte = takipteData.filter(t => {
+      if (!dateFilters.startDate && !dateFilters.endDate && !dateFilters.month && !dateFilters.year) return true;
+      
+      const itemDate = new Date(t.Tarih || t.date || '');
+      if (isNaN(itemDate.getTime())) return true;
+      
+      if (dateFilters.year && itemDate.getFullYear().toString() !== dateFilters.year) return false;
+      if (dateFilters.month && (itemDate.getMonth() + 1).toString().padStart(2, '0') !== dateFilters.month) return false;
+      if (dateFilters.startDate && itemDate < new Date(dateFilters.startDate)) return false;
+      if (dateFilters.endDate && itemDate > new Date(dateFilters.endDate)) return false;
+      
+      return true;
+    });
 
-    // Customer source analysis
-    const sourceData = Object.entries(takipte.bySource).map(([source, count]) => ({
+    const total = filteredTakipte.length;
+    if (total === 0) return null;
+
+    // Customer source analysis from filtered data
+    const sourceCounts = filteredTakipte.reduce((acc: any, t) => {
+      const source = t['İrtibat Müşteri Kaynağı'] || t.source || 'Bilinmiyor';
+      acc[source] = (acc[source] || 0) + 1;
+      return acc;
+    }, {});
+    
+    const sourceData = Object.entries(sourceCounts).map(([source, count]) => ({
       name: source,
       value: count as number,
-      percentage: Math.round(((count as number) / takipte.total) * 100)
+      percentage: Math.round(((count as number) / total) * 100)
     }));
 
-    // Meeting type distribution
-    const meetingTypeData = Object.entries(takipte.byMeetingType).map(([type, count]) => ({
+    // Meeting type distribution from filtered data
+    const meetingCounts = filteredTakipte.reduce((acc: any, t) => {
+      const type = t['Görüşme Tipi'] || t.meetingType || 'Bilinmiyor';
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {});
+    
+    const meetingTypeData = Object.entries(meetingCounts).map(([type, count]) => ({
       name: type,
       value: count as number,
-      percentage: Math.round(((count as number) / takipte.total) * 100)
+      percentage: Math.round(((count as number) / total) * 100)
     }));
 
-    // Office performance
-    const officeData = Object.entries(takipte.byOffice).map(([office, count]) => ({
+    // Office performance from filtered data
+    const officeCounts = filteredTakipte.reduce((acc: any, t) => {
+      const office = t.Ofis || t.office || 'Bilinmiyor';
+      acc[office] = (acc[office] || 0) + 1;
+      return acc;
+    }, {});
+    
+    const officeData = Object.entries(officeCounts).map(([office, count]) => ({
       name: office,
       value: count as number,
-      percentage: Math.round(((count as number) / takipte.total) * 100)
+      percentage: Math.round(((count as number) / total) * 100)
     }));
 
-    // Customer criteria (Satış vs Kira)
-    const kriterData = Object.entries(takipte.byKriter).map(([kriter, count]) => ({
+    // Customer criteria (Satış vs Kira) from filtered data
+    const kriterCounts = filteredTakipte.reduce((acc: any, t) => {
+      const kriter = t.Kriter || t.criteria || 'Bilinmiyor';
+      acc[kriter] = (acc[kriter] || 0) + 1;
+      return acc;
+    }, {});
+    
+    const kriterData = Object.entries(kriterCounts).map(([kriter, count]) => ({
       name: kriter,
       value: count as number,
-      percentage: Math.round(((count as number) / takipte.total) * 100)
+      percentage: Math.round(((count as number) / total) * 100)
     }));
 
     return {
@@ -271,7 +346,7 @@ export default function EnhancedOverviewDashboardTab() {
       officeData,
       kriterData
     };
-  }, [enhancedStats, hasSecondaryData]);
+  }, [takipteData, hasSecondaryData, dateFilters]);
 
   if (!enhancedStats) {
     return (
