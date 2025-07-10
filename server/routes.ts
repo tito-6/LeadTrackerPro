@@ -556,8 +556,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Apply advanced multi-select personnel filter
       if (salesRep && salesRep.includes(',')) {
-        const personnelList = (salesRep as string).split(',').map(p => p.trim());
-        console.log('Filtering by personnel:', personnelList);
+        // Fix Turkish character encoding issue
+        const personnelList = (salesRep as string).split(',').map(p => {
+          let decoded = decodeURIComponent(p.trim());
+          // Fix common Turkish character encoding issues
+          decoded = decoded.replace(/ReÃ§ber/g, 'Reçber');
+          decoded = decoded.replace(/Ã§/g, 'ç');
+          decoded = decoded.replace(/Ã¼/g, 'ü');
+          decoded = decoded.replace(/Ã¶/g, 'ö');
+          decoded = decoded.replace(/Ä±/g, 'ı');
+          decoded = decoded.replace(/Ä°/g, 'İ');
+          decoded = decoded.replace(/Å/g, 'Ş');
+          decoded = decoded.replace(/ÅŸ/g, 'ş');
+          decoded = decoded.replace(/Äž/g, 'Ğ');
+          decoded = decoded.replace(/ÄŸ/g, 'ğ');
+          return decoded;
+        });
+        console.log('Filtering by personnel (corrected):', personnelList);
+        console.log('Original personnel param:', salesRep);
         console.log('Personnel in leads:', filteredLeads.map(lead => lead.assignedPersonnel).slice(0, 10));
         
         filteredLeads = filteredLeads.filter(lead => 
@@ -568,7 +584,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Apply project filtering
       if (projects && projects !== 'all') {
-        const projectList = (projects as string).split(',').map(p => p.trim());
+        const projectList = (projects as string).split(',').map(p => decodeURIComponent(p.trim()));
         console.log('Filtering by projects:', projectList);
         filteredLeads = filteredLeads.filter(lead => 
           lead.projectName && projectList.includes(lead.projectName.trim())
@@ -578,7 +594,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Apply status filtering
       if (statuses && statuses !== 'all') {
-        const statusList = (statuses as string).split(',').map(s => s.trim());
+        const statusList = (statuses as string).split(',').map(s => decodeURIComponent(s.trim()));
         console.log('Filtering by statuses:', statusList);
         filteredLeads = filteredLeads.filter(lead => 
           lead.status && statusList.includes(lead.status.trim())
@@ -677,8 +693,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           exportData.analytics = analytics;
         }
 
-        res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Content-Disposition', `attachment; filename="İNNO-Kapsamlı-Lead-Raporu-${new Date().toISOString().split('T')[0]}.json"`);
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        
+        // Add total leads count to the response
+        exportData.totalLeads = filteredLeads.length;
+        
         res.json(exportData);
       } else if (format === 'excel') {
         const XLSX = require('xlsx');

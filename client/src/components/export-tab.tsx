@@ -232,58 +232,159 @@ export default function ExportTab() {
     const { default: jsPDF } = await import('jspdf');
     const { default: autoTable } = await import('jspdf-autotable');
 
-    const response = await fetch(`/api/export/pdf?${params.toString()}`);
+    // Get filtered data from JSON endpoint
+    const response = await fetch(`/api/export/json?${params.toString()}`);
     if (!response.ok) throw new Error("PDF data fetch failed");
     
     const data = await response.json();
-    const leads = data.data.leads;
-
-    const doc = new jsPDF();
+    
+    // Create PDF document with landscape orientation for better chart display
+    const doc = new jsPDF('landscape', 'mm', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
     
     // Enhanced header with company branding
-    if (advancedExportSettings.includeCompanyBranding) {
-      doc.setFontSize(20);
-      doc.text('İNNO Gayrimenkul Yatırım A.Ş.', 20, 20);
-      doc.setFontSize(16);
-      doc.text(advancedExportSettings.customTitle || 'Kapsamlı Lead Raporu', 20, 30);
-    }
-
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text('İNNO Gayrimenkul Yatırım A.Ş.', pageWidth/2, 20, { align: 'center' });
+    
+    doc.setFontSize(16);
+    doc.text(advancedExportSettings.customTitle || 'Kapsamlı Lead Raporu', pageWidth/2, 30, { align: 'center' });
+    
     doc.setFontSize(12);
-    doc.text(`Rapor Tarihi: ${new Date().toLocaleDateString('tr-TR')}`, 20, 40);
-    doc.text(`Toplam Lead Sayısı: ${leads.length}`, 20, 50);
-
-    // Add filters summary
-    if (advancedExportSettings.personnelFilter !== 'all' && advancedExportSettings.selectedPersonnel.length > 0) {
-      doc.text(`Seçili Personel: ${advancedExportSettings.selectedPersonnel.join(', ')}`, 20, 60);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Export Date: ${new Date().toLocaleDateString('tr-TR')}`, pageWidth/2, 40, { align: 'center' });
+    doc.text(`Total Leads: ${data.totalLeads || data.leads?.length || 0}`, pageWidth/2, 50, { align: 'center' });
+    
+    let yPosition = 70;
+    
+    // Capture and add charts using the approach you suggested
+    if (advancedExportSettings.includeCharts) {
+      const chartElements = document.querySelectorAll('canvas');
+      let chartCount = 0;
+      
+      for (const canvas of chartElements) {
+        if (canvas.offsetParent !== null && canvas.width > 0 && canvas.height > 0) {
+          try {
+            // Convert chart canvas to image as suggested
+            const chartImage = canvas.toDataURL('image/png', 1.0);
+            
+            // Add new page if needed
+            if (yPosition > pageHeight - 100) {
+              doc.addPage();
+              yPosition = 20;
+            }
+            
+            // Get chart title from parent container
+            const chartContainer = canvas.closest('[data-testid]') || canvas.closest('.recharts-wrapper') || canvas.parentElement;
+            const chartTitle = chartContainer?.querySelector('h3, h4, .chart-title')?.textContent || `Chart ${chartCount + 1}`;
+            
+            // Add chart title
+            doc.setFontSize(14);
+            doc.setFont("helvetica", "bold");
+            doc.text(chartTitle, 20, yPosition);
+            yPosition += 10;
+            
+            // Calculate chart dimensions maintaining aspect ratio
+            const maxWidth = pageWidth - 40;
+            const maxHeight = 80;
+            const aspectRatio = canvas.width / canvas.height;
+            
+            let chartWidth = Math.min(maxWidth, maxHeight * aspectRatio);
+            let chartHeight = chartWidth / aspectRatio;
+            
+            if (chartHeight > maxHeight) {
+              chartHeight = maxHeight;
+              chartWidth = chartHeight * aspectRatio;
+            }
+            
+            // Add chart image to PDF
+            doc.addImage(chartImage, 'PNG', 20, yPosition, chartWidth, chartHeight);
+            yPosition += chartHeight + 20;
+            chartCount++;
+            
+          } catch (error) {
+            console.warn('Could not capture chart:', error);
+          }
+        }
+      }
+      
+      if (chartCount > 0) {
+        doc.addPage();
+        yPosition = 20;
+      }
+    }
+    
+    // Add analytics summary
+    if (advancedExportSettings.includeAnalytics && data.analytics) {
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text("Analytics Summary", 20, yPosition);
+      yPosition += 15;
+      
+      // Status breakdown table
+      if (data.analytics.statusBreakdown) {
+        const statusData = Object.entries(data.analytics.statusBreakdown).map(([status, count]) => [
+          status, 
+          count.toString(), 
+          `${((count as number) / data.totalLeads * 100).toFixed(1)}%`
+        ]);
+        
+        autoTable(doc, {
+          head: [['Status', 'Count', 'Percentage']],
+          body: statusData,
+          startY: yPosition,
+          styles: { fontSize: 10 },
+          headStyles: { fillColor: [52, 73, 94] },
+          margin: { left: 20, right: 20 }
+        });
+        
+        yPosition = (doc as any).lastAutoTable.finalY + 20;
+      }
+    }
+    
+    // Add lead data table if requested
+    if (advancedExportSettings.includeRawData && data.leads && data.leads.length > 0) {
+      if (yPosition > pageHeight - 60) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text("Lead Data", 20, yPosition);
+      yPosition += 10;
+      
+      // Show up to 100 leads to avoid excessive pages
+      const tableData = data.leads.slice(0, 100).map((lead: any) => [
+        lead.customerName || '',
+        lead.assignedPersonnel || '',
+        lead.status || '',
+        lead.leadType === 'kiralik' ? 'Kiralık' : 'Satış',
+        lead.projectName || '',
+        lead.requestDate || ''
+      ]);
+      
+      autoTable(doc, {
+        head: [['Müşteri Adı', 'Personel', 'Durum', 'Tip', 'Proje', 'Tarih']],
+        body: tableData,
+        startY: yPosition,
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [52, 73, 94], textColor: [255, 255, 255] },
+        columnStyles: {
+          0: { cellWidth: 50 },
+          1: { cellWidth: 35 },
+          2: { cellWidth: 35 },
+          3: { cellWidth: 25 },
+          4: { cellWidth: 40 },
+          5: { cellWidth: 30 }
+        }
+      });
     }
 
-    // Create comprehensive table data
-    const tableData = leads.map((lead: any) => [
-      lead.customerName || '',
-      lead.assignedPersonnel || '',
-      lead.status || '',
-      lead.leadType === 'kiralik' ? 'Kiralık' : 'Satış',
-      lead.projectName || '',
-      lead.requestDate || ''
-    ]);
-
-    autoTable(doc, {
-      head: [['Müşteri Adı', 'Personel', 'Durum', 'Tip', 'Proje', 'Tarih']],
-      body: tableData,
-      startY: 70,
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [52, 73, 94], textColor: [255, 255, 255] },
-      columnStyles: {
-        0: { cellWidth: 40 },
-        1: { cellWidth: 25 },
-        2: { cellWidth: 25 },
-        3: { cellWidth: 20 },
-        4: { cellWidth: 30 },
-        5: { cellWidth: 25 }
-      }
-    });
-
-    doc.save(`İNNO_Kapsamlı_Lead_Raporu_${new Date().toISOString().split('T')[0]}.pdf`);
+    // Save PDF with proper filename
+    const fileName = `İNNO_Kapsamlı_Lead_Raporu_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
   };
 
   const handleExportPDF = async () => {
