@@ -6,6 +6,40 @@ import multer from "multer";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
 
+// Helper function to extract project name from WebForm Notu
+function extractProjectNameFromWebForm(webFormNote: string | undefined): string | undefined {
+  if (!webFormNote || typeof webFormNote !== 'string') return undefined;
+  
+  const cleanNote = webFormNote.trim();
+  
+  // Common Turkish real estate project patterns
+  const patterns = [
+    /\b([A-ZÇĞIŞÖÜ][a-zçğışöü]+\s+(?:Residence|Plaza|Tower|City|Park|Konut|Proje|Sitesi))\b/g,
+    /\b([A-ZÇĞIŞÖÜ][a-zçğışöü]*\s*[A-ZÇĞIŞÖÜ][a-zçğışöü]+\s+(?:Residence|Plaza|Tower))\b/g,
+    /\b(\w+\s+(?:proje|konut|residence|plaza|tower|city|park|bahçe|villa|apart|sitesi|blok))\b/gi
+  ];
+  
+  // Try each pattern
+  for (const pattern of patterns) {
+    const matches = cleanNote.match(pattern);
+    if (matches && matches.length > 0) {
+      return matches[0].trim();
+    }
+  }
+  
+  // If no pattern matches, check for specific keywords and extract surrounding text
+  const keywords = ['proje', 'konut', 'residence', 'plaza', 'tower', 'city', 'park', 'sitesi'];
+  for (const keyword of keywords) {
+    const regex = new RegExp(`\\b\\w*${keyword}\\w*\\b`, 'gi');
+    const matches = cleanNote.match(regex);
+    if (matches && matches.length > 0) {
+      return matches[0].trim();
+    }
+  }
+  
+  return undefined;
+}
+
 const upload = multer({ storage: multer.memoryStorage() });
 
 // Helper function to map row data to lead schema with comprehensive Turkish column support
@@ -105,6 +139,7 @@ function mapRowToLead(row: any): any {
     firstCustomerSource: getValue(row['İlk Müşteri Kaynağı']) || getValue(row.firstCustomerSource),
     formCustomerSource: getValue(row['Form Müşteri Kaynağı']) || getValue(row.formCustomerSource),
     webFormNote: getValue(row['WebForm Notu']) || getValue(row['Web Form Notu']) || getValue(row.webFormNote),
+    projectName: extractProjectNameFromWebForm(getValue(row['WebForm Notu']) || getValue(row['Web Form Notu']) || getValue(row.webFormNote)),
     infoFormLocation1: getValue(row['İnfo Form Geliş Yeri']) || getValue(row.infoFormLocation1),
     infoFormLocation2: getValue(row['İnfo Form Geliş Yeri 2']) || getValue(row.infoFormLocation2),
     infoFormLocation3: getValue(row['İnfo Form Geliş Yeri 3']) || getValue(row.infoFormLocation3),

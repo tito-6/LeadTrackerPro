@@ -14,11 +14,19 @@ import { DataTable } from "@/components/ui/data-table";
 import { MasterDataTable } from "@/components/ui/master-data-table";
 import { useSettings } from "@/hooks/use-settings";
 import ThreeDPie from "@/components/charts/ThreeDPie";
+import DateFilter from "@/components/ui/date-filter";
+import { getStandardColor, getPersonnelColor, getStatusColor, getSourceColor } from "@/lib/color-system";
 
 export default function EnhancedOverviewDashboardTab() {
   const [chartType, setChartType] = useState<'pie' | 'bar' | 'line'>('pie');
   const [selectedPersonnel, setSelectedPersonnel] = useState<string>('all');
   const [selectedOffice, setSelectedOffice] = useState<string>('all');
+  const [dateFilters, setDateFilters] = useState({
+    startDate: '',
+    endDate: '',
+    month: '',
+    year: ''
+  });
   
   // Get 3D settings from chart settings
   const { data: settings } = useSettings();
@@ -27,18 +35,26 @@ export default function EnhancedOverviewDashboardTab() {
 
   // Fetch enhanced stats that combine both data sources
   const { data: enhancedStats } = useQuery({
-    queryKey: ['/api/enhanced-stats'],
+    queryKey: ['/api/enhanced-stats', dateFilters],
     refetchInterval: 5000,
   });
 
   // Fetch takipte data
   const { data: takipteData = [] } = useQuery({
-    queryKey: ['/api/takipte'],
+    queryKey: ['/api/takipte', dateFilters],
   });
 
-  // Fetch leads data for detailed analysis
+  // Fetch leads data for detailed analysis with date filtering
   const { data: leadsData = [] } = useQuery({
-    queryKey: ['/api/leads'],
+    queryKey: ['/api/leads', dateFilters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      Object.entries(dateFilters).forEach(([key, value]) => {
+        if (value) params.append(key, value);
+      });
+      const response = await fetch(`/api/leads?${params.toString()}`);
+      return response.json();
+    }
   });
 
   const hasSecondaryData = enhancedStats?.takipte?.hasData || false;
@@ -268,7 +284,21 @@ export default function EnhancedOverviewDashboardTab() {
     );
   }
 
-  const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7c7c', '#8dd1e1', '#d084d0', '#ffb347'];
+  // Use standardized colors instead of random colors
+  const getColorsForData = (data: any[], colorType: 'personnel' | 'status' | 'source' = 'status') => {
+    return data.map(item => {
+      switch (colorType) {
+        case 'personnel':
+          return getPersonnelColor(item.name);
+        case 'status':
+          return getStatusColor(item.name);
+        case 'source':
+          return getSourceColor(item.name);
+        default:
+          return getStatusColor(item.name);
+      }
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -351,26 +381,37 @@ export default function EnhancedOverviewDashboardTab() {
         </Card>
       </div>
 
-      {/* Chart Controls */}
-      <div className="flex flex-wrap gap-4 items-center justify-between bg-gray-50 p-4 rounded-lg">
-        <div className="flex gap-2">
-          <Select value={chartType} onValueChange={(value: 'pie' | 'bar' | 'line') => setChartType(value)}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Grafik Tipi" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pie">Pasta Grafik</SelectItem>
-              <SelectItem value="bar">Sütun Grafik</SelectItem>
-              <SelectItem value="line">Çizgi Grafik</SelectItem>
-            </SelectContent>
-          </Select>
+      {/* Date Filter and Chart Controls */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-1">
+          <DateFilter 
+            onFilterChange={setDateFilters}
+            initialFilters={dateFilters}
+          />
         </div>
         
-        <div className="flex gap-2 text-sm text-gray-600">
-          <Badge variant="outline">📊 Real-time</Badge>
-          <Badge variant="outline">🤖 AI-Power</Badge>
-          <Badge variant="outline">🤖 AI-Powered</Badge>
-          {hasSecondaryData && <Badge variant="outline">🔗 Dual-Source</Badge>}
+        <div className="lg:col-span-2">
+          <div className="flex flex-wrap gap-4 items-center justify-between bg-gray-50 p-4 rounded-lg h-full">
+            <div className="flex gap-2">
+              <Select value={chartType} onValueChange={(value: 'pie' | 'bar' | 'line') => setChartType(value)}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Grafik Tipi" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pie">Pasta Grafik</SelectItem>
+                  <SelectItem value="bar">Sütun Grafik</SelectItem>
+                  <SelectItem value="line">Çizgi Grafik</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex gap-2 text-sm text-gray-600">
+              <Badge variant="outline">📊 Real-time</Badge>
+              <Badge variant="outline">🤖 AI-Power</Badge>
+              <Badge variant="outline">🤖 AI-Powered</Badge>
+              {hasSecondaryData && <Badge variant="outline">🔗 Dual-Source</Badge>}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -523,16 +564,7 @@ export default function EnhancedOverviewDashboardTab() {
                       title="📱 Müşteri Kaynak Analizi"
                       labels={takipteAnalytics.sourceData.map(item => item.name)}
                       counts={takipteAnalytics.sourceData.map(item => item.value)}
-                      colors={[
-                        '#9b51e0', // Instagram purple
-                        '#2ecc71', // Referans green  
-                        '#3498db', // Facebook blue
-                        '#e74c3c', // Red
-                        '#f39c12', // Orange
-                        '#1abc9c', // Turquoise
-                        '#34495e', // Dark gray
-                        '#9b59b6'  // Purple
-                      ]}
+                      colors={getColorsForData(takipteAnalytics.sourceData, 'source')}
                       className="three-d-pie-container"
                     />
                   ) : (

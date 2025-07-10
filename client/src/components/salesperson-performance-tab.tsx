@@ -12,27 +12,26 @@ import { Lead, SalesRep } from '@shared/schema';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { Calendar, Filter, User, TrendingUp, Users, Target, Star, PhoneCall } from 'lucide-react';
 import InteractiveChart from './interactive-chart';
+import DateFilter from './ui/date-filter';
+import { getStandardColor, getPersonnelColor, getStatusColor } from '@/lib/color-system';
 
 interface SalespersonPerformanceTabProps {
   salespersonId: number;
 }
 
-// Status definitions with colors (using actual imported data statuses)
+// Status definitions with colors using standardized system
 const statusConfig = {
-  'Ulaşılamıyor - Cevap Vermiyor': { label: 'Ulaşılamıyor', color: '#ff9800', bgColor: 'bg-orange-100' },
-  'Yeni': { label: 'Yeni Lead', color: '#2196f3', bgColor: 'bg-blue-100' },
-  'Takipte': { label: 'Takipte', color: '#ffeb3b', bgColor: 'bg-yellow-100' },
-  'Bilgi Verildi': { label: 'Bilgi Verildi', color: '#9c27b0', bgColor: 'bg-purple-100' },
-  'Olumsuz': { label: 'Olumsuz', color: '#f44336', bgColor: 'bg-red-100' },
-  'Toplantı/Birebir Görüşme': { label: 'Toplantı', color: '#3f51b5', bgColor: 'bg-indigo-100' },
-  'Potansiyel Takipte': { label: 'Potansiyel', color: '#607d8b', bgColor: 'bg-slate-100' },
-  'Satış': { label: 'Satış', color: '#4caf50', bgColor: 'bg-green-100' },
-  'Tanımsız': { label: 'Tanımsız', color: '#795548', bgColor: 'bg-gray-100' },
-  'Bilinmiyor': { label: 'Bilinmiyor', color: '#9e9e9e', bgColor: 'bg-gray-100' },
+  'Ulaşılamıyor - Cevap Vermiyor': { label: 'Ulaşılamıyor', color: getStatusColor('Ulaşılamıyor'), bgColor: 'bg-orange-100' },
+  'Yeni': { label: 'Yeni Lead', color: getStatusColor('Yeni'), bgColor: 'bg-blue-100' },
+  'Takipte': { label: 'Takipte', color: getStatusColor('Takipte'), bgColor: 'bg-yellow-100' },
+  'Bilgi Verildi': { label: 'Bilgi Verildi', color: getStatusColor('Bilgi Verildi'), bgColor: 'bg-purple-100' },
+  'Olumsuz': { label: 'Olumsuz', color: getStatusColor('Olumsuz'), bgColor: 'bg-red-100' },
+  'Toplantı/Birebir Görüşme': { label: 'Toplantı', color: getStatusColor('Toplantı/Birebir Görüşme'), bgColor: 'bg-indigo-100' },
+  'Potansiyel Takipte': { label: 'Potansiyel', color: getStatusColor('Potansiyel Takipte'), bgColor: 'bg-slate-100' },
+  'Satış': { label: 'Satış', color: getStatusColor('Satış'), bgColor: 'bg-green-100' },
+  'Tanımsız': { label: 'Tanımsız', color: getStatusColor('Tanımsız'), bgColor: 'bg-gray-100' },
+  'Bilinmiyor': { label: 'Bilinmiyor', color: getStatusColor('Bilinmiyor'), bgColor: 'bg-gray-100' },
 };
-
-// Color palette for charts
-const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#00ff00', '#0080ff', '#ff00ff', '#ffff00', '#ff8080', '#8080ff'];
 
 export default function SalespersonPerformanceTab({ salespersonId }: SalespersonPerformanceTabProps) {
   const [dateFilters, setDateFilters] = useState({
@@ -216,23 +215,34 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
         </Card>
       </div>
 
-      {/* Chart Type Selector */}
-      <div className="flex justify-between items-center bg-gray-50 p-4 rounded-lg">
-        <div className="flex gap-2">
-          <Select value={chartType} onValueChange={(value: 'pie' | 'bar' | 'line') => setChartType(value)}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pie">🥧 Pasta Grafik</SelectItem>
-              <SelectItem value="bar">📊 Sütun Grafik</SelectItem>
-              <SelectItem value="line">📈 Çizgi Grafik</SelectItem>
-            </SelectContent>
-          </Select>
+      {/* Date Filter and Chart Controls */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-1">
+          <DateFilter 
+            onFilterChange={setDateFilters}
+            initialFilters={dateFilters}
+          />
         </div>
-        <div className="flex gap-2">
-          <Badge variant="outline">📊 Real-time</Badge>
-          <Badge variant="outline">🤖 AI-Power</Badge>
+        
+        <div className="lg:col-span-2">
+          <div className="flex justify-between items-center bg-gray-50 p-4 rounded-lg h-full">
+            <div className="flex gap-2">
+              <Select value={chartType} onValueChange={(value: 'pie' | 'bar' | 'line') => setChartType(value)}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pie">🥧 Pasta Grafik</SelectItem>
+                  <SelectItem value="bar">📊 Sütun Grafik</SelectItem>
+                  <SelectItem value="line">📈 Çizgi Grafik</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Badge variant="outline">📊 Real-time</Badge>
+              <Badge variant="outline">🤖 AI-Power</Badge>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -370,7 +380,7 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
                               dataKey="value"
                             >
                               {Object.entries(salesStats).filter(([key]) => key !== 'total' && salesStats[key] > 0).map(([key], index) => (
-                                <Cell key={`cell-${index}`} fill={statusConfig[key]?.color || colors[index % colors.length]} />
+                                <Cell key={`cell-${index}`} fill={statusConfig[key]?.color || getStatusColor(key)} />
                               ))}
                             </Pie>
                             <Tooltip formatter={(value, name) => [`${value} adet`, name]} />
@@ -543,7 +553,7 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
                               dataKey="value"
                             >
                               {Object.entries(rentalStats).filter(([key]) => key !== 'total' && rentalStats[key] > 0).map(([key], index) => (
-                                <Cell key={`cell-${index}`} fill={statusConfig[key]?.color || colors[index % colors.length]} />
+                                <Cell key={`cell-${index}`} fill={statusConfig[key]?.color || getStatusColor(key)} />
                               ))}
                             </Pie>
                             <Tooltip formatter={(value, name) => [`${value} adet`, name]} />

@@ -12,6 +12,8 @@ import { Phone, Clock, AlertCircle, Calendar, Star, TrendingUp, Users, Target } 
 import InteractiveChart from './interactive-chart';
 import { DataTable } from "@/components/ui/data-table";
 import { MasterDataTable } from "@/components/ui/master-data-table";
+import DateFilter from './ui/date-filter';
+import { getStandardColor, getPersonnelColor, getStatusColor, getSourceColor } from '@/lib/color-system';
 
 interface TakipteRecord {
   customerName: string;
@@ -34,6 +36,12 @@ export default function UnifiedTakipteTab() {
   const [selectedOffice, setSelectedOffice] = useState<string>('all');
   const [selectedKriter, setSelectedKriter] = useState<string>('all');
   const [chartType, setChartType] = useState<'pie' | 'bar' | 'line'>('pie');
+  const [dateFilters, setDateFilters] = useState({
+    startDate: '',
+    endDate: '',
+    month: '',
+    year: ''
+  });
 
   // Fetch takipte data
   const { data: takipteData = [], isLoading: takipteLoading } = useQuery({
@@ -334,55 +342,66 @@ export default function UnifiedTakipteTab() {
         </Card>
       </div>
 
-      {/* Filters and Controls */}
-      <div className="flex flex-wrap gap-4 items-center justify-between bg-gray-50 p-4 rounded-lg">
-        <div className="flex gap-2">
-          <Select value={selectedPersonnel} onValueChange={setSelectedPersonnel}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Personel" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tüm Personel</SelectItem>
-              {analytics?.uniquePersonnel.map(person => (
-                <SelectItem key={person} value={person}>{person}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {/* Date Filter and Controls */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-1">
+          <DateFilter 
+            onFilterChange={setDateFilters}
+            initialFilters={dateFilters}
+          />
+        </div>
+        
+        <div className="lg:col-span-2">
+          <div className="flex flex-wrap gap-4 items-center justify-between bg-gray-50 p-4 rounded-lg h-full">
+            <div className="flex gap-2">
+              <Select value={selectedPersonnel} onValueChange={setSelectedPersonnel}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Personel" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Personel</SelectItem>
+                  {analytics?.uniquePersonnel.map(person => (
+                    <SelectItem key={person} value={person}>{person}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-          <Select value={selectedOffice} onValueChange={setSelectedOffice}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Ofis" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tüm Ofisler</SelectItem>
-              {analytics?.uniqueOffices.map(office => (
-                <SelectItem key={office} value={office}>{office}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              <Select value={selectedOffice} onValueChange={setSelectedOffice}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Ofis" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Ofisler</SelectItem>
+                  {analytics?.uniqueOffices.map(office => (
+                    <SelectItem key={office} value={office}>{office}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-          <Select value={selectedKriter} onValueChange={setSelectedKriter}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Kriter" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tüm Kriterler</SelectItem>
-              {analytics?.uniqueKritler.map(kriter => (
-                <SelectItem key={kriter} value={kriter}>{kriter}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              <Select value={selectedKriter} onValueChange={setSelectedKriter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Kriter" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Kriterler</SelectItem>
+                  {analytics?.uniqueKritler.map(kriter => (
+                    <SelectItem key={kriter} value={kriter}>{kriter}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-          <Select value={chartType} onValueChange={(value: 'pie' | 'bar' | 'line') => setChartType(value)}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Grafik Tipi" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pie">Pasta Grafik</SelectItem>
-              <SelectItem value="bar">Sütun Grafik</SelectItem>
-              <SelectItem value="line">Çizgi Grafik</SelectItem>
-            </SelectContent>
-          </Select>
+              <Select value={chartType} onValueChange={(value: 'pie' | 'bar' | 'line') => setChartType(value)}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Grafik Tipi" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pie">Pasta Grafik</SelectItem>
+                  <SelectItem value="bar">Sütun Grafik</SelectItem>
+                  <SelectItem value="line">Çizgi Grafik</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -410,7 +429,11 @@ export default function UnifiedTakipteTab() {
                       data={analytics.kriterData}
                       chartType={chartType}
                       height={300}
-                      colors={['#3b82f6', '#ef4444', '#10b981']}
+                      colors={analytics.kriterData.map(item => 
+                        item.name.toLowerCase().includes('satis') ? getStandardColor('LEAD_TYPE', 'satilik') :
+                        item.name.toLowerCase().includes('kira') ? getStandardColor('LEAD_TYPE', 'kiralik') :
+                        getStandardColor('STATUS', item.name)
+                      )}
                     />
                     <DataTable
                       title="Müşteri Kriter Dağılımı"
@@ -435,7 +458,7 @@ export default function UnifiedTakipteTab() {
                       data={analytics.officeData}
                       chartType={chartType}
                       height={300}
-                      colors={colors}
+                      colors={analytics.officeData.map(item => getStandardColor('OFFICE', item.name))}
                     />
                     <DataTable
                       title="Ofis Performansı"
@@ -464,7 +487,7 @@ export default function UnifiedTakipteTab() {
                       data={analytics.sourceData}
                       chartType={chartType}
                       height={300}
-                      colors={colors}
+                      colors={analytics.sourceData.map(item => getSourceColor(item.name))}
                     />
                     <DataTable
                       title="İrtibat Müşteri Kaynağı"
@@ -489,7 +512,7 @@ export default function UnifiedTakipteTab() {
                       data={analytics.professionData}
                       chartType={chartType}
                       height={300}
-                      colors={colors}
+                      colors={analytics.professionData.map(item => getStandardColor('PROFESSION', item.name))}
                     />
                     <DataTable
                       title="Meslek Dağılımı"
@@ -518,7 +541,7 @@ export default function UnifiedTakipteTab() {
                       data={analytics.meetingTypeData}
                       chartType={chartType}
                       height={300}
-                      colors={colors}
+                      colors={analytics.meetingTypeData.map(item => getStandardColor('MEETING_TYPE', item.name))}
                     />
                     <DataTable
                       title="Görüşme Tipi Dağılımı"
@@ -543,7 +566,7 @@ export default function UnifiedTakipteTab() {
                       data={analytics.resultData}
                       chartType={chartType}
                       height={300}
-                      colors={colors}
+                      colors={analytics.resultData.map(item => getStatusColor(item.name))}
                     />
                     <DataTable
                       title="Son Sonuç Analizi"
