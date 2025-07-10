@@ -13,7 +13,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, BarChart, Bar, XAxis,
 import { Calendar, Filter, User, TrendingUp, Users, Target, Star, PhoneCall } from 'lucide-react';
 import InteractiveChart from './interactive-chart';
 import DateFilter from './ui/date-filter';
-import { getStandardColor, getPersonnelColor, getStatusColor } from '@/lib/color-system';
+import { getStandardColor, getPersonnelColor, getStatusColor, getSmartCategoryColors, generateChartColors } from '@/lib/color-system';
 
 interface SalespersonPerformanceTabProps {
   salespersonId: number;

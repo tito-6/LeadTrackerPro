@@ -13,7 +13,7 @@ import InteractiveChart from './interactive-chart';
 import { DataTable } from "@/components/ui/data-table";
 import { MasterDataTable } from "@/components/ui/master-data-table";
 import DateFilter from './ui/date-filter';
-import { getStandardColor, getPersonnelColor, getStatusColor, getSourceColor } from '@/lib/color-system';
+import { getStandardColor, getPersonnelColor, getStatusColor, getSourceColor, getSmartCategoryColors, generateChartColors } from '@/lib/color-system';
 
 interface TakipteRecord {
   customerName: string;
@@ -179,47 +179,71 @@ export default function UnifiedTakipteTab() {
     }, 0);
     const averageResponseTime = totalRecords > 0 ? Math.round(totalDuration / totalRecords) : 0;
 
-    // Convert to chart data format
+    // Convert to chart data format with smart color assignment
+    const kriterCategories = Object.keys(kriterCounts);
+    const sourceCategories = Object.keys(sourceCounts);
+    const meetingTypeCategories = Object.keys(meetingTypeCounts);
+    const officeCategories = Object.keys(officeCounts);
+    const personnelCategories = Object.keys(personnelCounts);
+    const professionCategories = Object.keys(professionCounts);
+    const resultCategories = Object.keys(resultCounts);
+
+    // Get smart color mappings for each category
+    const kriterColors = getSmartCategoryColors(kriterCategories, 'general');
+    const sourceColors = getSmartCategoryColors(sourceCategories, 'source');
+    const meetingTypeColors = getSmartCategoryColors(meetingTypeCategories, 'meeting');
+    const officeColors = getSmartCategoryColors(officeCategories, 'general');
+    const personnelColors = getSmartCategoryColors(personnelCategories, 'personnel');
+    const professionColors = getSmartCategoryColors(professionCategories, 'general');
+    const resultColors = getSmartCategoryColors(resultCategories, 'status');
+
     const kriterData = Object.entries(kriterCounts).map(([name, value]) => ({
       name,
       value,
-      percentage: Math.round((value / totalRecords) * 100)
+      percentage: Math.round((value / totalRecords) * 100),
+      color: kriterColors[name]
     }));
 
     const sourceData = Object.entries(sourceCounts).map(([name, value]) => ({
       name,
       value,
-      percentage: Math.round((value / totalRecords) * 100)
+      percentage: Math.round((value / totalRecords) * 100),
+      color: sourceColors[name]
     }));
 
     const meetingTypeData = Object.entries(meetingTypeCounts).map(([name, value]) => ({
       name,
       value,
-      percentage: Math.round((value / totalRecords) * 100)
+      percentage: Math.round((value / totalRecords) * 100),
+      color: meetingTypeColors[name]
     }));
 
     const officeData = Object.entries(officeCounts).map(([name, value]) => ({
       name,
       value,
-      percentage: Math.round((value / totalRecords) * 100)
+      percentage: Math.round((value / totalRecords) * 100),
+      color: officeColors[name]
     }));
 
     const personnelData = Object.entries(personnelCounts).map(([name, value]) => ({
       name,
       value,
-      percentage: Math.round((value / totalRecords) * 100)
+      percentage: Math.round((value / totalRecords) * 100),
+      color: personnelColors[name]
     }));
 
     const professionData = Object.entries(professionCounts).map(([name, value]) => ({
       name,
       value,
-      percentage: Math.round((value / totalRecords) * 100)
+      percentage: Math.round((value / totalRecords) * 100),
+      color: professionColors[name]
     }));
 
     const resultData = Object.entries(resultCounts).map(([name, value]) => ({
       name,
       value,
-      percentage: Math.round((value / totalRecords) * 100)
+      percentage: Math.round((value / totalRecords) * 100),
+      color: resultColors[name]
     }));
 
     return {
@@ -281,7 +305,7 @@ export default function UnifiedTakipteTab() {
     );
   }
 
-  const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7c7c', '#8dd1e1', '#d084d0', '#ffb347'];
+  // Remove the old hardcoded colors - now using smart color assignment in data
 
   return (
     <div className="space-y-6">
@@ -445,11 +469,7 @@ export default function UnifiedTakipteTab() {
                       data={analytics.kriterData}
                       chartType={chartType}
                       height={300}
-                      colors={analytics.kriterData.map(item => 
-                        item.name.toLowerCase().includes('satis') ? getStandardColor('LEAD_TYPE', 'satilik') :
-                        item.name.toLowerCase().includes('kira') ? getStandardColor('LEAD_TYPE', 'kiralik') :
-                        getStandardColor('STATUS', item.name)
-                      )}
+                      colors={analytics.kriterData.map(item => item.color)}
                     />
                     <DataTable
                       title="Müşteri Kriter Dağılımı"
@@ -474,7 +494,7 @@ export default function UnifiedTakipteTab() {
                       data={analytics.officeData}
                       chartType={chartType}
                       height={300}
-                      colors={analytics.officeData.map(item => getStandardColor('OFFICE', item.name))}
+                      colors={analytics.officeData.map(item => item.color)}
                     />
                     <DataTable
                       title="Ofis Performansı"
@@ -503,7 +523,7 @@ export default function UnifiedTakipteTab() {
                       data={analytics.sourceData}
                       chartType={chartType}
                       height={300}
-                      colors={analytics.sourceData.map(item => getSourceColor(item.name))}
+                      colors={analytics.sourceData.map(item => item.color)}
                     />
                     <DataTable
                       title="İrtibat Müşteri Kaynağı"
@@ -528,7 +548,7 @@ export default function UnifiedTakipteTab() {
                       data={analytics.professionData}
                       chartType={chartType}
                       height={300}
-                      colors={analytics.professionData.map(item => getStandardColor('PROFESSION', item.name))}
+                      colors={analytics.professionData.map(item => item.color)}
                     />
                     <DataTable
                       title="Meslek Dağılımı"
@@ -557,7 +577,7 @@ export default function UnifiedTakipteTab() {
                       data={analytics.meetingTypeData}
                       chartType={chartType}
                       height={300}
-                      colors={analytics.meetingTypeData.map(item => getStandardColor('MEETING_TYPE', item.name))}
+                      colors={analytics.meetingTypeData.map(item => item.color)}
                     />
                     <DataTable
                       title="Görüşme Tipi Dağılımı"
@@ -582,7 +602,7 @@ export default function UnifiedTakipteTab() {
                       data={analytics.resultData}
                       chartType={chartType}
                       height={300}
-                      colors={analytics.resultData.map(item => getStatusColor(item.name))}
+                      colors={analytics.resultData.map(item => item.color)}
                     />
                     <DataTable
                       title="Son Sonuç Analizi"
@@ -605,16 +625,13 @@ export default function UnifiedTakipteTab() {
             <CardContent>
               {analytics?.personnelData && (
                 <>
-                  <ResponsiveContainer width="100%" height={400}>
-                    <BarChart data={analytics.personnelData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="value" fill="#8884d8" name="Takip Sayısı" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <InteractiveChart
+                    title="Personel Performansı"
+                    data={analytics.personnelData}
+                    chartType={chartType}
+                    height={400}
+                    colors={analytics.personnelData.map(item => item.color)}
+                  />
                   <DataTable
                     title="Personel Takip Performansı"
                     data={analytics.personnelData}

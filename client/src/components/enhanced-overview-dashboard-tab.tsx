@@ -15,7 +15,7 @@ import { MasterDataTable } from "@/components/ui/master-data-table";
 import { useSettings } from "@/hooks/use-settings";
 import ThreeDPie from "@/components/charts/ThreeDPie";
 import DateFilter from "@/components/ui/date-filter";
-import { getStandardColor, getPersonnelColor, getStatusColor, getSourceColor } from "@/lib/color-system";
+import { getStandardColor, getPersonnelColor, getStatusColor, getSourceColor, getSmartCategoryColors, generateChartColors } from "@/lib/color-system";
 
 export default function EnhancedOverviewDashboardTab() {
   const [chartType, setChartType] = useState<'pie' | 'bar' | 'line'>('pie');

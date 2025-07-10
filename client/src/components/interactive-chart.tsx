@@ -16,12 +16,10 @@ interface InteractiveChartProps {
   chartType?: 'pie' | 'bar' | 'line';
 }
 
-// Enhanced 3D color palette with gradients
-const DEFAULT_COLORS = [
-  '#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', 
-  '#06B6D4', '#F97316', '#84CC16', '#EC4899', '#6366F1',
-  '#14B8A6', '#F472B6', '#A855F7', '#22C55E', '#FB923C'
-];
+import { generateChartColors } from '@/lib/color-system';
+
+// Use the improved color system for unique colors
+const DEFAULT_COLORS = generateChartColors(30);
 
 // Custom tooltip with enhanced styling
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -209,45 +207,19 @@ export default function InteractiveChart({
         </h3>
       )}
       
-      {/* Data Summary Cards */}
-      <div className="mb-4 grid grid-cols-2 md:grid-cols-4 gap-2">
-        {enhancedData.slice(0, 4).map((item, index) => (
-          <div 
-            key={index} 
-            className="flex items-center p-2 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-            onClick={() => handleClick(item)}
-          >
+      {/* Smart Data Summary Cards - Dynamic Layout */}
+      <div className="mb-4">
+        {/* Top Priority Items (Always Visible) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+          {enhancedData.slice(0, Math.min(8, enhancedData.length)).map((item, index) => (
             <div 
-              className="w-4 h-4 rounded-full mr-2 shadow-sm" 
-              style={{ backgroundColor: item.color }}
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">
-                {item.name}
-              </p>
-              <p className="text-xs text-gray-600 dark:text-gray-400">
-                {item.value} ({item.percentage}%)
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-      
-      <ResponsiveContainer width="100%" height={height}>
-        {renderChart()}
-      </ResponsiveContainer>
-      
-      {/* Additional Data Below Chart */}
-      {enhancedData.length > 4 && (
-        <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-2">
-          {enhancedData.slice(4).map((item, index) => (
-            <div 
-              key={index + 4} 
-              className="flex items-center p-2 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+              key={index} 
+              className="flex items-center p-2 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer border-l-4"
+              style={{ borderLeftColor: item.color }}
               onClick={() => handleClick(item)}
             >
               <div 
-                className="w-3 h-3 rounded-full mr-2" 
+                className="w-4 h-4 rounded-full mr-2 shadow-sm border-2 border-white" 
                 style={{ backgroundColor: item.color }}
               />
               <div className="flex-1 min-w-0">
@@ -261,7 +233,92 @@ export default function InteractiveChart({
             </div>
           ))}
         </div>
-      )}
+        
+        {/* Expandable Section for Remaining Items */}
+        {enhancedData.length > 8 && (
+          <details className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+            <summary className="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100">
+              {enhancedData.length - 8} daha fazla öğe göster...
+            </summary>
+            <div className="mt-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              {enhancedData.slice(8).map((item, index) => (
+                <div 
+                  key={index + 8} 
+                  className="flex items-center p-2 bg-white dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors cursor-pointer border-l-4"
+                  style={{ borderLeftColor: item.color }}
+                  onClick={() => handleClick(item)}
+                >
+                  <div 
+                    className="w-3 h-3 rounded-full mr-2 border border-white" 
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">
+                      {item.name}
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      {item.value} ({item.percentage}%)
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+      </div>
+      
+      <ResponsiveContainer width="100%" height={height}>
+        {renderChart()}
+      </ResponsiveContainer>
+      
+      {/* Compact Data Table for All Items */}
+      <div className="mt-4 bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+        <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+          Detaylı Analiz ({enhancedData.length} öğe)
+        </h4>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-gray-600 dark:text-gray-400 border-b border-gray-200 dark:border-gray-600">
+                <th className="text-left py-1">Kategori</th>
+                <th className="text-right py-1">Değer</th>
+                <th className="text-right py-1">Yüzde</th>
+                <th className="text-left py-1">Renk</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+              {enhancedData.map((item, index) => (
+                <tr 
+                  key={index}
+                  className="hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                  onClick={() => handleClick(item)}
+                >
+                  <td className="py-1 font-medium text-gray-900 dark:text-gray-100">
+                    {item.name}
+                  </td>
+                  <td className="py-1 text-right text-gray-600 dark:text-gray-400">
+                    {item.value}
+                  </td>
+                  <td className="py-1 text-right text-gray-600 dark:text-gray-400">
+                    {item.percentage}%
+                  </td>
+                  <td className="py-1">
+                    <div className="flex items-center">
+                      <div 
+                        className="w-4 h-4 rounded border border-gray-300" 
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span className="ml-1 text-xs text-gray-500 dark:text-gray-400 font-mono">
+                        {item.color}
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

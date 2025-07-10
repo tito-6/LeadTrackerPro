@@ -141,20 +141,106 @@ export function getSourceColor(source: string): string {
   return getStandardColor('CUSTOMER_SOURCE', source);
 }
 
-// Generate color array for charts (mixing all categories for variety)
+// Comprehensive unique color palette for chart elements
+const UNIQUE_CHART_COLORS = [
+  '#3B82F6',  // Blue (1)
+  '#EF4444',  // Red (2)
+  '#10B981',  // Green (3)
+  '#F59E0B',  // Amber (4)
+  '#8B5CF6',  // Purple (5)
+  '#06B6D4',  // Cyan (6)
+  '#F97316',  // Orange (7)
+  '#84CC16',  // Lime (8)
+  '#EC4899',  // Pink (9)
+  '#6366F1',  // Indigo (10)
+  '#14B8A6',  // Teal (11)
+  '#F472B6',  // Rose (12)
+  '#A855F7',  // Violet (13)
+  '#22C55E',  // Emerald (14)
+  '#FB923C',  // Orange-alt (15)
+  '#8B5A2B',  // Brown (16)
+  '#059669',  // Green-alt (17)
+  '#DC2626',  // Red-alt (18)
+  '#1D4ED8',  // Blue-alt (19)
+  '#7C2D12',  // Brown-alt (20)
+  '#701A75',  // Purple-alt (21)
+  '#92400E',  // Yellow-alt (22)
+  '#065F46',  // Emerald-alt (23)
+  '#1E40AF',  // Blue-deep (24)
+  '#BE123C',  // Rose-alt (25)
+  '#166534',  // Green-deep (26)
+  '#9333EA',  // Violet-alt (27)
+  '#C2410C',  // Orange-deep (28)
+  '#0891B2',  // Cyan-alt (29)
+  '#BE185D'   // Pink-alt (30)
+];
+
+// Generate unique color array for charts with no duplicates
 export function generateChartColors(count: number): string[] {
-  const allColors = [
-    ...Object.values(STANDARD_COLORS.PERSONNEL),
-    ...Object.values(STANDARD_COLORS.STATUS),
-    ...Object.values(STANDARD_COLORS.CUSTOMER_SOURCE),
-    ...Object.values(STANDARD_COLORS.PRIORITY)
-  ];
-  
-  const colors = [];
-  for (let i = 0; i < count; i++) {
-    colors.push(allColors[i % allColors.length]);
+  if (count <= UNIQUE_CHART_COLORS.length) {
+    return UNIQUE_CHART_COLORS.slice(0, count);
   }
+  
+  // If we need more colors than available, generate variations
+  const colors = [...UNIQUE_CHART_COLORS];
+  const baseColors = UNIQUE_CHART_COLORS;
+  
+  for (let i = baseColors.length; i < count; i++) {
+    const baseColor = baseColors[i % baseColors.length];
+    // Create darker/lighter variations
+    const variation = i >= baseColors.length * 2 ? 
+      adjustColorBrightness(baseColor, 0.3) : 
+      adjustColorBrightness(baseColor, -0.3);
+    colors.push(variation);
+  }
+  
   return colors;
+}
+
+// Utility function to adjust color brightness
+function adjustColorBrightness(hex: string, factor: number): string {
+  // Remove # if present
+  hex = hex.replace('#', '');
+  
+  // Parse RGB
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  
+  // Adjust brightness
+  const newR = Math.max(0, Math.min(255, Math.round(r + (255 - r) * factor)));
+  const newG = Math.max(0, Math.min(255, Math.round(g + (255 - g) * factor)));
+  const newB = Math.max(0, Math.min(255, Math.round(b + (255 - b) * factor)));
+  
+  // Convert back to hex
+  return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
+}
+
+// Smart color assignment for specific data categories
+export function getSmartCategoryColors(categories: string[], categoryType: 'meeting' | 'status' | 'source' | 'personnel' | 'general' = 'general'): Record<string, string> {
+  const colorMap: Record<string, string> = {};
+  
+  // First try to assign from predefined category colors
+  categories.forEach((category, index) => {
+    switch (categoryType) {
+      case 'meeting':
+        colorMap[category] = getStandardColor('MEETING_TYPE', category) || UNIQUE_CHART_COLORS[index % UNIQUE_CHART_COLORS.length];
+        break;
+      case 'status':
+        colorMap[category] = getStandardColor('STATUS', category) || UNIQUE_CHART_COLORS[index % UNIQUE_CHART_COLORS.length];
+        break;
+      case 'source':
+        colorMap[category] = getStandardColor('CUSTOMER_SOURCE', category) || UNIQUE_CHART_COLORS[index % UNIQUE_CHART_COLORS.length];
+        break;
+      case 'personnel':
+        colorMap[category] = getStandardColor('PERSONNEL', category) || UNIQUE_CHART_COLORS[index % UNIQUE_CHART_COLORS.length];
+        break;
+      default:
+        colorMap[category] = UNIQUE_CHART_COLORS[index % UNIQUE_CHART_COLORS.length];
+    }
+  });
+  
+  return colorMap;
 }
 
 // Project name detection patterns
