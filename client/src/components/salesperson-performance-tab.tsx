@@ -90,6 +90,9 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
     },
   });
 
+  // Find the salesperson first
+  const salesperson = salesReps.find(rep => rep.id === salespersonId);
+
   // Fetch expense stats for this salesperson's leads
   const { data: expenseStats } = useQuery({
     queryKey: ['/api/lead-expenses/stats', salesperson?.name, dateFilters],
@@ -106,8 +109,6 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
     },
     enabled: !!salesperson?.name,
   });
-
-  const salesperson = salesReps.find(rep => rep.id === salespersonId);
   const salespersonLeads = leads.filter(lead => lead.assignedPersonnel === salesperson?.name);
   const hasSecondaryData = takipteData.length > 0;
 
