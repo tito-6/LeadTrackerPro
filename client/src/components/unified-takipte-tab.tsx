@@ -451,7 +451,7 @@ export default function UnifiedTakipteTab() {
           <TabsTrigger value="kriter">Müşteri Kriterleri</TabsTrigger>
           <TabsTrigger value="sources">Kaynak Analizi</TabsTrigger>
           <TabsTrigger value="meetings">Görüşme Analizi</TabsTrigger>
-          <TabsTrigger value="personnel">Personel Analizi</TabsTrigger>
+          <TabsTrigger value="personnel">Müşteri Analizi</TabsTrigger>
         </TabsList>
 
         <TabsContent value="kriter" className="space-y-4">
@@ -620,24 +620,24 @@ export default function UnifiedTakipteTab() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Personel Takip Performansı Karşılaştırması</CardTitle>
-                <CardDescription>Satış personeli arasında takip aktivite analizi</CardDescription>
+                <CardTitle>Müşteri Takip Analizi Karşılaştırması</CardTitle>
+                <CardDescription>Müşteri segmentleri arasında takip aktivite analizi</CardDescription>
               </CardHeader>
               <CardContent>
                 {analytics?.personnelData && (
                   <>
                     <InteractiveChart
-                      title="Personel Performans Karşılaştırması"
+                      title="Müşteri Performans Karşılaştırması"
                       data={analytics.personnelData}
                       chartType={chartType}
                       height={400}
                       colors={analytics.personnelData.map(item => item.color)}
                     />
                     <div className="mt-4 space-y-2">
-                      <h4 className="font-semibold text-sm text-gray-700">Performans Metrikleri:</h4>
+                      <h4 className="font-semibold text-sm text-gray-700">Müşteri Analiz Metrikleri:</h4>
                       <div className="grid grid-cols-2 gap-4 text-xs">
                         <div>
-                          <span className="font-medium">En Aktif:</span> {analytics.personnelData[0]?.name || 'N/A'}
+                          <span className="font-medium">En Aktif Kategori:</span> {analytics.personnelData[0]?.name || 'N/A'}
                         </div>
                         <div>
                           <span className="font-medium">Toplam Takip:</span> {analytics.personnelData.reduce((sum, p) => sum + p.value, 0)}
@@ -651,13 +651,13 @@ export default function UnifiedTakipteTab() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Detaylı Performans Tablosu</CardTitle>
-                <CardDescription>Personel bazlı takip sayıları ve yüzdeleri</CardDescription>
+                <CardTitle>Detaylı Müşteri Analiz Tablosu</CardTitle>
+                <CardDescription>Müşteri bazlı takip sayıları ve yüzdeleri</CardDescription>
               </CardHeader>
               <CardContent>
                 {analytics?.personnelData && (
                   <DataTable
-                    title="Personel Performans Detayları"
+                    title="Müşteri Performans Detayları"
                     data={analytics.personnelData}
                     totalRecords={analytics.totalRecords}
                   />
@@ -669,8 +669,8 @@ export default function UnifiedTakipteTab() {
           {/* Advanced Personnel Analytics */}
           <Card>
             <CardHeader>
-              <CardTitle>Gelişmiş Personel Analizi</CardTitle>
-              <CardDescription>Personel bazlı takip kalitesi ve verimlilik analizi</CardDescription>
+              <CardTitle>Gelişmiş Müşteri Performans Analizi</CardTitle>
+              <CardDescription>Müşteri bazlı takip kalitesi ve verimlilik analizi</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
@@ -685,7 +685,7 @@ export default function UnifiedTakipteTab() {
                       <CardHeader className="pb-2">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-sm font-medium">{person.name}</CardTitle>
-                          {index === 0 && <Badge variant="outline" className="text-xs">🥇 En Aktif</Badge>}
+                          {index === 0 && <Badge variant="outline" className="text-xs">🥇 En Yüksek</Badge>}
                         </div>
                       </CardHeader>
                       <CardContent>
@@ -706,11 +706,11 @@ export default function UnifiedTakipteTab() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium">Toplam Personel</CardTitle>
+                      <CardTitle className="text-sm font-medium">Toplam Kategori</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">{analytics?.personnelData.length || 0}</div>
-                      <p className="text-purple-100 text-xs">Aktif personel sayısı</p>
+                      <p className="text-purple-100 text-xs">Aktif kategori sayısı</p>
                     </CardContent>
                   </Card>
 
@@ -723,7 +723,7 @@ export default function UnifiedTakipteTab() {
                         {analytics?.personnelData.length ? 
                           Math.round(analytics.personnelData.reduce((sum, p) => sum + p.value, 0) / analytics.personnelData.length) : 0}
                       </div>
-                      <p className="text-indigo-100 text-xs">Personel başına</p>
+                      <p className="text-indigo-100 text-xs">Kategori başına</p>
                     </CardContent>
                   </Card>
 
@@ -735,7 +735,7 @@ export default function UnifiedTakipteTab() {
                       <div className="text-2xl font-bold">
                         {analytics?.personnelData[0]?.value || 0}
                       </div>
-                      <p className="text-teal-100 text-xs">En aktif personel</p>
+                      <p className="text-teal-100 text-xs">En aktif kategori</p>
                     </CardContent>
                   </Card>
 
@@ -748,7 +748,7 @@ export default function UnifiedTakipteTab() {
                         {analytics?.personnelData.length && analytics.personnelData[0]?.value ? 
                           Math.round((analytics.personnelData[0].value / analytics.totalRecords) * 100) : 0}%
                       </div>
-                      <p className="text-pink-100 text-xs">En aktif oran</p>
+                      <p className="text-pink-100 text-xs">En yüksek oran</p>
                     </CardContent>
                   </Card>
                 </div>
