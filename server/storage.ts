@@ -1,4 +1,4 @@
-import { leads, salesReps, settings, type Lead, type InsertLead, type SalesRep, type InsertSalesRep, type Settings, type InsertSettings } from "@shared/schema";
+import { leads, salesReps, settings, leadExpenses, type Lead, type InsertLead, type SalesRep, type InsertSalesRep, type Settings, type InsertSettings, type LeadExpense, type InsertLeadExpense } from "@shared/schema";
 
 export interface IStorage {
   // Leads
@@ -30,25 +30,37 @@ export interface IStorage {
   getSettings(): Promise<Settings[]>;
   getSetting(key: string): Promise<Settings | undefined>;
   setSetting(setting: InsertSettings): Promise<Settings>;
+
+  // Lead Expenses
+  getLeadExpenses(): Promise<LeadExpense[]>;
+  getLeadExpenseById(id: number): Promise<LeadExpense | undefined>;
+  createLeadExpense(expense: InsertLeadExpense): Promise<LeadExpense>;
+  updateLeadExpense(id: number, expense: Partial<InsertLeadExpense>): Promise<LeadExpense | undefined>;
+  deleteLeadExpense(id: number): Promise<boolean>;
+  getLeadExpensesByMonth(month: string): Promise<LeadExpense[]>;
 }
 
 export class MemStorage implements IStorage {
   private leads: Map<number, Lead>;
   private salesReps: Map<number, SalesRep>;
   private settings: Map<string, Settings>;
+  private leadExpenses: Map<number, LeadExpense>;
   private takipteData: any[]; // Store takipte/follow-up data
   private currentLeadId: number;
   private currentSalesRepId: number;
   private currentSettingsId: number;
+  private currentExpenseId: number;
 
   constructor() {
     this.leads = new Map();
     this.salesReps = new Map();
     this.settings = new Map();
+    this.leadExpenses = new Map();
     this.takipteData = [];
     this.currentLeadId = 1;
     this.currentSalesRepId = 1;
     this.currentSettingsId = 1;
+    this.currentExpenseId = 1;
 
     // Initialize with some default sales reps
     this.initializeDefaults();
@@ -293,6 +305,49 @@ export class MemStorage implements IStorage {
       this.settings.set(insertSetting.key, setting);
       return setting;
     }
+  }
+
+  // Lead Expenses CRUD Methods
+  async getLeadExpenses(): Promise<LeadExpense[]> {
+    return Array.from(this.leadExpenses.values());
+  }
+
+  async getLeadExpenseById(id: number): Promise<LeadExpense | undefined> {
+    return this.leadExpenses.get(id);
+  }
+
+  async createLeadExpense(insertExpense: InsertLeadExpense): Promise<LeadExpense> {
+    const id = this.currentExpenseId++;
+    const now = new Date();
+    const expense: LeadExpense = { 
+      ...insertExpense, 
+      id,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.leadExpenses.set(id, expense);
+    return expense;
+  }
+
+  async updateLeadExpense(id: number, updateData: Partial<InsertLeadExpense>): Promise<LeadExpense | undefined> {
+    const existingExpense = this.leadExpenses.get(id);
+    if (!existingExpense) return undefined;
+
+    const updatedExpense: LeadExpense = { 
+      ...existingExpense, 
+      ...updateData,
+      updatedAt: new Date()
+    };
+    this.leadExpenses.set(id, updatedExpense);
+    return updatedExpense;
+  }
+
+  async deleteLeadExpense(id: number): Promise<boolean> {
+    return this.leadExpenses.delete(id);
+  }
+
+  async getLeadExpensesByMonth(month: string): Promise<LeadExpense[]> {
+    return Array.from(this.leadExpenses.values()).filter(expense => expense.month === month);
   }
 }
 

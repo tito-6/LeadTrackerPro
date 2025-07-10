@@ -1722,5 +1722,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  // Lead Expenses CRUD API
+  app.get("/api/lead-expenses", async (req, res) => {
+    try {
+      const expenses = await storage.getLeadExpenses();
+      res.json(expenses);
+    } catch (error) {
+      console.error('Error fetching lead expenses:', error);
+      res.status(500).json({ error: 'Failed to fetch lead expenses' });
+    }
+  });
+
+  app.get("/api/lead-expenses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const expense = await storage.getLeadExpenseById(id);
+      if (!expense) {
+        return res.status(404).json({ error: 'Lead expense not found' });
+      }
+      res.json(expense);
+    } catch (error) {
+      console.error('Error fetching lead expense:', error);
+      res.status(500).json({ error: 'Failed to fetch lead expense' });
+    }
+  });
+
+  app.get("/api/lead-expenses/month/:month", async (req, res) => {
+    try {
+      const month = req.params.month;
+      const expenses = await storage.getLeadExpensesByMonth(month);
+      res.json(expenses);
+    } catch (error) {
+      console.error('Error fetching lead expenses by month:', error);
+      res.status(500).json({ error: 'Failed to fetch lead expenses by month' });
+    }
+  });
+
+  app.post("/api/lead-expenses", async (req, res) => {
+    try {
+      const { insertLeadExpenseSchema } = await import("@shared/schema");
+      const expenseData = insertLeadExpenseSchema.parse(req.body);
+      const expense = await storage.createLeadExpense(expenseData);
+      res.status(201).json(expense);
+    } catch (error) {
+      console.error('Error creating lead expense:', error);
+      res.status(400).json({ error: 'Failed to create lead expense', details: error });
+    }
+  });
+
+  app.put("/api/lead-expenses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { insertLeadExpenseSchema } = await import("@shared/schema");
+      const expenseData = insertLeadExpenseSchema.partial().parse(req.body);
+      const expense = await storage.updateLeadExpense(id, expenseData);
+      if (!expense) {
+        return res.status(404).json({ error: 'Lead expense not found' });
+      }
+      res.json(expense);
+    } catch (error) {
+      console.error('Error updating lead expense:', error);
+      res.status(400).json({ error: 'Failed to update lead expense', details: error });
+    }
+  });
+
+  app.delete("/api/lead-expenses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteLeadExpense(id);
+      if (!success) {
+        return res.status(404).json({ error: 'Lead expense not found' });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting lead expense:', error);
+      res.status(500).json({ error: 'Failed to delete lead expense' });
+    }
+  });
+
   return httpServer;
 }

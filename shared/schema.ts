@@ -75,6 +75,16 @@ export const settings = pgTable("settings", {
   value: text("value").notNull(),
 });
 
+export const leadExpenses = pgTable("lead_expenses", {
+  id: serial("id").primaryKey(),
+  month: text("month").notNull(), // Format: "2025-01" 
+  expenseType: text("expense_type").notNull(), // "agency_fee" or "ads_expense"
+  amountTL: decimal("amount_tl", { precision: 10, scale: 2 }).notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const insertLeadSchema = createInsertSchema(leads).omit({
   id: true,
   createdAt: true,
@@ -126,9 +136,19 @@ export const insertSettingsSchema = createInsertSchema(settings).omit({
   id: true,
 });
 
+export const insertLeadExpenseSchema = createInsertSchema(leadExpenses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type Lead = typeof leads.$inferSelect;
 export type InsertLead = z.infer<typeof insertLeadSchema>;
 export type SalesRep = typeof salesReps.$inferSelect;
 export type InsertSalesRep = z.infer<typeof insertSalesRepSchema>;
 export type Settings = typeof settings.$inferSelect;
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
+export type LeadExpense = typeof leadExpenses.$inferSelect;
+export type InsertLeadExpense = z.infer<typeof insertLeadExpenseSchema>;
+export type LeadExpense = typeof leadExpenses.$inferSelect;
+export type InsertLeadExpense = z.infer<typeof insertLeadExpenseSchema>;

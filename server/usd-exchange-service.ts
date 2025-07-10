@@ -81,32 +81,59 @@ class USDExchangeService {
   }
 
   private async fetchFromTCMB(): Promise<ExchangeRate> {
-    // Try current day first
-    const currentDateUrl = this.getCurrentDateUrl();
+    // Try multiple TCMB endpoint strategies
+    const urls = [
+      // Current date XML
+      this.getCurrentDateUrl(),
+      // Yesterday XML  
+      this.getYesterdayUrl(),
+      // Alternative TCMB endpoint with HTTPS
+      'https://www.tcmb.gov.tr/kurlar/today.xml',
+      // TCMB main endpoint
+      'https://www.tcmb.gov.tr/kurlar/kurlar.xml'
+    ];
     
-    try {
-      const response = await fetch(currentDateUrl);
-      if (response.ok) {
+    for (const url of urls) {
+      try {
+        console.log(`Trying TCMB URL: ${url}`);
+        const response = await fetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          }
+        });
+        
+        if (!response.ok) {
+          console.log(`TCMB URL ${url} returned ${response.status}`);
+          continue;
+        }
+        
         const xmlText = await response.text();
-        return this.parseXMLResponse(xmlText);
+        if (xmlText.includes('Currency') || xmlText.includes('Tarih_Date')) {
+          return this.parseXMLResponse(xmlText);
+        }
+      } catch (error) {
+        console.log(`Error with TCMB URL ${url}:`, error);
+        continue;
       }
-    } catch (error) {
-      console.log('Current day fetch failed, trying previous day:', error);
     }
-
-    // If current day fails, try yesterday (handles weekends/holidays)
-    const yesterdayUrl = this.getYesterdayUrl();
+    
+    // Try alternative rate source as fallback
     try {
-      const response = await fetch(yesterdayUrl);
-      if (!response.ok) {
-        throw new Error(`TCMB API returned ${response.status}`);
+      const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+      if (response.ok) {
+        const data = await response.json();
+        const rate = data.rates?.TRY || 34.5;
+        return {
+          buyingRate: rate * 0.995,
+          sellingRate: rate * 1.005,
+          lastUpdated: new Date().toISOString()
+        };
       }
-      
-      const xmlText = await response.text();
-      return this.parseXMLResponse(xmlText);
     } catch (error) {
-      throw new Error(`Failed to fetch from TCMB: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.log('Alternative exchange API failed:', error);
     }
+    
+    throw new Error('Failed to fetch from TCMB: All endpoints returned errors');
   }
 
   private getCurrentDateUrl(): string {
@@ -126,7 +153,8 @@ class USDExchangeService {
     const year = date.getFullYear().toString().slice(-2);
     const yearMonth = date.getFullYear().toString().slice(-2) + month;
     
-    return `http://www.tcmb.gov.tr/kurlar/${yearMonth}/${day}${month}${year}.xml`;
+    // Use HTTPS for TCMB URLs
+    return `https://www.tcmb.gov.tr/kurlar/${yearMonth}/${day}${month}${year}.xml`;
   }
 
   private parseXMLResponse(xmlText: string): ExchangeRate {

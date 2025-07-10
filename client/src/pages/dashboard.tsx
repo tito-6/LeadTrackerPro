@@ -19,6 +19,7 @@ import OverviewDashboardTab from "@/components/overview-dashboard-tab";
 import EnhancedOverviewDashboardTab from "@/components/enhanced-overview-dashboard-tab";
 import SalespersonPerformanceTab from "@/components/salesperson-performance-tab";
 import MainLeadReport from "@/components/main-lead-report";
+import ExpenseManagementTab from "@/components/expense-management-tab";
 import { useQuery } from "@tanstack/react-query";
 import { SalesRep } from "@shared/schema";
 
@@ -95,10 +96,14 @@ export default function Dashboard() {
               </TabsList>
               
               {/* Row 2: Analysis Functions */}
-              <TabsList className="grid w-full grid-cols-5 h-auto p-1">
+              <TabsList className="grid w-full grid-cols-6 h-auto p-1">
                 <TabsTrigger value="main-lead-report" className="flex items-center space-x-2 p-3">
                   <ChartLine className="h-4 w-4" />
                   <span>💰 Lead Gider Raporu</span>
+                </TabsTrigger>
+                <TabsTrigger value="expense-management" className="flex items-center space-x-2 p-3">
+                  <Settings className="h-4 w-4" />
+                  <span>⚙️ Manuel Gider Yönetimi</span>
                 </TabsTrigger>
                 <TabsTrigger value="olumsuz-analizi" className="flex items-center space-x-2 p-3">
                   <TrendingDown className="h-4 w-4" />
@@ -147,6 +152,10 @@ export default function Dashboard() {
 
           <TabsContent value="main-lead-report">
             <MainLeadReport />
+          </TabsContent>
+
+          <TabsContent value="expense-management">
+            <ExpenseManagementTab />
           </TabsContent>
 
           <TabsContent value="excel-input">
