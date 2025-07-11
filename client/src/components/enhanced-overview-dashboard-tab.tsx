@@ -288,7 +288,7 @@ export default function EnhancedOverviewDashboardTab() {
     }, {});
     
     const typeData = Object.entries(typeCounts).map(([type, count]) => ({
-      name: type === 'kiralama' ? 'Kiralık' : 'Satış',
+      name: type === 'kiralama' ? 'Kiralık' : type === 'satis' ? 'Satış' : type,
       value: count as number,
       percentage: Math.round(((count as number) / totalLeads) * 100)
     }));
