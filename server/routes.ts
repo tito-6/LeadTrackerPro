@@ -1223,10 +1223,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const personnelCounts: { [key: string]: number } = {};
 
       negativeLeads.forEach(lead => {
-        // Use negativeReason field if available, otherwise use status
-        const reason = (lead.negativeReason && lead.negativeReason.trim() !== '') 
-          ? lead.negativeReason.trim() 
-          : lead.status || 'Belirtilmemiş';
+        // Comprehensive reason extraction - check multiple fields
+        let reason = 'Belirtilmemiş';
+        if (lead.negativeReason && lead.negativeReason.trim() !== '') {
+          reason = lead.negativeReason.trim();
+        } else if (lead.lastMeetingNote && lead.lastMeetingNote.trim() !== '') {
+          reason = lead.lastMeetingNote.trim();
+        } else if (lead.responseResult && lead.responseResult.trim() !== '') {
+          reason = lead.responseResult.trim();
+        } else if (lead.status) {
+          reason = lead.status;
+        }
+        
         const personnel = lead.assignedPersonnel || 'Atanmamış';
         
         reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;

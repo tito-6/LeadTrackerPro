@@ -98,11 +98,22 @@ export default function OlumsuzAnaliziTab() {
     const negativeLeads = leadsData.filter(lead => 
       lead.status?.includes('Olumsuz') || lead.status?.toLowerCase().includes('olumsuz')
     );
-    const reasons = negativeLeads.map(lead => 
-      (lead.negativeReason && lead.negativeReason.trim() !== '') 
-        ? lead.negativeReason.trim() 
-        : lead.status || 'Belirtilmemiş'
-    ).filter(Boolean);
+    
+    // More comprehensive reason extraction - check multiple fields
+    const reasons = negativeLeads.map(lead => {
+      // Priority: negativeReason -> lastMeetingNote -> responseResult -> status
+      if (lead.negativeReason && lead.negativeReason.trim() !== '') {
+        return lead.negativeReason.trim();
+      }
+      if (lead.lastMeetingNote && lead.lastMeetingNote.trim() !== '') {
+        return lead.lastMeetingNote.trim();
+      }
+      if (lead.responseResult && lead.responseResult.trim() !== '') {
+        return lead.responseResult.trim();
+      }
+      return lead.status || 'Belirtilmemiş';
+    }).filter(Boolean);
+    
     return [...new Set(reasons)];
   }, [leadsData]);
 
