@@ -262,9 +262,9 @@ export default function ChatDrawer() {
             {messages.length === 0 ? (
               <div className="text-center py-8">
                 <Bot className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Lead Asistanınızla konuşun</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">🤖 AI Lead Asistanınızla konuşun</h3>
                 <p className="text-sm text-gray-500 mb-6">
-                  Lead verileriniz hakkında doğal dilde sorular sorun, anlık analizler alın.
+                  Lead verileriniz hakkında doğal dilde sorular sorun, anlık analizler ve grafikler alın.
                 </p>
                 
                 <div className="space-y-2">
@@ -280,6 +280,18 @@ export default function ChatDrawer() {
                       {query}
                     </Button>
                   ))}
+                </div>
+                
+                <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-xs text-blue-800 font-medium mb-2">🔧 Ollama Kurulum Gerekliliği</p>
+                  <p className="text-xs text-blue-700 mb-2">
+                    AI asistanı kullanmak için önce Ollama'yı kurmanız gerekir:
+                  </p>
+                  <div className="text-xs text-blue-600 space-y-1">
+                    <p>1. <code className="bg-blue-100 px-1 rounded">curl -fsSL https://ollama.ai/install.sh | sh</code></p>
+                    <p>2. <code className="bg-blue-100 px-1 rounded">ollama serve</code></p>
+                    <p>3. <code className="bg-blue-100 px-1 rounded">ollama pull llama3.2:3b-instruct-q4_0</code></p>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -347,6 +359,12 @@ export default function ChatDrawer() {
             <p className="text-xs text-gray-500 flex items-center">
               <AlertCircle className="h-3 w-3 mr-1" />
               Bu özellik deneme aşamasındadır. Ollama servisinin çalışır durumda olması gerekir.
+            </p>
+          </div>
+          
+          <div className="flex items-center justify-center mt-1">
+            <p className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">
+              📚 Kurulum kılavuzu: OLLAMA_SETUP.md dosyasını inceleyin
             </p>
           </div>
         </div>
