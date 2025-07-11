@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertLeadSchema, insertSalesRepSchema, insertSettingsSchema } from "@shared/schema";
 import { usdExchangeService } from "./usd-exchange-service";
+import { handleAIQuery } from "./routes/ai";
 import multer from "multer";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
@@ -1898,6 +1899,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to delete lead expense' });
     }
   });
+
+  // AI Query endpoint
+  app.post("/api/ai/query", handleAIQuery);
 
   return httpServer;
 }

@@ -5,6 +5,11 @@
 This is İNNO Gayrimenkul Yatırım A.Ş.'s comprehensive AI-powered real estate lead automation platform that transforms complex lead data into actionable insights through intelligent analytics and comprehensive performance tracking. The system features a mandatory dual-file upload capability for complete lead analysis, processing both main lead files and Takipte (follow-up) files to provide real-time dashboard capabilities, advanced Turkish language support with 37+ columns, and intelligent insights with follow-up metrics. Built as a React single-page application with Express.js backend using PostgreSQL with Drizzle ORM.
 
 ### Recent Updates (January 2025)
+- **🤖 AI Assistant Integration**: Fully-local open-source AI assistant with natural language querying capabilities using Ollama and Llama 3.2 3B Instruct model
+- **📊 Smart Chart Generation**: AI automatically generates Chart.js visualizations (pie, bar, line charts) based on natural language queries
+- **🔒 Complete Privacy**: All AI processing happens locally with no external API calls or data sharing
+- **🗣️ Turkish Language Support**: Native Turkish language understanding for real estate terminology and lead analysis
+- **⚡ Real-time Streaming**: Server-sent events for live AI responses and chart rendering
 - **Corporate Branding**: Added İNNO Gayrimenkul Yatırım A.Ş. logo and company branding throughout the application
 - **Standardized Color System**: Implemented consistent brand colors for Instagram (purple), Facebook (blue), and Referans (green)
 - **Enhanced UI**: Added DateFilter component for consistent date filtering across all tabs
@@ -78,9 +83,11 @@ RESTful API endpoints:
 - `/api/settings` - Application settings management
 - `/api/stats` - Statistics and analytics endpoints
 - `/api/export` - Data export functionality
+- `/api/ai/query` - AI assistant natural language query endpoint with streaming responses
 
 ### Frontend Features
 - **🧠 Akıllı Dashboard**: Enhanced AI-powered overview with dual-source data analysis, requiring both main lead files and Takipte follow-up files for complete functionality, featuring real-time KPIs, data completeness scores, and intelligent warnings when second file is missing
+- **🤖 AI Chat Assistant**: Floating chat drawer with natural language query interface, real-time streaming responses, automatic chart generation, and comprehensive Turkish language support for lead data analysis
 - **Excel Input Tab**: Dedicated Excel-style input screen with copy & paste functionality from Excel/Google Sheets, automatic total calculations, and comprehensive Turkish column support (37+ fields)
 - **🧠 Akıllı Veri Girişi Tab**: Enhanced data entry with mandatory dual file upload capability supporting both main lead files and secondary takip files, smart column detection, automatic project extraction from WebForm notes, and intelligent duplicate prevention
 - **Reports Tab**: Interactive charts and filtered data views with Chart.js integration and real-time synchronization
