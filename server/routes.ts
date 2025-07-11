@@ -385,6 +385,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Clear all cache (leads + takipte data)
+  app.delete("/api/cache/clear", async (req, res) => {
+    try {
+      await storage.clearAllLeads();
+      await storage.clearTakipteData();
+      res.json({ message: "All cache cleared successfully" });
+    } catch (error) {
+      console.error("Error clearing cache:", error);
+      res.status(500).json({ 
+        error: "Failed to clear cache",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // File upload endpoint
   app.post("/api/leads/import", upload.single("file"), async (req: any, res) => {
     try {

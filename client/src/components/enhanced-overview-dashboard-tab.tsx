@@ -6,9 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { TrendingUp, Users, Target, AlertCircle, Calendar, PhoneCall, Clock, Star } from 'lucide-react';
+import { TrendingUp, Users, Target, AlertCircle, Calendar, PhoneCall, Clock, Star, Trash2, RefreshCw } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
 
 import { DataTable } from "@/components/ui/data-table";
 import { MasterDataTable } from "@/components/ui/master-data-table";
@@ -28,6 +29,9 @@ export default function EnhancedOverviewDashboardTab() {
     month: '',
     year: ''
   });
+
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   // Get 3D settings from chart settings
   const { data: settings } = useSettings();
@@ -59,6 +63,39 @@ export default function EnhancedOverviewDashboardTab() {
   });
 
   const hasSecondaryData = enhancedStats?.takipte?.hasData || false;
+
+  // Cache clear mutation
+  const clearCacheMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/cache/clear', {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to clear cache');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalidate all queries to refresh data
+      queryClient.invalidateQueries();
+      toast({
+        title: "Önbellek Temizlendi",
+        description: "Tüm veriler başarıyla temizlendi. Sayfa yenileniyor...",
+      });
+      // Refresh page after a short delay
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    },
+    onError: (error) => {
+      toast({
+        title: "Hata",
+        description: "Önbellek temizlenirken bir hata oluştu.",
+        variant: "destructive",
+      });
+      console.error('Error clearing cache:', error);
+    },
+  });
 
   // Define the exact status columns from the screenshot with mapping
   const statusColumns = useMemo(() => {
@@ -479,6 +516,21 @@ export default function EnhancedOverviewDashboardTab() {
                   <SelectItem value="line">Çizgi Grafik</SelectItem>
                 </SelectContent>
               </Select>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => clearCacheMutation.mutate()}
+                disabled={clearCacheMutation.isPending}
+                className="flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+              >
+                {clearCacheMutation.isPending ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                {clearCacheMutation.isPending ? 'Temizleniyor...' : 'Önbellek Temizle'}
+              </Button>
             </div>
             
             <div className="flex gap-2 text-sm text-gray-600">
