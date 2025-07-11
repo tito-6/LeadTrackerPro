@@ -34,16 +34,22 @@ export default function NegativeReasonsSummaryTable({ leads, selectedPersonnel =
   const [selectedReason, setSelectedReason] = useState<NegativeReason | null>(null);
 
   const negativeReasonsData = useMemo(() => {
-    // Filter leads by personnel if specified
-    let filteredLeads = leads.filter(lead => lead.negativeReason && lead.negativeReason.trim() !== '');
+    // Filter leads exactly like the server does - check for status containing "Olumsuz"
+    let filteredLeads = leads.filter(lead => 
+      lead.status?.includes('Olumsuz') || 
+      lead.status?.toLowerCase().includes('olumsuz')
+    );
     
     if (selectedPersonnel !== 'all') {
       filteredLeads = filteredLeads.filter(lead => lead.assignedPersonnel === selectedPersonnel);
     }
 
-    // Group by negative reason
+    // Group by negative reason - use negativeReason field if available, otherwise use status
     const reasonGroups = filteredLeads.reduce((acc, lead) => {
-      const reason = lead.negativeReason.trim();
+      const reason = (lead.negativeReason && lead.negativeReason.trim() !== '') 
+        ? lead.negativeReason.trim() 
+        : lead.status || 'Belirtilmemiş';
+      
       if (!acc[reason]) {
         acc[reason] = [];
       }

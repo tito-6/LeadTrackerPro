@@ -1213,16 +1213,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/negative-analysis", async (_req, res) => {
     try {
       const leads = await storage.getLeads();
+      // Match exactly how enhanced-stats counts "Olumsuz" leads
       const negativeLeads = leads.filter(lead => 
-        lead.status?.toLowerCase().includes('olumsuz') || 
-        lead.negativeReason
+        lead.status?.includes('Olumsuz') ||
+        lead.status?.toLowerCase().includes('olumsuz')
       );
 
       const reasonCounts: { [key: string]: number } = {};
       const personnelCounts: { [key: string]: number } = {};
 
       negativeLeads.forEach(lead => {
-        const reason = lead.negativeReason || 'Belirtilmemiş';
+        // Use negativeReason field if available, otherwise use status
+        const reason = (lead.negativeReason && lead.negativeReason.trim() !== '') 
+          ? lead.negativeReason.trim() 
+          : lead.status || 'Belirtilmemiş';
         const personnel = lead.assignedPersonnel || 'Atanmamış';
         
         reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;
