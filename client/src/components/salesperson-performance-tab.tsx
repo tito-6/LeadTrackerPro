@@ -337,7 +337,7 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
                           <th className="border border-gray-300 px-4 py-2 text-center">Satış Leads</th>
                           <th className="border border-gray-300 px-4 py-2 text-center">Kiralama Leads</th>
                           <th className="border border-gray-300 px-4 py-2 text-center">Toplam</th>
-                          <th className="border border-gray-300 px-4 py-2 text-center">Yüzde</th>
+                          <th className="border border-gray-300 px-4 py-2 text-center">Adet (Yüzde)</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -363,7 +363,7 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
                               <td className="border border-gray-300 px-4 py-2 text-center">{salesCount}</td>
                               <td className="border border-gray-300 px-4 py-2 text-center">{rentalCount}</td>
                               <td className="border border-gray-300 px-4 py-2 text-center font-semibold">{total}</td>
-                              <td className="border border-gray-300 px-4 py-2 text-center">{percentage}%</td>
+                              <td className="border border-gray-300 px-4 py-2 text-center">{total} ({percentage}%)</td>
                             </tr>
                           );
                         })}
@@ -372,7 +372,7 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
                           <td className="border border-gray-300 px-4 py-2 text-center">{salesStats.total}</td>
                           <td className="border border-gray-300 px-4 py-2 text-center">{rentalStats.total}</td>
                           <td className="border border-gray-300 px-4 py-2 text-center">{salespersonLeads.length}</td>
-                          <td className="border border-gray-300 px-4 py-2 text-center">100%</td>
+                          <td className="border border-gray-300 px-4 py-2 text-center">{salespersonLeads.length} (100%)</td>
                         </tr>
                       </tbody>
                     </table>
@@ -440,7 +440,7 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
                             <tr className="bg-blue-50">
                               <th className="border border-gray-300 px-3 py-2 text-left">Durum</th>
                               <th className="border border-gray-300 px-3 py-2 text-center">Adet</th>
-                              <th className="border border-gray-300 px-3 py-2 text-center">Yüzde</th>
+                              <th className="border border-gray-300 px-3 py-2 text-center">Adet (Yüzde)</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -459,7 +459,7 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
                                     </div>
                                   </td>
                                   <td className="border border-gray-300 px-3 py-2 text-center">{value}</td>
-                                  <td className="border border-gray-300 px-3 py-2 text-center">{percentage}%</td>
+                                  <td className="border border-gray-300 px-3 py-2 text-center">{value} ({percentage}%)</td>
                                 </tr>
                               );
                             })}
@@ -613,7 +613,7 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
                             <tr className="bg-orange-50">
                               <th className="border border-gray-300 px-3 py-2 text-left">Durum</th>
                               <th className="border border-gray-300 px-3 py-2 text-center">Adet</th>
-                              <th className="border border-gray-300 px-3 py-2 text-center">Yüzde</th>
+                              <th className="border border-gray-300 px-3 py-2 text-center">Adet (Yüzde)</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -632,7 +632,7 @@ export default function SalespersonPerformanceTab({ salespersonId }: Salesperson
                                     </div>
                                   </td>
                                   <td className="border border-gray-300 px-3 py-2 text-center">{value}</td>
-                                  <td className="border border-gray-300 px-3 py-2 text-center">{percentage}%</td>
+                                  <td className="border border-gray-300 px-3 py-2 text-center">{value} ({percentage}%)</td>
                                 </tr>
                               );
                             })}

@@ -911,7 +911,7 @@ export default function EnhancedOverviewDashboardTab() {
                               cx="50%"
                               cy="50%"
                               labelLine={false}
-                              label={({ name, percentage }) => `${name}: %${percentage}`}
+                              label={({ name, value, percentage }) => `${name}: ${value} (%${percentage})`}
                               outerRadius={120}
                               fill="#8884d8"
                               dataKey="value"
@@ -960,7 +960,7 @@ export default function EnhancedOverviewDashboardTab() {
                       data={dashboardMetrics.statusData.map(item => ({
                         'Durum': item.name,
                         'Adet': item.value,
-                        'Yüzde': `%${item.percentage}`
+                        'Yüzde': `${item.value} (%${item.percentage})`
                       }))}
                       totalRecords={dashboardMetrics.totalLeads}
                     />
@@ -986,7 +986,7 @@ export default function EnhancedOverviewDashboardTab() {
                               cx="50%"
                               cy="50%"
                               labelLine={false}
-                              label={({ name, percentage }) => `${name}: %${percentage}`}
+                              label={({ name, value, percentage }) => `${name}: ${value} (%${percentage})`}
                               outerRadius={120}
                               fill="#8884d8"
                               dataKey="value"
@@ -1035,7 +1035,7 @@ export default function EnhancedOverviewDashboardTab() {
                       data={dashboardMetrics.typeData.map(item => ({
                         'Tip': item.name,
                         'Adet': item.value,
-                        'Yüzde': `%${item.percentage}`
+                        'Yüzde': `${item.value} (%${item.percentage})`
                       }))}
                       totalRecords={dashboardMetrics.totalLeads}
                     />
@@ -1097,7 +1097,7 @@ export default function EnhancedOverviewDashboardTab() {
                               cx="50%"
                               cy="50%"
                               labelLine={false}
-                              label={({ name, percentage }) => `${name}: %${percentage}`}
+                              label={({ name, value, percentage }) => `${name}: ${value} (%${percentage})`}
                               outerRadius={100}
                               fill="#8884d8"
                               dataKey="value"
@@ -1136,7 +1136,7 @@ export default function EnhancedOverviewDashboardTab() {
                       data={takipteAnalytics.sourceData.map(item => ({
                         'Kaynak': item.name,
                         'Adet': item.value,
-                        'Yüzde': `%${item.percentage}`
+                        'Yüzde': `${item.value} (%${item.percentage})`
                       }))}
                       title="Kaynak Detayları"
                       className="mt-4"
@@ -1159,7 +1159,7 @@ export default function EnhancedOverviewDashboardTab() {
                               cx="50%"
                               cy="50%"
                               labelLine={false}
-                              label={({ name, percentage }) => `${name}: %${percentage}`}
+                              label={({ name, value, percentage }) => `${name}: ${value} (%${percentage})`}
                               outerRadius={100}
                               fill="#8884d8"
                               dataKey="value"
@@ -1198,7 +1198,7 @@ export default function EnhancedOverviewDashboardTab() {
                       data={takipteAnalytics.meetingTypeData.map(item => ({
                         'Görüşme Tipi': item.name,
                         'Adet': item.value,
-                        'Yüzde': `%${item.percentage}`
+                        'Yüzde': `${item.value} (%${item.percentage})`
                       }))}
                       title="Görüşme Detayları"
                       className="mt-4"
@@ -1314,7 +1314,7 @@ export default function EnhancedOverviewDashboardTab() {
                               cx="50%"
                               cy="50%"
                               labelLine={false}
-                              label={({ name, percentage }) => `${name}: %${percentage}`}
+                              label={({ name, value, percentage }) => `${name}: ${value} (%${percentage})`}
                               outerRadius={100}
                               fill="#8884d8"
                               dataKey="value"
@@ -1353,7 +1353,7 @@ export default function EnhancedOverviewDashboardTab() {
                       data={takipteAnalytics.kriterData.map(item => ({
                         'Kriter': item.name,
                         'Adet': item.value,
-                        'Yüzde': `%${item.percentage}`
+                        'Yüzde': `${item.value} (%${item.percentage})`
                       }))}
                       title="Kriter Detayları"
                       className="mt-4"
@@ -1376,7 +1376,7 @@ export default function EnhancedOverviewDashboardTab() {
                               cx="50%"
                               cy="50%"
                               labelLine={false}
-                              label={({ name, percentage }) => `${name}: %${percentage}`}
+                              label={({ name, value, percentage }) => `${name}: ${value} (%${percentage})`}
                               outerRadius={100}
                               fill="#8884d8"
                               dataKey="value"
@@ -1415,7 +1415,7 @@ export default function EnhancedOverviewDashboardTab() {
                       data={takipteAnalytics.officeData.map(item => ({
                         'Ofis': item.name,
                         'Adet': item.value,
-                        'Yüzde': `%${item.percentage}`
+                        'Yüzde': `${item.value} (%${item.percentage})`
                       }))}
                       title="Ofis Detayları"
                       className="mt-4"

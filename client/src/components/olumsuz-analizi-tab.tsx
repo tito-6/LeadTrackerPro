@@ -356,7 +356,7 @@ export default function OlumsuzAnaliziTab() {
                             cx="50%"
                             cy="50%"
                             labelLine={false}
-                            label={({ name, percentage }) => `%${percentage}`}
+                            label={({ value, percentage }) => `${value} (%${percentage})`}
                             outerRadius={120}
                             fill="#8884d8"
                             dataKey="count"
