@@ -15,6 +15,7 @@ import { MasterDataTable } from "@/components/ui/master-data-table";
 import { useSettings } from "@/hooks/use-settings";
 import ThreeDPie from "@/components/charts/ThreeDPie";
 import DateFilter from "@/components/ui/date-filter";
+import LeadDataExplorer from "@/components/lead-data-explorer";
 import { getStandardColor, getPersonnelColor, getStatusColor, getSourceColor, getSmartCategoryColors, generateChartColors } from "@/lib/color-system";
 
 export default function EnhancedOverviewDashboardTab() {
@@ -831,10 +832,11 @@ export default function EnhancedOverviewDashboardTab() {
 
       {/* Main Analytics Tabs */}
       <Tabs defaultValue="status" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="status">Durum Analizi</TabsTrigger>
           <TabsTrigger value="personnel">Personel Performansı</TabsTrigger>
           <TabsTrigger value="sources">🎯 Kaynak Analizi</TabsTrigger>
+          <TabsTrigger value="data-explorer">📊 Lead Verileri</TabsTrigger>
           <TabsTrigger value="advanced">🧠 Gelişmiş Analiz</TabsTrigger>
         </TabsList>
 
@@ -1553,6 +1555,13 @@ export default function EnhancedOverviewDashboardTab() {
               </Alert>
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="data-explorer" className="space-y-4">
+          <LeadDataExplorer 
+            leads={leadsData || []}
+            isLoading={false}
+          />
         </TabsContent>
       </Tabs>
 
