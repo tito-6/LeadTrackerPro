@@ -292,6 +292,11 @@ export default function ChatDrawer() {
                     <p>2. <code className="bg-blue-100 px-1 rounded">ollama serve</code></p>
                     <p>3. <code className="bg-blue-100 px-1 rounded">ollama pull llama3.2:3b-instruct-q4_0</code></p>
                   </div>
+                  <div className="mt-3 p-2 bg-green-50 rounded border border-green-200">
+                    <p className="text-xs text-green-700">
+                      💡 <strong>Demo Mode:</strong> Ollama olmadan da test edebilirsiniz! Yukarıdaki örnek soruları deneyin.
+                    </p>
+                  </div>
                 </div>
               </div>
             ) : (
