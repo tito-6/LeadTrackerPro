@@ -12,6 +12,7 @@ import { AlertCircle, TrendingDown, Users, Target, FileText, Calendar, Phone } f
 import { MasterDataTable } from "@/components/ui/master-data-table";
 import { DataTable } from "@/components/ui/data-table";
 import DateFilter from './ui/date-filter';
+import UniversalFilter, { UniversalFilters } from './ui/universal-filter';
 import NegativeReasonsSummaryTable from './negative-reasons-summary-table';
 import { getStandardColor, getPersonnelColor, getStatusColor } from '@/lib/color-system';
 
@@ -41,6 +42,17 @@ export default function OlumsuzAnaliziTab() {
     endDate: '',
     month: '',
     year: ''
+  });
+  
+  const [universalFilters, setUniversalFilters] = useState<UniversalFilters>({
+    startDate: '',
+    endDate: '',
+    month: '',
+    year: '',
+    leadType: '',
+    projectName: '',
+    salesRep: '',
+    status: ''
   });
 
   // Fetch negative analysis data
@@ -224,6 +236,19 @@ export default function OlumsuzAnaliziTab() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Universal Filters */}
+      <UniversalFilter
+        onFilterChange={setUniversalFilters}
+        initialFilters={universalFilters}
+        availableProjects={[]}
+        availableSalesReps={uniquePersonnel}
+        availableStatuses={[]}
+        showProjectFilter={true}
+        showSalesRepFilter={true}
+        showStatusFilter={false}
+        showLeadTypeFilter={true}
+      />
 
       {/* Summary Statistics */}
       {negativeAnalysis && (

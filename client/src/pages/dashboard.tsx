@@ -20,6 +20,7 @@ import EnhancedOverviewDashboardTab from "@/components/enhanced-overview-dashboa
 import SalespersonPerformanceTab from "@/components/salesperson-performance-tab";
 import MainLeadReport from "@/components/main-lead-report";
 import ExpenseManagementTab from "@/components/expense-management-tab";
+import SalespersonPage from "@/components/salesperson-page";
 import { useQuery } from "@tanstack/react-query";
 import { SalesRep } from "@shared/schema";
 
@@ -205,7 +206,7 @@ export default function Dashboard() {
           {/* Dynamic Salesperson Tabs */}
           {salesReps.map((rep) => (
             <TabsContent key={`salesperson-${rep.id}`} value={`salesperson-${rep.id}`}>
-              <SalespersonPerformanceTab salespersonId={rep.id} />
+              <SalespersonPage salespersonName={rep.name} />
             </TabsContent>
           ))}
         </Tabs>
