@@ -3,6 +3,44 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom scrollbars for better table experience */
+.overflow-x-auto {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f8fafc;
+}
+
+.overflow-x-auto::-webkit-scrollbar {
+  height: 8px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: #f8fafc;
+  border-radius: 4px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Enhanced table styling */
+.lead-data-table th {
+  border-right: 1px solid #e2e8f0;
+  position: relative;
+}
+
+.lead-data-table td {
+  border-right: 1px solid #f1f5f9;
+}
+
+.lead-data-table .sticky {
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+
 :root {
   --background: hsl(0, 0%, 100%);
   --foreground: hsl(20, 14.3%, 4.1%);

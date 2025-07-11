@@ -20,7 +20,7 @@ export default function LeadDataExplorer({ leads = [], isLoading = false }: Lead
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [salesRepFilter, setSalesRepFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
+  const itemsPerPage = 15; // Reduced for better performance with more columns
 
   // Get unique values for filters
   const uniqueLeadTypes = [...new Set(leads.map(lead => lead.leadType).filter(Boolean))];
@@ -87,11 +87,14 @@ export default function LeadDataExplorer({ leads = [], isLoading = false }: Lead
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Eye className="h-5 w-5" />
-          Lead Veri Keşifçisi
+          Lead Veri Keşifçisi - Tüm Detaylar
           <Badge variant="outline" className="ml-auto">
             {filteredLeads.length} / {leads.length} Lead
           </Badge>
         </CardTitle>
+        <div className="text-sm text-gray-600 mt-1">
+          Yatay kaydırma ile tüm lead detaylarını görüntüleyebilirsiniz
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Search and Filters */}
@@ -171,67 +174,169 @@ export default function LeadDataExplorer({ leads = [], isLoading = false }: Lead
           </div>
         </div>
 
-        {/* Data Table */}
+        {/* Comprehensive Data Table with Horizontal Scrolling */}
         <div className="border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-gray-50">
-                <TableHead className="font-semibold">Müşteri Bilgileri</TableHead>
-                <TableHead className="font-semibold">Lead Tipi</TableHead>
-                <TableHead className="font-semibold">Proje</TableHead>
-                <TableHead className="font-semibold">Durum</TableHead>
-                <TableHead className="font-semibold">Temsilci</TableHead>
-                <TableHead className="font-semibold">Tarih</TableHead>
-                <TableHead className="font-semibold">WebForm Notu</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedLeads.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                    {searchTerm || leadTypeFilter !== "all" || statusFilter !== "all" || salesRepFilter !== "all" 
-                      ? "Filtrelere uygun lead bulunamadı" 
-                      : "Henüz lead verisi yok"}
-                  </TableCell>
+          <div className="overflow-x-auto" style={{ maxHeight: '70vh' }}>
+            <Table className="min-w-full lead-data-table">
+              <TableHeader>
+                <TableRow className="bg-gray-50">
+                  <TableHead className="font-semibold min-w-[200px] sticky left-0 bg-gray-50 z-10 border-r">Müşteri Bilgileri</TableHead>
+                  <TableHead className="font-semibold min-w-[120px]">Lead Tipi</TableHead>
+                  <TableHead className="font-semibold min-w-[150px]">Proje Adı</TableHead>
+                  <TableHead className="font-semibold min-w-[120px]">Durum</TableHead>
+                  <TableHead className="font-semibold min-w-[150px]">Atanan Personel</TableHead>
+                  <TableHead className="font-semibold min-w-[120px]">Talep Tarihi</TableHead>
+                  <TableHead className="font-semibold min-w-[120px]">İlk Kaynak</TableHead>
+                  <TableHead className="font-semibold min-w-[120px]">Form Kaynağı</TableHead>
+                  <TableHead className="font-semibold min-w-[150px]">Form Geliş Yeri</TableHead>
+                  <TableHead className="font-semibold min-w-[150px]">Hatırlatma Personeli</TableHead>
+                  <TableHead className="font-semibold min-w-[120px]">Geri Dönüş</TableHead>
+                  <TableHead className="font-semibold min-w-[120px]">Mail Gönderildi</TableHead>
+                  <TableHead className="font-semibold min-w-[120px]">Görüşme Yapıldı</TableHead>
+                  <TableHead className="font-semibold min-w-[120px]">Görüşme Tarihi</TableHead>
+                  <TableHead className="font-semibold min-w-[120px]">Satış Yapıldı</TableHead>
+                  <TableHead className="font-semibold min-w-[100px]">Satış Adedi</TableHead>
+                  <TableHead className="font-semibold min-w-[120px]">Randevu Tarihi</TableHead>
+                  <TableHead className="font-semibold min-w-[250px]">Son Görüşme Sonucu</TableHead>
+                  <TableHead className="font-semibold min-w-[250px]">Son Görüşme Notu</TableHead>
+                  <TableHead className="font-semibold min-w-[300px]">WebForm Notu</TableHead>
                 </TableRow>
-              ) : (
-                paginatedLeads.map((lead, index) => (
-                  <TableRow key={lead.id || `${lead.customerId}-${index}`} className="hover:bg-gray-50">
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="font-medium">{lead.customerName || 'İsimsiz'}</div>
-                        <div className="text-sm text-gray-500">
-                          ID: {lead.customerId} | İletişim: {lead.contactId}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getLeadTypeColor(lead.leadType || '')}>
-                        {getLeadTypeLabel(lead.leadType || '')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="max-w-32 truncate">
-                      {lead.projectName || 'Belirtilmemiş'}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs">
-                        {lead.status || 'Durum yok'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {lead.assignedPersonnel || 'Atanmamış'}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {lead.requestDate || 'Tarih yok'}
-                    </TableCell>
-                    <TableCell className="max-w-48 truncate text-sm text-gray-600">
-                      {lead.webFormNote || 'Not yok'}
+              </TableHeader>
+              <TableBody>
+                {paginatedLeads.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={20} className="text-center py-8 text-gray-500">
+                      {searchTerm || leadTypeFilter !== "all" || statusFilter !== "all" || salesRepFilter !== "all" 
+                        ? "Filtrelere uygun lead bulunamadı" 
+                        : "Henüz lead verisi yok"}
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  paginatedLeads.map((lead, index) => (
+                    <TableRow key={lead.id || `${lead.customerId}-${index}`} className="hover:bg-gray-50">
+                      {/* Sticky customer info column */}
+                      <TableCell className="sticky left-0 bg-white z-10 border-r min-w-[200px]">
+                        <div className="space-y-1">
+                          <div className="font-medium text-sm">{lead.customerName || 'İsimsiz'}</div>
+                          <div className="text-xs text-gray-500">
+                            <div>Müşteri ID: {lead.customerId}</div>
+                            <div>İletişim ID: {lead.contactId}</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      
+                      {/* Lead Type */}
+                      <TableCell className="min-w-[120px]">
+                        <Badge className={getLeadTypeColor(lead.leadType || '')}>
+                          {getLeadTypeLabel(lead.leadType || '')}
+                        </Badge>
+                      </TableCell>
+                      
+                      {/* Project Name */}
+                      <TableCell className="min-w-[150px] text-sm">
+                        <div className="max-w-[140px] truncate" title={lead.projectName || 'Belirtilmemiş'}>
+                          {lead.projectName || 'Belirtilmemiş'}
+                        </div>
+                      </TableCell>
+                      
+                      {/* Status */}
+                      <TableCell className="min-w-[120px]">
+                        <Badge variant="outline" className="text-xs">
+                          {lead.status || 'Durum yok'}
+                        </Badge>
+                      </TableCell>
+                      
+                      {/* Assigned Personnel */}
+                      <TableCell className="min-w-[150px] text-sm">
+                        {lead.assignedPersonnel || 'Atanmamış'}
+                      </TableCell>
+                      
+                      {/* Request Date */}
+                      <TableCell className="min-w-[120px] text-sm">
+                        {lead.requestDate || 'Tarih yok'}
+                      </TableCell>
+                      
+                      {/* First Customer Source */}
+                      <TableCell className="min-w-[120px] text-sm">
+                        {lead.firstCustomerSource || '-'}
+                      </TableCell>
+                      
+                      {/* Form Customer Source */}
+                      <TableCell className="min-w-[120px] text-sm">
+                        {lead.formCustomerSource || '-'}
+                      </TableCell>
+                      
+                      {/* Info Form Origin */}
+                      <TableCell className="min-w-[150px] text-sm">
+                        {lead.infoFormOrigin || '-'}
+                      </TableCell>
+                      
+                      {/* Reminder Personnel */}
+                      <TableCell className="min-w-[150px] text-sm">
+                        {lead.reminderPersonnel || '-'}
+                      </TableCell>
+                      
+                      {/* Customer Called */}
+                      <TableCell className="min-w-[120px] text-sm">
+                        {lead.customerCalled || '-'}
+                      </TableCell>
+                      
+                      {/* Email Sent */}
+                      <TableCell className="min-w-[120px] text-sm">
+                        {lead.emailSent || '-'}
+                      </TableCell>
+                      
+                      {/* One on One Meeting */}
+                      <TableCell className="min-w-[120px] text-sm">
+                        {lead.oneOnOneMeeting || '-'}
+                      </TableCell>
+                      
+                      {/* One on One Date */}
+                      <TableCell className="min-w-[120px] text-sm">
+                        {lead.oneOnOneDate || '-'}
+                      </TableCell>
+                      
+                      {/* Sale Made */}
+                      <TableCell className="min-w-[120px] text-sm">
+                        {lead.saleMade || '-'}
+                      </TableCell>
+                      
+                      {/* Sale Quantity */}
+                      <TableCell className="min-w-[100px] text-sm text-center">
+                        {lead.saleQuantity || '-'}
+                      </TableCell>
+                      
+                      {/* Appointment Date */}
+                      <TableCell className="min-w-[120px] text-sm">
+                        {lead.appointmentDate || '-'}
+                      </TableCell>
+                      
+                      {/* Last Meeting Result */}
+                      <TableCell className="min-w-[250px] text-sm">
+                        <div className="max-w-[240px] truncate" title={lead.lastMeetingResult || '-'}>
+                          {lead.lastMeetingResult || '-'}
+                        </div>
+                      </TableCell>
+                      
+                      {/* Last Meeting Note */}
+                      <TableCell className="min-w-[250px] text-sm">
+                        <div className="max-w-[240px] truncate" title={lead.lastMeetingNote || '-'}>
+                          {lead.lastMeetingNote || '-'}
+                        </div>
+                      </TableCell>
+                      
+                      {/* WebForm Note */}
+                      <TableCell className="min-w-[300px] text-sm text-gray-600">
+                        <div className="max-w-[290px] truncate" title={lead.webFormNote || '-'}>
+                          {lead.webFormNote || '-'}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
 
         {/* Pagination */}
