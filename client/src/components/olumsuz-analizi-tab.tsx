@@ -1,515 +1,458 @@
-import { useMemo, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Lead, SalesRep } from "@shared/schema";
-import { TrendingDown, Users, AlertCircle, BarChart3, PieChart } from "lucide-react";
-import InteractiveChart from "./interactive-chart";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { AlertCircle, TrendingDown, Users, Target, FileText, Calendar, Phone } from 'lucide-react';
+import { MasterDataTable } from "@/components/ui/master-data-table";
 import { DataTable } from "@/components/ui/data-table";
-import SmartReasonsTable from "@/components/ui/smart-reasons-table";
+import DateFilter from './ui/date-filter';
+import { getStandardColor, getPersonnelColor, getStatusColor } from '@/lib/color-system';
+
+interface NegativeAnalysisData {
+  totalNegative: number;
+  totalLeads: number;
+  negativePercentage: number;
+  reasonAnalysis: Array<{
+    reason: string;
+    count: number;
+    percentage: number;
+  }>;
+  personnelAnalysis: Array<{
+    personnel: string;
+    count: number;
+    percentage: number;
+  }>;
+}
 
 export default function OlumsuzAnaliziTab() {
-  const { data: leads = [], isLoading } = useQuery<Lead[]>({
-    queryKey: ['/api/leads'],
+  const [selectedPersonnel, setSelectedPersonnel] = useState<string>('all');
+  const [selectedReason, setSelectedReason] = useState<string>('all');
+  const [chartType, setChartType] = useState<'pie' | 'bar'>('bar');
+  const [viewMode, setViewMode] = useState<'summary' | 'detailed'>('summary');
+  const [dateFilters, setDateFilters] = useState({
+    startDate: '',
+    endDate: '',
+    month: '',
+    year: ''
   });
-  
-  const { data: salesReps = [] } = useQuery<SalesRep[]>({
-    queryKey: ['/api/sales-reps'],
+
+  // Fetch negative analysis data
+  const { data: negativeAnalysis, isLoading } = useQuery<NegativeAnalysisData>({
+    queryKey: ['/api/negative-analysis', dateFilters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      Object.entries(dateFilters).forEach(([key, value]) => {
+        if (value) params.append(key, value);
+      });
+      const response = await fetch(`/api/negative-analysis?${params.toString()}`);
+      return response.json();
+    },
+    refetchInterval: 5000,
   });
 
-  const [chartType, setChartType] = useState<'pie' | 'bar' | 'line'>('pie');
-  const [selectedSalesperson, setSelectedSalesperson] = useState<string>('all');
-  const [selectedProject, setSelectedProject] = useState<string>('all');
-  const [groupBy, setGroupBy] = useState<'reason' | 'personnel' | 'project'>('reason');
-
-  // Filter for negative leads
-  const negativeLeads = useMemo(() => {
-    if (!leads) return [];
-    
-    return leads.filter(lead => {
-      const status = lead.status || '';
-      const isNegative = status.toLowerCase().includes('olumsuz') || 
-                        status.toLowerCase().includes('negative') ||
-                        lead.negativeReason;
-      
-      // Apply filters
-      let matchesSalesperson = !selectedSalesperson || selectedSalesperson === 'all' || lead.assignedPersonnel === selectedSalesperson;
-      let matchesProject = !selectedProject || selectedProject === 'all' || (lead.projectName && lead.projectName.includes(selectedProject));
-      
-      return isNegative && matchesSalesperson && matchesProject;
-    });
-  }, [leads, selectedSalesperson, selectedProject]);
-
-  // Group by negative reasons
-  const reasonDistribution = useMemo(() => {
-    if (!negativeLeads.length) return [];
-    
-    const reasonCounts = negativeLeads.reduce((acc, lead) => {
-      const reason = lead.negativeReason || lead.callNote || lead.lastMeetingNote || 'Belirtilmemiş';
-      
-      // Standardize common negative reasons
-      let standardizedReason = reason;
-      const reasonText = reason.toLowerCase();
-      
-      if (reasonText.includes('gerekirse kendisi arayacak') || reasonText.includes('kendisi arayacak')) {
-        standardizedReason = 'Gerekirse Kendisi Arayacak';
-      } else if (reasonText.includes('yanlış numara') || reasonText.includes('yanliş numara')) {
-        standardizedReason = 'Yanlış Numara';
-      } else if (reasonText.includes('bütçe yetersiz') || reasonText.includes('butce yetersiz')) {
-        standardizedReason = 'Bütçe Yetersiz';
-      } else if (reasonText.includes('ilgilenmiyor') || reasonText.includes('ilgisiz')) {
-        standardizedReason = 'İlgilenmiyor';
-      } else if (reasonText.includes('başka yerde aldı') || reasonText.includes('baska yerde')) {
-        standardizedReason = 'Başka Yerde Aldı';
-      } else if (reasonText.includes('zamanı uygun değil') || reasonText.includes('zaman uygun degil')) {
-        standardizedReason = 'Zamanı Uygun Değil';
-      } else if (reasonText.includes('lokasyon uygun değil') || reasonText.includes('lokasyon uymuyor')) {
-        standardizedReason = 'Lokasyon Uygun Değil';
-      } else if (reasonText.includes('fiyat yüksek') || reasonText.includes('pahali')) {
-        standardizedReason = 'Fiyat Yüksek';
-      } else if (reasonText.includes('bilgi almak istedi') || reasonText.includes('sadece bilgi')) {
-        standardizedReason = 'Sadece Bilgi Almak İstedi';
-      } else if (!reason || reason.trim() === '') {
-        standardizedReason = 'Belirtilmemiş';
-      }
-      
-      acc[standardizedReason] = (acc[standardizedReason] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-    
-    const total = negativeLeads.length;
-    
-    return Object.entries(reasonCounts)
-      .sort(([,a], [,b]) => b - a) // Sort by count descending
-      .map(([reason, count], index) => ({
-        name: reason,
-        value: count,
-        percentage: Math.round((count / total) * 100),
-        color: `hsl(${index * 30}, 70%, 50%)`
-      }));
-  }, [negativeLeads]);
-
-  // Group by personnel
-  const personnelDistribution = useMemo(() => {
-    if (!negativeLeads.length) return [];
-    
-    const personCounts = negativeLeads.reduce((acc, lead) => {
-      const person = lead.assignedPersonnel || 'Atanmamış';
-      acc[person] = (acc[person] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-    
-    const total = negativeLeads.length;
-    
-    return Object.entries(personCounts)
-      .sort(([,a], [,b]) => b - a)
-      .map(([person, count], index) => ({
-        name: person,
-        value: count,
-        percentage: Math.round((count / total) * 100),
-        color: `hsl(${index * 45}, 65%, 55%)`
-      }));
-  }, [negativeLeads]);
-
-  // Group by project
-  const projectDistribution = useMemo(() => {
-    if (!negativeLeads.length) return [];
-    
-    const projectCounts = negativeLeads.reduce((acc, lead) => {
-      const project = lead.projectName || 'Proje Belirtilmemiş';
-      acc[project] = (acc[project] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-    
-    const total = negativeLeads.length;
-    
-    return Object.entries(projectCounts)
-      .sort(([,a], [,b]) => b - a)
-      .map(([project, count], index) => ({
-        name: project,
-        value: count,
-        percentage: Math.round((count / total) * 100),
-        color: `hsl(${index * 40}, 75%, 60%)`
-      }));
-  }, [negativeLeads]);
-
-  // Get current chart data based on groupBy selection
-  const currentChartData = useMemo(() => {
-    switch (groupBy) {
-      case 'personnel':
-        return personnelDistribution;
-      case 'project':
-        return projectDistribution;
-      default:
-        return reasonDistribution;
+  // Fetch detailed leads data for advanced table
+  const { data: leadsData = [] } = useQuery({
+    queryKey: ['/api/leads', dateFilters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      Object.entries(dateFilters).forEach(([key, value]) => {
+        if (value) params.append(key, value);
+      });
+      const response = await fetch(`/api/leads?${params.toString()}`);
+      return response.json();
     }
-  }, [groupBy, reasonDistribution, personnelDistribution, projectDistribution]);
+  });
 
-  // Get unique projects for filters
-  const uniqueProjects = useMemo(() => {
-    const projects = new Set(leads.map(lead => lead.projectName).filter(Boolean));
-    return Array.from(projects);
-  }, [leads]);
+  // Filter negative leads based on selections
+  const filteredNegativeLeads = useMemo(() => {
+    return leadsData.filter(lead => {
+      const hasNegativeReason = lead.negativeReason && lead.negativeReason.trim() !== '';
+      const matchesPersonnel = selectedPersonnel === 'all' || lead.assignedPersonnel === selectedPersonnel;
+      const matchesReason = selectedReason === 'all' || lead.negativeReason === selectedReason;
+      
+      return hasNegativeReason && matchesPersonnel && matchesReason;
+    });
+  }, [leadsData, selectedPersonnel, selectedReason]);
 
-  const chartTypeOptions = [
-    { value: 'pie' as const, label: 'Pasta Grafik', icon: '🥧' },
-    { value: 'bar' as const, label: 'Sütun Grafik', icon: '📊' },
-    { value: 'line' as const, label: 'Çizgi Grafik', icon: '📈' }
-  ];
+  // Get unique personnel and reasons for filtering
+  const uniquePersonnel = useMemo(() => {
+    const personnel = leadsData
+      .filter(lead => lead.negativeReason && lead.negativeReason.trim() !== '')
+      .map(lead => lead.assignedPersonnel)
+      .filter(Boolean);
+    return [...new Set(personnel)];
+  }, [leadsData]);
 
-  const groupByOptions = [
-    { value: 'reason' as const, label: 'Olumsuzluk Nedeni', icon: '📝' },
-    { value: 'personnel' as const, label: 'Personel', icon: '👥' },
-    { value: 'project' as const, label: 'Proje', icon: '🏗️' }
-  ];
+  const uniqueReasons = useMemo(() => {
+    const reasons = leadsData
+      .filter(lead => lead.negativeReason && lead.negativeReason.trim() !== '')
+      .map(lead => lead.negativeReason)
+      .filter(Boolean);
+    return [...new Set(reasons)];
+  }, [leadsData]);
+
+  // Optimize reason display for "all" view - limit to top 10 reasons
+  const optimizedReasonData = useMemo(() => {
+    if (!negativeAnalysis?.reasonAnalysis) return [];
+    
+    if (selectedPersonnel === 'all') {
+      // Show only top 10 reasons when all personnel selected
+      return negativeAnalysis.reasonAnalysis
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10)
+        .map(item => ({
+          ...item,
+          name: item.reason.length > 25 ? item.reason.substring(0, 25) + '...' : item.reason,
+          fullReason: item.reason
+        }));
+    }
+    
+    // Show all reasons when specific personnel selected
+    return negativeAnalysis.reasonAnalysis.map(item => ({
+      ...item,
+      name: item.reason,
+      fullReason: item.reason
+    }));
+  }, [negativeAnalysis, selectedPersonnel]);
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <Card className="p-6">
-          <div className="animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-            <div className="h-64 bg-gray-200 rounded"></div>
+      <div className="space-y-4">
+        <div className="flex justify-center items-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+            <p className="text-gray-600">Olumsuz analiz verileri yükleniyor...</p>
           </div>
-        </Card>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header with Controls */}
-      <Card className="p-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-              📉 Olumsuz Analizi
-            </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Olumsuz sonuçlanan leadlerin detaylı analizi ve nedenleri
-            </p>
+      {/* Header Controls */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingDown className="h-5 w-5 text-red-600" />
+                ❌ Olumsuzluk Nedenleri Analizi
+              </CardTitle>
+              <CardDescription>
+                Olumsuz lead'lerin detaylı analizi ve nedenlerin incelenmesi
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Select value={viewMode} onValueChange={setViewMode}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="summary">Özet</SelectItem>
+                  <SelectItem value="detailed">Detaylı</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={chartType} onValueChange={setChartType}>
+                <SelectTrigger className="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bar">Bar</SelectItem>
+                  <SelectItem value="pie">Pie</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          
-          {/* Chart Type Selector */}
-          <div className="flex space-x-2">
-            {chartTypeOptions.map(option => (
-              <button
-                key={option.value}
-                onClick={() => setChartType(option.value)}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  chartType === option.value
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-                }`}
-              >
-                {option.icon} {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        
-        {/* Filters and Grouping */}
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <Label htmlFor="groupby-selector">Gruplama</Label>
-            <Select value={groupBy} onValueChange={(value: 'reason' | 'personnel' | 'project') => setGroupBy(value)}>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <DateFilter
+              startDate={dateFilters.startDate}
+              endDate={dateFilters.endDate}
+              month={dateFilters.month}
+              year={dateFilters.year}
+              onFiltersChange={setDateFilters}
+            />
+            <Select value={selectedPersonnel} onValueChange={setSelectedPersonnel}>
               <SelectTrigger>
-                <SelectValue placeholder="Gruplama Seçin" />
-              </SelectTrigger>
-              <SelectContent>
-                {groupByOptions.map(option => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.icon} {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div>
-            <Label htmlFor="salesperson-filter">Personel Filtresi</Label>
-            <Select value={selectedSalesperson} onValueChange={setSelectedSalesperson}>
-              <SelectTrigger>
-                <SelectValue placeholder="Tüm Personel" />
+                <SelectValue placeholder="Personel Seçin" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tüm Personel</SelectItem>
-                {salesReps.map(rep => (
-                  <SelectItem key={rep.id} value={rep.name}>
-                    {rep.name}
-                  </SelectItem>
+                {uniquePersonnel.map(personnel => (
+                  <SelectItem key={personnel} value={personnel}>{personnel}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          
-          <div>
-            <Label htmlFor="project-filter">Proje Filtresi</Label>
-            <Select value={selectedProject} onValueChange={setSelectedProject}>
+            <Select value={selectedReason} onValueChange={setSelectedReason}>
               <SelectTrigger>
-                <SelectValue placeholder="Tüm Projeler" />
+                <SelectValue placeholder="Neden Seçin" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tüm Projeler</SelectItem>
-                {uniqueProjects.map(project => (
-                  <SelectItem key={project} value={project}>
-                    {project}
+                <SelectItem value="all">Tüm Nedenler</SelectItem>
+                {uniqueReasons.map(reason => (
+                  <SelectItem key={reason} value={reason}>
+                    {reason.length > 30 ? reason.substring(0, 30) + '...' : reason}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-        </div>
-      </Card>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-4 bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20">
-          <div className="flex items-center">
-            <div className="p-2 bg-red-500 rounded-lg">
-              <TrendingDown className="h-6 w-6 text-white" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Toplam Olumsuz</p>
-              <p className="text-2xl font-bold text-red-600 dark:text-red-400">{negativeLeads.length}</p>
-            </div>
-          </div>
-        </Card>
-        
-        <Card className="p-4 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20">
-          <div className="flex items-center">
-            <div className="p-2 bg-orange-500 rounded-lg">
-              <AlertCircle className="h-6 w-6 text-white" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Farklı Neden</p>
-              <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{reasonDistribution.length}</p>
-            </div>
-          </div>
-        </Card>
-        
-        <Card className="p-4 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-500 rounded-lg">
-              <Users className="h-6 w-6 text-white" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Etkilenen Personel</p>
-              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{personnelDistribution.length}</p>
-            </div>
-          </div>
-        </Card>
-        
-        <Card className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-500 rounded-lg">
-              <BarChart3 className="h-6 w-6 text-white" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Olumsuzluk Oranı</p>
-              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {leads.length > 0 ? Math.round((negativeLeads.length / leads.length) * 100) : 0}%
-              </p>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Main Chart */}
-      <Card className="p-6 shadow-lg border-2 border-red-100 dark:border-red-800">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-            📊 {groupByOptions.find(opt => opt.value === groupBy)?.label} Dağılımı
-          </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Olumsuz leadlerin {groupByOptions.find(opt => opt.value === groupBy)?.label.toLowerCase()} bazında analizi
-          </p>
-        </div>
-        <InteractiveChart 
-          title=""
-          data={currentChartData}
-          height={400}
-          chartType={chartType}
-        />
-        
-        {/* Statistics table under the chart */}
-        <div className="mt-6">
-          <DataTable
-            data={currentChartData.map(item => ({
-              [groupByOptions.find(opt => opt.value === groupBy)?.label || 'Kategori']: item.name,
-              'Adet': item.value,
-              'Yüzde': `%${item.percentage}`
-            }))}
-            title={`${groupByOptions.find(opt => opt.value === groupBy)?.label} İstatistikleri`}
-            className="border-t border-gray-200 dark:border-gray-700"
-          />
-        </div>
-      </Card>
-
-      {/* Smart Reasons Table for Pie Chart Mode */}
-      {groupBy === 'reason' && reasonDistribution.length > 0 && chartType === 'pie' && reasonDistribution.length > 8 && (
-        <SmartReasonsTable
-          data={reasonDistribution}
-          title="Olumsuzluk Nedenleri Detayları"
-          className="mb-6"
-        />
-      )}
-
-      {/* Detailed Breakdown */}
-      {groupBy === 'reason' && reasonDistribution.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Top Reasons */}
-          <Card className="shadow-lg border-2 border-orange-100 dark:border-orange-800">
-            <CardHeader className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20">
-              <CardTitle className="flex items-center text-orange-700 dark:text-orange-300">
-                🏆 En Sık Olumsuzluk Nedenleri
-              </CardTitle>
-              <CardDescription>
-                En çok karşılaşılan olumsuz geri dönüş nedenleri
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="space-y-3 p-6">
-                {reasonDistribution.slice(0, 5).map((reason, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <div className="flex items-center">
-                      <div 
-                        className="w-4 h-4 rounded-full mr-3" 
-                        style={{ backgroundColor: reason.color }}
-                      />
-                      <span className="font-medium text-gray-900 dark:text-gray-100">
-                        {reason.name}
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bold text-lg text-gray-900 dark:text-gray-100">
-                        {reason.value}
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {reason.percentage}%
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Personnel Impact */}
-          <Card className="shadow-lg border-2 border-purple-100 dark:border-purple-800">
-            <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20">
-              <CardTitle className="flex items-center text-purple-700 dark:text-purple-300">
-                👥 Personel Bazında Olumsuz Dağılım
-              </CardTitle>
-              <CardDescription>
-                Personel performansında olumsuz etki analizi
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="space-y-3 p-6">
-                {personnelDistribution.slice(0, 5).map((person, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <div className="flex items-center">
-                      <div 
-                        className="w-4 h-4 rounded-full mr-3" 
-                        style={{ backgroundColor: person.color }}
-                      />
-                      <span className="font-medium text-gray-900 dark:text-gray-100">
-                        {person.name}
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bold text-lg text-gray-900 dark:text-gray-100">
-                        {person.value}
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {person.percentage}%
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Detailed Table */}
-      <Card className="shadow-lg border-2 border-gray-100 dark:border-gray-800">
-        <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-900/20 dark:to-blue-900/20">
-          <CardTitle className="flex items-center text-gray-700 dark:text-gray-300">
-            📋 Detaylı Olumsuz Lead Listesi
-          </CardTitle>
-          <CardDescription>
-            Olumsuz sonuçlanan tüm leadlerin detayları
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-800">
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">Müşteri</th>
-                  <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">Personel</th>
-                  <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">Proje</th>
-                  <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">Durum</th>
-                  <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">Olumsuzluk Nedeni</th>
-                  <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">Tarih</th>
-                </tr>
-              </thead>
-              <tbody>
-                {negativeLeads.slice(0, 50).map((lead, index) => (
-                  <tr 
-                    key={lead.id} 
-                    className={`border-b border-gray-100 dark:border-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 ${
-                      index % 2 === 0 ? 'bg-gray-50 dark:bg-gray-800/50' : 'bg-white dark:bg-gray-900'
-                    }`}
-                  >
-                    <td className="p-3 font-medium text-gray-900 dark:text-gray-100">{lead.customerName}</td>
-                    <td className="p-3 text-gray-700 dark:text-gray-300">{lead.assignedPersonnel}</td>
-                    <td className="p-3 text-gray-700 dark:text-gray-300">{lead.projectName || '-'}</td>
-                    <td className="p-3">
-                      <Badge variant="outline" className="text-red-700 border-red-300">
-                        {lead.status}
-                      </Badge>
-                    </td>
-                    <td className="p-3 text-gray-700 dark:text-gray-300 max-w-xs truncate">
-                      {lead.negativeReason || lead.callNote || lead.lastMeetingNote || 'Belirtilmemiş'}
-                    </td>
-                    <td className="p-3 text-gray-700 dark:text-gray-300">
-                      {lead.requestDate ? new Date(lead.requestDate).toLocaleDateString('tr-TR') : '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {negativeLeads.length > 50 && (
-            <div className="p-4 text-center text-gray-600 dark:text-gray-400">
-              İlk 50 kayıt gösteriliyor. Toplam {negativeLeads.length} olumsuz lead bulundu.
-            </div>
-          )}
         </CardContent>
       </Card>
 
-      {/* Empty State */}
-      {negativeLeads.length === 0 && (
-        <Card className="p-8">
-          <div className="text-center">
-            <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
-              <PieChart className="w-8 h-8 text-gray-400" />
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-              Olumsuz Lead Bulunamadı
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              Seçilen filtrelere göre olumsuz sonuçlanan lead bulunmuyor.
-            </p>
-          </div>
-        </Card>
+      {/* Summary Statistics */}
+      {negativeAnalysis && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Toplam Olumsuz Lead</CardTitle>
+              <TrendingDown className="h-4 w-4 text-red-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">{filteredNegativeLeads.length}</div>
+              <p className="text-xs text-muted-foreground">
+                Tüm lead'lerin %{Math.round((filteredNegativeLeads.length / (negativeAnalysis.totalLeads || 1)) * 100)}'i
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Farklı Neden Sayısı</CardTitle>
+              <FileText className="h-4 w-4 text-orange-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600">{uniqueReasons.length}</div>
+              <p className="text-xs text-muted-foreground">
+                Benzersiz olumsuzluk nedeni
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Etkilenen Personel</CardTitle>
+              <Users className="h-4 w-4 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">{uniquePersonnel.length}</div>
+              <p className="text-xs text-muted-foreground">
+                Olumsuz lead'e sahip personel
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">En Çok Görülen</CardTitle>
+              <Target className="h-4 w-4 text-purple-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm font-bold text-purple-600">
+                {negativeAnalysis.reasonAnalysis[0]?.reason.substring(0, 20) + (negativeAnalysis.reasonAnalysis[0]?.reason.length > 20 ? '...' : '') || 'Veri yok'}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {negativeAnalysis.reasonAnalysis[0]?.count || 0} lead (%{negativeAnalysis.reasonAnalysis[0]?.percentage || 0})
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Analysis Tabs */}
+      <Tabs defaultValue="reasons" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="reasons">Olumsuzluk Nedenleri</TabsTrigger>
+          <TabsTrigger value="personnel">Personel Analizi</TabsTrigger>
+          <TabsTrigger value="detailed">Detaylı Liste</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="reasons" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                📊 Olumsuzluk Nedenleri Dağılımı
+                {selectedPersonnel === 'all' && (
+                  <Badge variant="secondary">İlk 10 neden gösteriliyor</Badge>
+                )}
+              </CardTitle>
+              <CardDescription>
+                {selectedPersonnel === 'all' 
+                  ? 'Tüm personel için en sık görülen olumsuzluk nedenleri (optimize edilmiş görünüm)'
+                  : `${selectedPersonnel} için olumsuzluk nedenleri`
+                }
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {optimizedReasonData.length > 0 ? (
+                <>
+                  <div className="mb-6">
+                    <ResponsiveContainer width="100%" height={400}>
+                      {chartType === 'pie' ? (
+                        <PieChart>
+                          <Pie
+                            data={optimizedReasonData}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={({ name, percentage }) => `%${percentage}`}
+                            outerRadius={120}
+                            fill="#8884d8"
+                            dataKey="count"
+                          >
+                            {optimizedReasonData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={getStandardColor('NEGATIVE', entry.fullReason)} />
+                            ))}
+                          </Pie>
+                          <Tooltip 
+                            formatter={(value, name, props) => [
+                              `${value} lead`,
+                              props.payload.fullReason
+                            ]}
+                          />
+                        </PieChart>
+                      ) : (
+                        <BarChart data={optimizedReasonData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis 
+                            dataKey="name" 
+                            angle={-45} 
+                            textAnchor="end" 
+                            height={100}
+                            interval={0}
+                          />
+                          <YAxis />
+                          <Tooltip 
+                            formatter={(value, name, props) => [
+                              `${value} lead`,
+                              props.payload.fullReason
+                            ]}
+                          />
+                          <Bar dataKey="count" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      )}
+                    </ResponsiveContainer>
+                  </div>
+                  
+                  <DataTable
+                    title="Olumsuzluk Nedenleri Detayları"
+                    data={optimizedReasonData.map(item => ({
+                      'Neden': item.fullReason,
+                      'Adet': item.count,
+                      'Yüzde': `%${item.percentage}`
+                    }))}
+                  />
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">Seçilen kriterlere uygun olumsuz lead bulunamadı</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="personnel" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>👥 Personel Bazında Olumsuz Lead Analizi</CardTitle>
+              <CardDescription>
+                Personel performansı ve olumsuz lead dağılımı
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {negativeAnalysis?.personnelAnalysis && negativeAnalysis.personnelAnalysis.length > 0 ? (
+                <>
+                  <div className="mb-6">
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart data={negativeAnalysis.personnelAnalysis}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="personnel" angle={-45} textAnchor="end" height={80} />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="count" fill="#f97316" radius={[4, 4, 0, 0]}>
+                          {negativeAnalysis.personnelAnalysis.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={getPersonnelColor(entry.personnel)} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  
+                  <DataTable
+                    title="Personel Olumsuz Lead Detayları"
+                    data={negativeAnalysis.personnelAnalysis.map(item => ({
+                      'Personel': item.personnel,
+                      'Olumsuz Lead': item.count,
+                      'Yüzde': `%${item.percentage}`
+                    }))}
+                  />
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">Personel analizi için veri bulunamadı</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="detailed" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>📋 Olumsuz Lead'ler - Detaylı Liste</CardTitle>
+              <CardDescription>
+                Tüm olumsuz lead'lerin filtrelenebilir ve aranabilir listesi
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {filteredNegativeLeads.length > 0 ? (
+                <MasterDataTable
+                  title="Olumsuz Lead Detayları"
+                  data={filteredNegativeLeads}
+                  columns={[
+                    { key: 'customerName', label: 'Müşteri Adı', type: 'text' },
+                    { key: 'negativeReason', label: 'Olumsuzluk Nedeni', type: 'badge' },
+                    { key: 'assignedPersonnel', label: 'Atanan Personel', type: 'badge' },
+                    { key: 'projectName', label: 'Proje', type: 'text' },
+                    { key: 'leadType', label: 'Lead Tipi', type: 'badge' },
+                    { key: 'requestDate', label: 'Talep Tarihi', type: 'date' },
+                    { key: 'status', label: 'Durum', type: 'badge' },
+                    { key: 'lastMeetingNote', label: 'Son Görüşme Notu', type: 'text' },
+                    { key: 'responseResult', label: 'Dönüş Sonucu', type: 'text' },
+                    { key: 'firstCustomerSource', label: 'İlk Müşteri Kaynağı', type: 'text' },
+                    { key: 'formCustomerSource', label: 'Form Müşteri Kaynağı', type: 'text' }
+                  ]}
+                />
+              ) : (
+                <div className="text-center py-8">
+                  <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">Seçilen kriterlere uygun olumsuz lead bulunamadı</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {selectedPersonnel === 'all' && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Optimize Edilmiş Görünüm:</strong> Tüm personel seçildiğinde performans için sadece en sık görülen 10 olumsuzluk nedeni gösterilmektedir. 
+            Belirli bir personel seçerek o personele ait tüm olumsuzluk nedenlerini görebilirsiniz.
+          </AlertDescription>
+        </Alert>
       )}
     </div>
   );

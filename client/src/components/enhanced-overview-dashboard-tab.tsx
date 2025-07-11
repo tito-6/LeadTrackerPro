@@ -1614,6 +1614,286 @@ export default function EnhancedOverviewDashboardTab() {
             leads={leadsData || []}
             isLoading={false}
           />
+          
+          {/* Enhanced Data Tables Section */}
+          <div className="space-y-6 mt-8">
+            <div className="border-t pt-6">
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">📊 Tüm Veri Tabloları</h3>
+              
+              {/* Olumsuzluk Nedenleri Advanced Table */}
+              {dashboardMetrics?.leads && (
+                <Card className="mb-6">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg font-medium flex items-center gap-2">
+                        ❌ Olumsuzluk Nedenleri - Detaylı Analiz
+                        <Badge variant="outline">
+                          {dashboardMetrics.leads.filter(l => l.negativeReason && l.negativeReason.trim() !== '').length} olumsuz lead
+                        </Badge>
+                      </CardTitle>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const negativeLeads = dashboardMetrics.leads.filter(l => l.negativeReason && l.negativeReason.trim() !== '');
+                            const csvContent = [
+                              'Müşteri Adı,Olumsuzluk Nedeni,Atanan Personel,Proje,Lead Tipi,Tarih',
+                              ...negativeLeads.map(lead => 
+                                `"${lead.customerName || ''}","${lead.negativeReason || ''}","${lead.assignedPersonnel || ''}","${lead.projectName || ''}","${lead.leadType || ''}","${lead.requestDate || ''}"`
+                              )
+                            ].join('\n');
+                            const blob = new Blob([csvContent], { type: 'text/csv' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `olumsuzluk_nedenleri_detay_${new Date().toISOString().slice(0, 10)}.csv`;
+                            a.click();
+                          }}
+                          className="flex items-center gap-1"
+                        >
+                          CSV
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const negativeLeads = dashboardMetrics.leads.filter(l => l.negativeReason && l.negativeReason.trim() !== '');
+                            const headers = 'Müşteri Adı\tOlumsuzluk Nedeni\tAtanan Personel\tProje\tLead Tipi\tTarih\n';
+                            const content = negativeLeads
+                              .map(lead => `${lead.customerName || ''}\t${lead.negativeReason || ''}\t${lead.assignedPersonnel || ''}\t${lead.projectName || ''}\t${lead.leadType || ''}\t${lead.requestDate || ''}`)
+                              .join('\n');
+                            const blob = new Blob([headers + content], { type: 'application/vnd.ms-excel' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `olumsuzluk_nedenleri_detay_${new Date().toISOString().slice(0, 10)}.xls`;
+                            a.click();
+                          }}
+                          className="flex items-center gap-1"
+                        >
+                          Excel
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <MasterDataTable
+                      title="Olumsuzluk Nedenleri - Detaylı Liste"
+                      data={dashboardMetrics.leads
+                        .filter(l => l.negativeReason && l.negativeReason.trim() !== '')
+                        .map(lead => ({
+                          customerName: lead.customerName || 'Bilinmiyor',
+                          negativeReason: lead.negativeReason || '',
+                          assignedPersonnel: lead.assignedPersonnel || 'Atanmamış',
+                          projectName: lead.projectName || 'Belirtilmemiş',
+                          leadType: lead.leadType || 'Bilinmiyor',
+                          requestDate: lead.requestDate || '',
+                          status: lead.status || 'Bilinmiyor',
+                          lastMeetingNote: lead.lastMeetingNote || '',
+                          responseResult: lead.responseResult || ''
+                        }))}
+                      columns={[
+                        { key: 'customerName', label: 'Müşteri Adı', type: 'text' },
+                        { key: 'negativeReason', label: 'Olumsuzluk Nedeni', type: 'badge' },
+                        { key: 'assignedPersonnel', label: 'Atanan Personel', type: 'badge' },
+                        { key: 'projectName', label: 'Proje', type: 'text' },
+                        { key: 'leadType', label: 'Lead Tipi', type: 'badge' },
+                        { key: 'requestDate', label: 'Talep Tarihi', type: 'date' },
+                        { key: 'status', label: 'Durum', type: 'badge' },
+                        { key: 'lastMeetingNote', label: 'Son Görüşme Notu', type: 'text' },
+                        { key: 'responseResult', label: 'Dönüş Sonucu', type: 'text' }
+                      ]}
+                    />
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Status Distribution Table */}
+              <Card className="mb-6">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg font-medium flex items-center gap-2">
+                      📊 Durum Dağılımı - Detaylı Tablo
+                      <Badge variant="outline">{dashboardMetrics?.statusData?.length || 0} durum</Badge>
+                    </CardTitle>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const csvContent = [
+                            'Durum,Adet,Yüzde',
+                            ...(dashboardMetrics?.statusData || []).map(item => 
+                              `"${item.name}",${item.value},${item.percentage}%`
+                            )
+                          ].join('\n');
+                          const blob = new Blob([csvContent], { type: 'text/csv' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `durum_dagilimi_${new Date().toISOString().slice(0, 10)}.csv`;
+                          a.click();
+                        }}
+                        className="flex items-center gap-1"
+                      >
+                        CSV
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const headers = 'Durum\tAdet\tYüzde\n';
+                          const content = (dashboardMetrics?.statusData || [])
+                            .map(item => `${item.name}\t${item.value}\t${item.percentage}%`)
+                            .join('\n');
+                          const blob = new Blob([headers + content], { type: 'application/vnd.ms-excel' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `durum_dagilimi_${new Date().toISOString().slice(0, 10)}.xls`;
+                          a.click();
+                        }}
+                        className="flex items-center gap-1"
+                      >
+                        Excel
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse border border-gray-200">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">Durum</th>
+                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">Adet</th>
+                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">Yüzde</th>
+                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">Renk</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dashboardMetrics?.statusData?.map((item, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="border border-gray-200 px-4 py-2">{item.name}</td>
+                            <td className="border border-gray-200 px-4 py-2 text-center font-medium">{item.value}</td>
+                            <td className="border border-gray-200 px-4 py-2 text-center">{item.percentage}%</td>
+                            <td className="border border-gray-200 px-4 py-2">
+                              <div 
+                                className="w-6 h-6 rounded border border-gray-300 mx-auto"
+                                style={{ backgroundColor: getStatusColor(item.name) }}
+                              ></div>
+                            </td>
+                          </tr>
+                        )) || (
+                          <tr>
+                            <td colSpan={4} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
+                              Veri bulunamadı
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Personnel Performance Table */}
+              <Card className="mb-6">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg font-medium flex items-center gap-2">
+                      👥 Personel Performansı - Detaylı Tablo
+                      <Badge variant="outline">{dashboardMetrics?.personnelData?.length || 0} personel</Badge>
+                    </CardTitle>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const csvContent = [
+                            'Personel,Lead Sayısı,Takip Sayısı,Verimlilik %',
+                            ...(dashboardMetrics?.personnelData || []).map(item => 
+                              `"${item.name}",${item.leadCount},${item.takipteCount},${item.efficiency}%`
+                            )
+                          ].join('\n');
+                          const blob = new Blob([csvContent], { type: 'text/csv' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `personel_performansi_${new Date().toISOString().slice(0, 10)}.csv`;
+                          a.click();
+                        }}
+                        className="flex items-center gap-1"
+                      >
+                        CSV
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const headers = 'Personel\tLead Sayısı\tTakip Sayısı\tVerimlilik %\n';
+                          const content = (dashboardMetrics?.personnelData || [])
+                            .map(item => `${item.name}\t${item.leadCount}\t${item.takipteCount}\t${item.efficiency}%`)
+                            .join('\n');
+                          const blob = new Blob([headers + content], { type: 'application/vnd.ms-excel' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `personel_performansi_${new Date().toISOString().slice(0, 10)}.xls`;
+                          a.click();
+                        }}
+                        className="flex items-center gap-1"
+                      >
+                        Excel
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse border border-gray-200">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">Personel</th>
+                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">Lead Sayısı</th>
+                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">Takip Sayısı</th>
+                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">Verimlilik %</th>
+                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">Renk</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dashboardMetrics?.personnelData?.map((item, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="border border-gray-200 px-4 py-2 font-medium">{item.name}</td>
+                            <td className="border border-gray-200 px-4 py-2 text-center">{item.leadCount}</td>
+                            <td className="border border-gray-200 px-4 py-2 text-center">{item.takipteCount}</td>
+                            <td className="border border-gray-200 px-4 py-2 text-center">
+                              <Badge variant={item.efficiency > 70 ? "default" : item.efficiency > 40 ? "secondary" : "destructive"}>
+                                {item.efficiency}%
+                              </Badge>
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2">
+                              <div 
+                                className="w-6 h-6 rounded border border-gray-300 mx-auto"
+                                style={{ backgroundColor: getPersonnelColor(item.name) }}
+                              ></div>
+                            </td>
+                          </tr>
+                        )) || (
+                          <tr>
+                            <td colSpan={5} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
+                              Veri bulunamadı
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
 
