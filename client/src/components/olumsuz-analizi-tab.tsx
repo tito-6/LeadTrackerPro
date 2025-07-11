@@ -70,31 +70,39 @@ export default function OlumsuzAnaliziTab() {
     }
   });
 
-  // Filter negative leads based on selections
+  // Filter negative leads based on selections - use same logic as NegativeReasonsSummaryTable
   const filteredNegativeLeads = useMemo(() => {
     return leadsData.filter(lead => {
-      const hasNegativeReason = lead.negativeReason && lead.negativeReason.trim() !== '';
+      // Match exactly how server and summary table filter olumsuz leads
+      const isNegativeLead = lead.status?.includes('Olumsuz') || lead.status?.toLowerCase().includes('olumsuz');
       const matchesPersonnel = selectedPersonnel === 'all' || lead.assignedPersonnel === selectedPersonnel;
-      const matchesReason = selectedReason === 'all' || lead.negativeReason === selectedReason;
+      const reasonToCheck = (lead.negativeReason && lead.negativeReason.trim() !== '') 
+        ? lead.negativeReason.trim() 
+        : lead.status || 'Belirtilmemiş';
+      const matchesReason = selectedReason === 'all' || reasonToCheck === selectedReason;
       
-      return hasNegativeReason && matchesPersonnel && matchesReason;
+      return isNegativeLead && matchesPersonnel && matchesReason;
     });
   }, [leadsData, selectedPersonnel, selectedReason]);
 
-  // Get unique personnel and reasons for filtering
+  // Get unique personnel and reasons for filtering - use same logic as summary table
   const uniquePersonnel = useMemo(() => {
     const personnel = leadsData
-      .filter(lead => lead.negativeReason && lead.negativeReason.trim() !== '')
+      .filter(lead => lead.status?.includes('Olumsuz') || lead.status?.toLowerCase().includes('olumsuz'))
       .map(lead => lead.assignedPersonnel)
       .filter(Boolean);
     return [...new Set(personnel)];
   }, [leadsData]);
 
   const uniqueReasons = useMemo(() => {
-    const reasons = leadsData
-      .filter(lead => lead.negativeReason && lead.negativeReason.trim() !== '')
-      .map(lead => lead.negativeReason)
-      .filter(Boolean);
+    const negativeLeads = leadsData.filter(lead => 
+      lead.status?.includes('Olumsuz') || lead.status?.toLowerCase().includes('olumsuz')
+    );
+    const reasons = negativeLeads.map(lead => 
+      (lead.negativeReason && lead.negativeReason.trim() !== '') 
+        ? lead.negativeReason.trim() 
+        : lead.status || 'Belirtilmemiş'
+    ).filter(Boolean);
     return [...new Set(reasons)];
   }, [leadsData]);
 
