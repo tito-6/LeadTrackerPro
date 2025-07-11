@@ -115,9 +115,19 @@ export default function DataEntryTab() {
       }
       
       setFile(null);
+      let description = `${data.imported} lead başarıyla içe aktarıldı.`;
+      
+      if (data.errors > 0) {
+        description += ` ${data.errors} hata oluştu.`;
+      }
+      
+      if (data.duplicateInfo && data.duplicateInfo.skipped > 0) {
+        description += ` ${data.duplicateInfo.skipped} yinelenen kayıt atlandı.`;
+      }
+      
       toast({
         title: "İçe Aktarma Başarılı",
-        description: `${data.imported} lead başarıyla içe aktarıldı. ${data.errors > 0 ? `${data.errors} hata oluştu.` : ""}`,
+        description,
       });
     },
     onError: () => {

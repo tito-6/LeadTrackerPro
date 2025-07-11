@@ -433,6 +433,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log successful file processing
       console.log(`Processing ${originalname}: ${leads.length} leads found`);
 
+      // Get existing leads to check for duplicates
+      const existingLeads = await storage.getLeads();
+      const duplicateInfo = {
+        byCustomerId: 0,
+        byContactId: 0,
+        byName: 0,
+        total: 0,
+        skipped: 0,
+        imported: 0
+      };
+
       // Extract unique sales personnel names and auto-create them
       const uniquePersonnel = new Set<string>();
       leads.forEach(lead => {
@@ -490,6 +501,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
             continue;
           }
 
+          // Check for duplicates before creating
+          const isDuplicate = existingLeads.some(existing => {
+            // Primary check: Customer ID and Contact ID
+            if (mappedData.customerId && existing.customerId && 
+                mappedData.customerId === existing.customerId) {
+              duplicateInfo.byCustomerId++;
+              return true;
+            }
+            
+            if (mappedData.contactId && existing.contactId && 
+                mappedData.contactId === existing.contactId) {
+              duplicateInfo.byContactId++;
+              return true;
+            }
+            
+            // Secondary check: Customer name (normalized)
+            if (mappedData.customerName && existing.customerName) {
+              const nameA = mappedData.customerName.toLowerCase().trim();
+              const nameB = existing.customerName.toLowerCase().trim();
+              if (nameA === nameB && nameA.length > 3) {
+                duplicateInfo.byName++;
+                return true;
+              }
+            }
+            
+            return false;
+          });
+
+          if (isDuplicate) {
+            duplicateInfo.skipped++;
+            console.log(`⚠️ Duplicate detected and skipped: ${mappedData.customerName} (ID: ${mappedData.customerId})`);
+            continue;
+          }
+
           // Track validation issues
           if (!mappedData.requestDate || mappedData.requestDate === '') {
             validationWarnings.dateFormatIssues++;
@@ -502,18 +547,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const leadData = insertLeadSchema.parse(mappedData);
           const lead = await storage.createLead(leadData);
           createdLeads.push(lead);
+          duplicateInfo.imported++;
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           errors.push({ row: i + 1, error: errorMessage });
         }
       }
 
+      duplicateInfo.total = duplicateInfo.byCustomerId + duplicateInfo.byContactId + duplicateInfo.byName;
+
       res.json({
-        message: `Successfully imported ${createdLeads.length} leads`,
+        message: `Successfully imported ${createdLeads.length} leads${errors.length > 0 ? ` with ${errors.length} errors` : ''}${duplicateInfo.skipped > 0 ? `. Skipped ${duplicateInfo.skipped} duplicates` : ''}`,
         imported: createdLeads.length,
         errors: errors.length,
         errorDetails: errors,
-        validationWarnings
+        validationWarnings,
+        duplicateInfo: {
+          ...duplicateInfo,
+          message: duplicateInfo.skipped > 0 ? `Found ${duplicateInfo.skipped} duplicate records: ${duplicateInfo.byCustomerId} by Customer ID, ${duplicateInfo.byContactId} by Contact ID, ${duplicateInfo.byName} by Name` : 'No duplicates found'
+        }
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to import file", error: (error as Error).message });

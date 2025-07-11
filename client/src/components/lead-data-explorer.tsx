@@ -887,7 +887,7 @@ export default function LeadDataExplorer({ leads = [], isLoading = false }: Lead
         {totalPages > 1 && (
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-500">
-              {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredLeads.length)} / {filteredLeads.length} lead gösteriliyor
+              {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredAndSortedLeads.length)} / {filteredAndSortedLeads.length} lead gösteriliyor
             </div>
             <div className="flex gap-2">
               <Button
