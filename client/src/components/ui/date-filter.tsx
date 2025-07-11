@@ -52,7 +52,9 @@ export default function DateFilter({ onFilterChange, initialFilters, className }
   const handleFilterChange = (key: string, value: string) => {
     const newFilters = { ...filters, [key]: value };
     setFilters(newFilters);
-    onFilterChange(newFilters);
+    if (onFilterChange && typeof onFilterChange === 'function') {
+      onFilterChange(newFilters);
+    }
   };
 
   const clearFilters = () => {
@@ -63,7 +65,9 @@ export default function DateFilter({ onFilterChange, initialFilters, className }
       year: ''
     };
     setFilters(clearedFilters);
-    onFilterChange(clearedFilters);
+    if (onFilterChange && typeof onFilterChange === 'function') {
+      onFilterChange(clearedFilters);
+    }
   };
 
   const hasActiveFilters = Object.values(filters).some(value => value !== '');

@@ -12,6 +12,7 @@ import { AlertCircle, TrendingDown, Users, Target, FileText, Calendar, Phone } f
 import { MasterDataTable } from "@/components/ui/master-data-table";
 import { DataTable } from "@/components/ui/data-table";
 import DateFilter from './ui/date-filter';
+import NegativeReasonsSummaryTable from './negative-reasons-summary-table';
 import { getStandardColor, getPersonnelColor, getStatusColor } from '@/lib/color-system';
 
 interface NegativeAnalysisData {
@@ -174,11 +175,8 @@ export default function OlumsuzAnaliziTab() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <DateFilter
-              startDate={dateFilters.startDate}
-              endDate={dateFilters.endDate}
-              month={dateFilters.month}
-              year={dateFilters.year}
-              onFiltersChange={setDateFilters}
+              onFilterChange={setDateFilters}
+              initialFilters={dateFilters}
             />
             <Select value={selectedPersonnel} onValueChange={setSelectedPersonnel}>
               <SelectTrigger>
@@ -276,10 +274,17 @@ export default function OlumsuzAnaliziTab() {
         </TabsList>
 
         <TabsContent value="reasons" className="space-y-4">
+          {/* Comprehensive Negative Reasons Summary Table */}
+          <NegativeReasonsSummaryTable 
+            leads={leadsData}
+            selectedPersonnel={selectedPersonnel}
+          />
+          
+          {/* Chart Visualization */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                📊 Olumsuzluk Nedenleri Dağılımı
+                📊 Olumsuzluk Nedenleri Dağılımı - Grafik
                 {selectedPersonnel === 'all' && (
                   <Badge variant="secondary">İlk 10 neden gösteriliyor</Badge>
                 )}
@@ -343,7 +348,7 @@ export default function OlumsuzAnaliziTab() {
                   </div>
                   
                   <DataTable
-                    title="Olumsuzluk Nedenleri Detayları"
+                    title="Olumsuzluk Nedenleri Grafik Detayları"
                     data={optimizedReasonData.map(item => ({
                       'Neden': item.fullReason,
                       'Adet': item.count,
