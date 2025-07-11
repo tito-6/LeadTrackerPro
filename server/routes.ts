@@ -13,26 +13,37 @@ function extractDataFromWebForm(webFormNote: string | undefined): { projectName?
   
   const originalNote = webFormNote.trim();
   
-  // Extract lead type (Satılık/Kiralık)
+  // Extract lead type (Satılık/Kiralık) - Enhanced for your specific format
   let leadType: string | undefined;
   
-  // Simplified and comprehensive lead type detection patterns
-  const leadTypePatterns = [
-    // KIRALIK patterns - check first for priority (all common variations)
+  // Specific pattern for your format: "/ Ilgilendigi Gayrimenkul Tipi :Satılık /" or ":Kiralık /"
+  const specificPatterns = [
+    // Match ":Kiralık" in the Ilgilendigi Gayrimenkul Tipi format
+    {
+      regex: /Ilgilendigi\s+Gayrimenkul\s+Tipi\s*:?\s*Kiralık/i,
+      type: 'kiralama'
+    },
+    // Match ":Satılık" in the Ilgilendigi Gayrimenkul Tipi format  
+    {
+      regex: /Ilgilendigi\s+Gayrimenkul\s+Tipi\s*:?\s*Satılık/i,
+      type: 'satis'
+    },
+    // Additional general patterns for KIRALIK (all common variations)
     { 
       regex: /kiralık|kiraliq|kiralik|kırala|kıralı|krala|krali|kerala|keralı/i, 
       type: 'kiralama' 
     },
-    // SATILIK patterns (all common variations)  
+    // Additional general patterns for SATILIK (all common variations)  
     { 
       regex: /satılık|satıliq|satilik|satlik|satlık|satılk|satlk|satış|satis/i, 
       type: 'satis' 
     }
   ];
   
-  for (const pattern of leadTypePatterns) {
+  for (const pattern of specificPatterns) {
     if (pattern.regex.test(originalNote)) {
       leadType = pattern.type;
+      console.log(`Lead type detected: "${leadType}" from pattern: ${pattern.regex} in: "${originalNote.substring(0, 100)}..."`);
       break;
     }
     // Reset the regex lastIndex for global patterns
@@ -189,9 +200,18 @@ function mapRowToLead(row: any): any {
   const webFormData = extractDataFromWebForm(webFormNote);
   if (webFormData.leadType) {
     leadType = webFormData.leadType; // Override with WebForm detected type
+    console.log(`✓ WebForm lead type detected: "${leadType}" from: "${webFormNote.substring(0, 60)}..."`);
   }
   
-  // Optional: Debug logging for WebForm extraction during file imports
+  // Enhanced project name extraction
+  let projectName = '';
+  if (webFormData.projectName) {
+    projectName = webFormData.projectName;
+    console.log(`✓ Project name extracted: "${projectName}" from WebForm`);
+  } else {
+    // Try to extract from other project-related columns
+    projectName = row['Proje Adı'] || row['Project Name'] || row.projectName || 'Model Sanayi Merkezi';
+  }
   // console.log(`WebForm Extraction - Project: "${webFormData.projectName || 'None'}", Type: "${webFormData.leadType || 'None'}"`);  
   
   // FIXED: Status derivation EXCLUSIVELY from SON GORUSME SONUCU column
@@ -229,7 +249,7 @@ function mapRowToLead(row: any): any {
     firstCustomerSource: getValue(row['İlk Müşteri Kaynağı']) || getValue(row.firstCustomerSource),
     formCustomerSource: getValue(row['Form Müşteri Kaynağı']) || getValue(row.formCustomerSource),
     webFormNote: getValue(row['WebForm Notu']) || getValue(row['Web Form Notu']) || getValue(row.webFormNote),
-    projectName: webFormData.projectName || extractProjectNameFromWebForm(getValue(row['WebForm Notu']) || getValue(row['Web Form Notu']) || getValue(row.webFormNote)),
+    projectName: projectName || webFormData.projectName || extractProjectNameFromWebForm(getValue(row['WebForm Notu']) || getValue(row['Web Form Notu']) || getValue(row.webFormNote)) || 'Model Sanayi Merkezi',
     infoFormLocation1: getValue(row['İnfo Form Geliş Yeri']) || getValue(row.infoFormLocation1),
     infoFormLocation2: getValue(row['İnfo Form Geliş Yeri 2']) || getValue(row.infoFormLocation2),
     infoFormLocation3: getValue(row['İnfo Form Geliş Yeri 3']) || getValue(row.infoFormLocation3),
