@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { AlertCircle, TrendingDown, Users, Target, FileText, Calendar, Phone } from 'lucide-react';
+import { AlertCircle, TrendingDown, Users, Target, FileText, Calendar, Phone, Filter, X } from 'lucide-react';
 import { MasterDataTable } from "@/components/ui/master-data-table";
 import { DataTable } from "@/components/ui/data-table";
 import DateFilter from './ui/date-filter';
@@ -93,9 +93,13 @@ export default function OlumsuzAnaliziTab() {
         : lead.status || 'Belirtilmemiş';
       const matchesReason = selectedReason === 'all' || reasonToCheck === selectedReason;
       
-      return isNegativeLead && matchesPersonnel && matchesReason;
+      // Additional universal filters
+      const matchesProject = !universalFilters.projectName || lead.projectName === universalFilters.projectName;
+      const matchesLeadType = !universalFilters.leadType || lead.leadType === universalFilters.leadType;
+      
+      return isNegativeLead && matchesPersonnel && matchesReason && matchesProject && matchesLeadType;
     });
-  }, [leadsData, selectedPersonnel, selectedReason]);
+  }, [leadsData, selectedPersonnel, selectedReason, universalFilters]);
 
   // Get unique personnel and reasons for filtering - use same logic as summary table
   const uniquePersonnel = useMemo(() => {
@@ -465,13 +469,139 @@ export default function OlumsuzAnaliziTab() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Advanced Filtering for Detailed List */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  Detaylı Liste Filtreleri
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <Label className="text-xs">Satış Personeli</Label>
+                    <Select value={selectedPersonnel} onValueChange={setSelectedPersonnel}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Personel seçin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tüm Personel</SelectItem>
+                        {uniquePersonnel.map(personnel => (
+                          <SelectItem key={personnel} value={personnel}>
+                            {personnel}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-xs">Olumsuzluk Nedeni</Label>
+                    <Select value={selectedReason} onValueChange={setSelectedReason}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Neden seçin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tüm Nedenler</SelectItem>
+                        {uniqueReasons.map(reason => (
+                          <SelectItem key={reason} value={reason}>
+                            {reason.length > 30 ? reason.substring(0, 30) + '...' : reason}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-xs">Proje</Label>
+                    <Select 
+                      value={universalFilters.projectName} 
+                      onValueChange={(value) => setUniversalFilters({...universalFilters, projectName: value})}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Proje seçin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Tüm Projeler</SelectItem>
+                        {[...new Set(filteredNegativeLeads.map(lead => lead.projectName).filter(Boolean))].map(project => (
+                          <SelectItem key={project} value={project}>
+                            {project}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-xs">Lead Tipi</Label>
+                    <Select 
+                      value={universalFilters.leadType} 
+                      onValueChange={(value) => setUniversalFilters({...universalFilters, leadType: value})}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Tip seçin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Tüm Tipler</SelectItem>
+                        <SelectItem value="satis">Satılık</SelectItem>
+                        <SelectItem value="kiralama">Kiralık</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="mt-4 flex items-center gap-2">
+                  <Badge variant="outline">
+                    {filteredNegativeLeads.length} olumsuz lead görüntüleniyor
+                  </Badge>
+                  <Badge variant="secondary">
+                    {uniquePersonnel.length} personel
+                  </Badge>
+                  <Badge variant="secondary">
+                    {uniqueReasons.length} neden
+                  </Badge>
+                  <Badge variant="secondary">
+                    {[...new Set(filteredNegativeLeads.map(lead => lead.projectName).filter(Boolean))].length} proje
+                  </Badge>
+                  {(selectedPersonnel !== 'all' || selectedReason !== 'all' || universalFilters.projectName || universalFilters.leadType) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedPersonnel('all');
+                        setSelectedReason('all');
+                        setUniversalFilters({...universalFilters, projectName: '', leadType: ''});
+                      }}
+                      className="h-7 text-xs"
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      Filtreleri Temizle
+                    </Button>
+                  )}
+                </div>
+              </div>
+              
               {filteredNegativeLeads.length > 0 ? (
                 <MasterDataTable
                   title="Olumsuz Lead Detayları"
                   data={filteredNegativeLeads}
                   columns={[
                     { key: 'customerName', label: 'Müşteri Adı', type: 'text' },
-                    { key: 'negativeReason', label: 'Olumsuzluk Nedeni', type: 'badge' },
+                    { 
+                      key: 'effectiveReason', 
+                      label: 'Olumsuzluk Nedeni', 
+                      type: 'badge',
+                      render: (lead) => {
+                        if (lead.negativeReason && lead.negativeReason.trim() !== '') {
+                          return lead.negativeReason.trim();
+                        }
+                        if (lead.lastMeetingNote && lead.lastMeetingNote.trim() !== '') {
+                          return lead.lastMeetingNote.trim();
+                        }
+                        if (lead.responseResult && lead.responseResult.trim() !== '') {
+                          return lead.responseResult.trim();
+                        }
+                        return lead.status || 'Belirtilmemiş';
+                      }
+                    },
                     { key: 'assignedPersonnel', label: 'Atanan Personel', type: 'badge' },
                     { key: 'projectName', label: 'Proje', type: 'text' },
                     { key: 'leadType', label: 'Lead Tipi', type: 'badge' },
@@ -480,7 +610,9 @@ export default function OlumsuzAnaliziTab() {
                     { key: 'lastMeetingNote', label: 'Son Görüşme Notu', type: 'text' },
                     { key: 'responseResult', label: 'Dönüş Sonucu', type: 'text' },
                     { key: 'firstCustomerSource', label: 'İlk Müşteri Kaynağı', type: 'text' },
-                    { key: 'formCustomerSource', label: 'Form Müşteri Kaynağı', type: 'text' }
+                    { key: 'formCustomerSource', label: 'Form Müşteri Kaynağı', type: 'text' },
+                    { key: 'customerId', label: 'Müşteri ID', type: 'text' },
+                    { key: 'contactId', label: 'İletişim ID', type: 'text' }
                   ]}
                 />
               ) : (
