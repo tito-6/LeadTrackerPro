@@ -282,19 +282,19 @@ export default function ChatDrawer() {
                   ))}
                 </div>
                 
-                <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-xs text-blue-800 font-medium mb-2">🔧 Ollama Kurulum Gerekliliği</p>
-                  <p className="text-xs text-blue-700 mb-2">
-                    AI asistanı kullanmak için önce Ollama'yı kurmanız gerekir:
+                <div className="mt-6 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                  <p className="text-xs text-amber-800 font-medium mb-2">⚠️ Replit Ortamında Ollama Sınırlaması</p>
+                  <p className="text-xs text-amber-700 mb-2">
+                    Ollama, Replit'in sanallaştırılmış ortamında çalışmamaktadır. AI asistanı kullanmak için:
                   </p>
-                  <div className="text-xs text-blue-600 space-y-1">
-                    <p>1. <code className="bg-blue-100 px-1 rounded">curl -fsSL https://ollama.ai/install.sh | sh</code></p>
-                    <p>2. <code className="bg-blue-100 px-1 rounded">ollama serve</code></p>
-                    <p>3. <code className="bg-blue-100 px-1 rounded">ollama pull llama3.2:3b-instruct-q4_0</code></p>
+                  <div className="text-xs text-amber-600 space-y-1">
+                    <p><strong>Seçenek 1:</strong> Projeyi yerel VS Code ortamınızda çalıştırın</p>
+                    <p><strong>Seçenek 2:</strong> Kendi sunucunuzda deploy edin</p>
+                    <p><strong>Seçenek 3:</strong> Docker ile yerel çalışma ortamı kurun</p>
                   </div>
-                  <div className="mt-3 p-2 bg-green-50 rounded border border-green-200">
-                    <p className="text-xs text-green-700">
-                      💡 <strong>Demo Mode:</strong> Ollama olmadan da test edebilirsiniz! Yukarıdaki örnek soruları deneyin.
+                  <div className="mt-3 p-2 bg-blue-50 rounded border border-blue-200">
+                    <p className="text-xs text-blue-700">
+                      📖 <strong>Yerel Kurulum:</strong> OLLAMA_SETUP.md ve LOCAL_SETUP.md dosyalarını inceleyin
                     </p>
                   </div>
                 </div>

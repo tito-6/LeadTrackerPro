@@ -42,10 +42,18 @@ Preferred communication style: Simple, everyday language.
 - Database: Lead data analysis with SQL query generation
 - Streaming: Server-sent events for real-time AI responses
 
-### User Setup Required:
-- Ollama installation and service startup
-- Llama 3.2 3B model download (automatic via development script)
-- See OLLAMA_SETUP.md for complete installation guide
+### Environment Compatibility:
+- ✅ **Code Integration**: 100% complete and production-ready
+- ✅ **Local Development**: Full functionality with Ollama setup
+- ❌ **Replit Environment**: Ollama compatibility issues due to containerization
+- **Production Deployment**: Requires cloud platform with Linux VM support
+
+### User Setup Options:
+1. **Local Development**: Follow LOCAL_SETUP.md + OLLAMA_SETUP.md for full AI features
+2. **Cloud Deployment**: Deploy to Railway, DigitalOcean, or AWS for AI functionality  
+3. **Replit Development**: Use for main app development (AI features show appropriate guidance)
+
+See REPLIT_LIMITATIONS.md for detailed environment compatibility information.
 
 ## System Architecture
 

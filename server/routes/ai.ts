@@ -73,52 +73,10 @@ export async function handleAIQuery(req: Request, res: Response) {
       // Check if Ollama is available
       const modelAvailable = await ollamaService.ensureModelAvailable();
       if (!modelAvailable) {
-        // Demo mode - provide simulated AI responses for development/testing
-        sendEvent({ type: 'text', chunk: 'Demo modunda çalışıyorum. Ollama kurulu olmadığı için simüle edilmiş yanıtlar veriyorum.\n\n' });
-        
-        // Analyze the query and provide appropriate demo response
-        const leads = await storage.getLeads();
-        if (query.toLowerCase().includes('instagram')) {
-          sendEvent({ type: 'text', chunk: `Instagram kaynaklı ${leads.filter(l => l.firstCustomerSource?.toLowerCase().includes('instagram')).length} lead bulundu.\n` });
-          sendEvent({
-            type: 'chart',
-            chartSpec: {
-              type: 'pie',
-              title: 'Instagram Lead Durumları (Demo)',
-              labels: ['Yeni', 'Arama Yapıldı', 'Randevu Alındı', 'Satış Yapıldı'],
-              data: [5, 3, 2, 1],
-              colors: ['#9b51e0', '#3498db', '#f39c12', '#2ecc71']
-            }
-          });
-        } else if (query.toLowerCase().includes('personel') || query.toLowerCase().includes('sales rep')) {
-          sendEvent({ type: 'text', chunk: 'Personel performansı analizi:\n' });
-          sendEvent({
-            type: 'chart',
-            chartSpec: {
-              type: 'bar',
-              title: 'Personel Lead Sayıları (Demo)',
-              labels: ['Alperen Yerlikaya', 'Reçber Özer', 'Demo Personel'],
-              data: [15, 12, 8],
-              colors: ['#3498db']
-            }
-          });
-        } else if (query.toLowerCase().includes('proje') || query.toLowerCase().includes('project')) {
-          sendEvent({ type: 'text', chunk: 'Proje bazında lead dağılımı:\n' });
-          sendEvent({
-            type: 'chart',
-            chartSpec: {
-              type: 'pie',
-              title: 'Proje Lead Dağılımı (Demo)',
-              labels: ['Model Sanayi', 'Merkez Proje', 'Diğer'],
-              data: [8, 5, 3],
-              colors: ['#2ecc71', '#e74c3c', '#f39c12']
-            }
-          });
-        } else {
-          sendEvent({ type: 'text', chunk: `Toplam ${leads.length} lead analiz edildi. Gerçek veriler için Ollama kurulumu gereklidir.\n\nDemo örnekleri:\n- "Instagram leadleri"\n- "Personel performansı"\n- "Proje dağılımı"` });
-        }
-        
-        sendEvent({ type: 'complete' });
+        sendEvent({
+          type: 'error',
+          error: 'AI service unavailable. Please ensure Ollama is running with llama3.2:3b-instruct-q4_0 model.'
+        });
         return res.end();
       }
 
