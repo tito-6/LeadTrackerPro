@@ -278,7 +278,7 @@ export default function LeadDataExplorer({ leads = [], isLoading = false }: Lead
           <Eye className="h-5 w-5" />
           Lead Veri Keşifçisi - Tüm Detaylar
           <Badge variant="outline" className="ml-auto">
-            {filteredLeads.length} / {leads.length} Lead
+            {filteredAndSortedLeads.length} / {leads.length} Lead
           </Badge>
         </CardTitle>
         <div className="text-sm text-gray-600 mt-1">
