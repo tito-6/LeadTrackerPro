@@ -12,6 +12,7 @@ Advanced AI-powered real estate lead automation platform that transforms complex
 ## ⚡ Quick Start (VS Code Local Development)
 
 ### Prerequisites
+
 - **Node.js 18+**
 - **VS Code**
 - **Git**
@@ -35,18 +36,21 @@ npm run dev
 ### 🎯 Key Features
 
 #### 🧠 AI-Powered Analytics
+
 - **Intelligent Dashboard**: Real-time KPIs with data completeness scoring
 - **Smart Project Detection**: Automatic extraction from WebForm notes
 - **Dynamic Status Generation**: Auto-detection from Turkish real estate columns
 - **Advanced Duplicate Detection**: Multi-field matching algorithms
 
 #### 📊 Comprehensive Reporting
+
 - **37+ Turkish Columns**: Complete real estate industry standard support
 - **Dual File Processing**: Main leads + Takipte follow-up files
 - **Interactive 3D Charts**: Enhanced visualizations with Chart.js
 - **Multi-Format Export**: PDF with charts, Excel, JSON
 
 #### 🎨 Modern UI/UX
+
 - **Corporate Branding**: İNNO Gayrimenkul Yatırım A.Ş. integration
 - **Responsive Design**: Mobile-first approach
 - **Dark Mode Support**: System-based theme switching
@@ -86,6 +90,7 @@ The project includes pre-configured VS Code settings:
 ### Memory Storage
 
 For local development, the application uses in-memory storage:
+
 - ✅ No database setup required
 - ✅ Fast startup and development
 - ✅ Perfect for testing and feature development
@@ -109,18 +114,21 @@ For local development, the application uses in-memory storage:
 ### Advanced Features
 
 #### Data Processing
+
 - **Smart Column Detection**: Automatic mapping of 37+ Turkish columns
 - **WebForm Parsing**: Intelligent project name and lead type extraction
 - **Date Format Handling**: Multiple Turkish date formats
 - **Character Encoding**: Full Turkish character support
 
 #### Export System
+
 - **Section Selection**: 10 comprehensive sections with chart capture
 - **PDF Generation**: Embedded charts with canvas-to-image conversion
 - **Excel Export**: Structured data with proper formatting
 - **JSON Export**: Raw data for external processing
 
 #### Analytics Engine
+
 - **Personnel Performance**: Individual and comparative analysis
 - **Project Tracking**: Intelligent project-based insights
 - **Status Distribution**: Dynamic status categorization
@@ -129,11 +137,13 @@ For local development, the application uses in-memory storage:
 ## 🚀 Usage Guide
 
 ### 1. Import Data
+
 ```
 🧠 Akıllı Veri Girişi → Upload Files → Select Main + Takipte Files
 ```
 
 ### 2. Analyze Data
+
 ```
 🧠 Akıllı Dashboard → Review KPIs and Alerts
 📊 Raporlar → Interactive filtering and charts
@@ -141,6 +151,7 @@ For local development, the application uses in-memory storage:
 ```
 
 ### 3. Export Reports
+
 ```
 📤 Veri Aktarımı → Kapsamlı İndir → Select Sections → Generate PDF
 ```
@@ -148,6 +159,7 @@ For local development, the application uses in-memory storage:
 ## 🔧 Technical Stack
 
 ### Frontend
+
 - **React 18** with TypeScript
 - **Vite** for fast development
 - **Tailwind CSS** for styling
@@ -156,6 +168,7 @@ For local development, the application uses in-memory storage:
 - **Recharts** for data visualization
 
 ### Backend
+
 - **Express.js** with TypeScript
 - **Multer** for file uploads
 - **XLSX & PapaParse** for data processing
@@ -163,6 +176,7 @@ For local development, the application uses in-memory storage:
 - **Memory Storage** for local development
 
 ### Development Tools
+
 - **tsx** for TypeScript execution
 - **esbuild** for bundling
 - **Prettier** for code formatting
@@ -171,12 +185,14 @@ For local development, the application uses in-memory storage:
 ## 📈 Performance Features
 
 ### Memory Optimization
+
 - Efficient in-memory data structures
 - Lazy loading for large datasets
 - Optimized chart rendering
 - Smart caching strategies
 
 ### Turkish Language Support
+
 - UTF-8 character encoding
 - Proper sorting and filtering
 - Date format localization
@@ -185,12 +201,14 @@ For local development, the application uses in-memory storage:
 ## 🔐 Data Security
 
 ### Local Development
+
 - All data stored in application memory
 - No external connections required
 - No persistent storage by default
 - Perfect for sensitive data testing
 
 ### Production Ready
+
 - PostgreSQL integration available
 - Session-based authentication
 - Secure file upload handling
@@ -207,12 +225,14 @@ For local development, the application uses in-memory storage:
 ### Common Issues
 
 1. **Port 5000 in use**
+
    ```bash
    # Kill process using port 5000
    lsof -ti:5000 | xargs kill -9
    ```
 
 2. **Turkish characters not displaying**
+
    - Ensure UTF-8 encoding in VS Code
    - Check file encoding settings
 
@@ -230,6 +250,7 @@ For local development, the application uses in-memory storage:
 ## 📞 Support
 
 For technical support or feature requests:
+
 1. Check the troubleshooting section above
 2. Review console logs for error messages
 3. Verify Node.js version compatibility (18+)
@@ -243,3 +264,18 @@ For technical support or feature requests:
 4. **Customize Settings**: Configure company branding and preferences
 
 **Ready to transform your real estate lead management!** 🏠📊
+
+#### 🤖 AI Assistant (NEW!)
+
+- **Natural Language Queries**: Ask questions in Turkish about your lead data
+- **Automatic Chart Generation**: AI creates appropriate visualizations
+- **Smart Pattern Recognition**: Understands real estate terminology
+- **Instant Analytics**: Get insights without complex filters
+- **Local Processing**: No external APIs required, fast and reliable
+
+**Example Queries:**
+
+- "Kaç adet satılık lead var?"
+- "Instagram dan gelen lead analizi"
+- "Personel performansı nasıl?"
+- "Bu ay trend analizi yap"

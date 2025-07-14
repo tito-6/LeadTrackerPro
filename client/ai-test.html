@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>AI Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      input {
+        width: 300px;
+        padding: 10px;
+        margin: 10px 0;
+      }
+      button {
+        padding: 10px 20px;
+        background: #9b51e0;
+        color: white;
+        border: none;
+        cursor: pointer;
+      }
+      .response {
+        margin: 20px 0;
+        padding: 15px;
+        background: #f5f5f5;
+        border-radius: 5px;
+      }
+      .loading {
+        color: #666;
+      }
+      .error {
+        color: red;
+      }
+      .success {
+        color: green;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🤖 AI Assistant Test</h1>
+      <div>
+        <input
+          type="text"
+          id="queryInput"
+          placeholder="Sorunuzu yazın..."
+          value="Kaç adet lead var?"
+        />
+        <button onclick="testAI()">Test AI</button>
+      </div>
+      <div id="response" class="response"></div>
+
+      <h2>Örnek Sorular:</h2>
+      <ul>
+        <li>
+          <a href="#" onclick="setQuery('Kaç adet lead var?')"
+            >Kaç adet lead var?</a
+          >
+        </li>
+        <li>
+          <a href="#" onclick="setQuery('Satılık lead sayısı nedir?')"
+            >Satılık lead sayısı nedir?</a
+          >
+        </li>
+        <li>
+          <a href="#" onclick="setQuery('Instagram dan gelen lead sayısı')"
+            >Instagram dan gelen lead sayısı</a
+          >
+        </li>
+        <li>
+          <a href="#" onclick="setQuery('Personel performansı analizi')"
+            >Personel performansı analizi</a
+          >
+        </li>
+        <li>
+          <a href="#" onclick="setQuery('Lead kaynakları dağılımı')"
+            >Lead kaynakları dağılımı</a
+          >
+        </li>
+      </ul>
+    </div>
+
+    <script>
+      function setQuery(query) {
+        document.getElementById("queryInput").value = query;
+      }
+
+      async function testAI() {
+        const query = document.getElementById("queryInput").value;
+        const responseDiv = document.getElementById("response");
+
+        if (!query.trim()) {
+          responseDiv.innerHTML =
+            '<div class="error">Lütfen bir soru yazın!</div>';
+          return;
+        }
+
+        responseDiv.innerHTML =
+          '<div class="loading">🔄 AI sorguyu işliyor...</div>';
+
+        try {
+          const response = await fetch("/api/ai/query", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ query: query }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const reader = response.body.getReader();
+          let result = "";
+          let chartSpec = null;
+
+          responseDiv.innerHTML =
+            '<div class="loading">📡 Veri alınıyor...</div>';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = new TextDecoder().decode(value);
+            const lines = chunk.split("\n");
+
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+
+                  if (data.type === "text" && data.chunk) {
+                    result += data.chunk;
+                    responseDiv.innerHTML = `<div class="success">${result}</div>`;
+                  } else if (data.type === "chart" && data.chartSpec) {
+                    chartSpec = data.chartSpec;
+                    responseDiv.innerHTML += `<div class="success">📊 Grafik: ${chartSpec.title} (${chartSpec.type})</div>`;
+                  } else if (data.type === "error") {
+                    responseDiv.innerHTML = `<div class="error">❌ Hata: ${data.error}</div>`;
+                  } else if (data.type === "complete") {
+                    responseDiv.innerHTML +=
+                      '<div class="success">✅ Tamamlandı!</div>';
+                    break;
+                  }
+                } catch (parseError) {
+                  console.error("Parse error:", parseError);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          responseDiv.innerHTML = `<div class="error">❌ Bağlantı hatası: ${error.message}</div>`;
+        }
+      }
+    </script>
+  </body>
+</html>

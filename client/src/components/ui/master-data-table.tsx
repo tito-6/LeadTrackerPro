@@ -4,7 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Download, Search, Eye, EyeOff, Filter } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useColors } from "@/hooks/use-colors";
 
 interface MasterDataTableProps {
   title: string;
@@ -12,24 +19,33 @@ interface MasterDataTableProps {
   columns: Array<{
     key: string;
     label: string;
-    type?: 'text' | 'number' | 'date' | 'badge';
+    type?: "text" | "number" | "date" | "badge" | "personnel" | "status";
   }>;
   onExport?: () => void;
 }
 
-export function MasterDataTable({ title, data, columns, onExport }: MasterDataTableProps) {
+export function MasterDataTable({
+  title,
+  data,
+  columns,
+  onExport,
+}: MasterDataTableProps) {
+  const { getColor } = useColors();
   const [isVisible, setIsVisible] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortColumn, setSortColumn] = useState("");
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [currentPage, setCurrentPage] = useState(1);
   const [recordsPerPage, setRecordsPerPage] = useState(10);
 
   // Filter data based on search term
-  const filteredData = data.filter(row =>
-    columns.some(col => {
+  const filteredData = data.filter((row) =>
+    columns.some((col) => {
       const value = row[col.key];
-      return value && value.toString().toLowerCase().includes(searchTerm.toLowerCase());
+      return (
+        value &&
+        value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+      );
     })
   );
 
@@ -38,80 +54,121 @@ export function MasterDataTable({ title, data, columns, onExport }: MasterDataTa
     if (!sortColumn) return 0;
     const aVal = a[sortColumn];
     const bVal = b[sortColumn];
-    
-    if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-    if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+
+    if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
+    if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
     return 0;
   });
 
   // Paginate data
   const totalPages = Math.ceil(sortedData.length / recordsPerPage);
   const startIndex = (currentPage - 1) * recordsPerPage;
-  const paginatedData = sortedData.slice(startIndex, startIndex + recordsPerPage);
+  const paginatedData = sortedData.slice(
+    startIndex,
+    startIndex + recordsPerPage
+  );
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortColumn(column);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
   const exportToCSV = () => {
-    const headers = columns.map(col => col.label);
+    const headers = columns.map((col) => col.label);
     const csvContent = [
-      headers.join(','),
-      ...sortedData.map(row => 
-        columns.map(col => {
-          const value = row[col.key];
-          return typeof value === 'string' && value.includes(',') ? `"${value}"` : value;
-        }).join(',')
-      )
-    ].join('\n');
+      headers.join(","),
+      ...sortedData.map((row) =>
+        columns
+          .map((col) => {
+            const value = row[col.key];
+            return typeof value === "string" && value.includes(",")
+              ? `"${value}"`
+              : value;
+          })
+          .join(",")
+      ),
+    ].join("\n");
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${title.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`);
-    link.style.visibility = 'hidden';
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `${title.replace(/\s+/g, "_")}_${new Date()
+        .toISOString()
+        .slice(0, 10)}.csv`
+    );
+    link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     if (onExport) onExport();
   };
 
   const exportToExcel = () => {
-    const headers = columns.map(col => col.label);
-    let excelContent = headers.join('\t') + '\n';
-    
-    sortedData.forEach(row => {
-      const rowData = columns.map(col => row[col.key] || '');
-      excelContent += rowData.join('\t') + '\n';
+    const headers = columns.map((col) => col.label);
+    let excelContent = headers.join("\t") + "\n";
+
+    sortedData.forEach((row) => {
+      const rowData = columns.map((col) => row[col.key] || "");
+      excelContent += rowData.join("\t") + "\n";
     });
 
-    const blob = new Blob([excelContent], { type: 'application/vnd.ms-excel' });
-    const link = document.createElement('a');
+    const blob = new Blob([excelContent], { type: "application/vnd.ms-excel" });
+    const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${title.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xls`);
-    link.style.visibility = 'hidden';
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `${title.replace(/\s+/g, "_")}_${new Date()
+        .toISOString()
+        .slice(0, 10)}.xls`
+    );
+    link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const renderCellValue = (value: any, type: string = 'text') => {
-    if (value === null || value === undefined) return '-';
-    
+  const renderCellValue = (value: any, type: string = "text") => {
+    if (value === null || value === undefined) return "-";
+
     switch (type) {
-      case 'badge':
+      case "badge":
         return <Badge variant="outline">{value}</Badge>;
-      case 'number':
+      case "personnel":
+        return (
+          <Badge
+            variant="outline"
+            style={{
+              backgroundColor: getColor("PERSONNEL", value),
+              color: "white",
+            }}
+          >
+            {value}
+          </Badge>
+        );
+      case "status":
+        return (
+          <Badge
+            variant="outline"
+            style={{
+              backgroundColor: getColor("STATUS", value),
+              color: "white",
+            }}
+          >
+            {value}
+          </Badge>
+        );
+      case "number":
         return <span className="font-mono">{value}</span>;
-      case 'date':
+      case "date":
         return <span className="text-sm">{value}</span>;
       default:
         return value;
@@ -133,8 +190,12 @@ export function MasterDataTable({ title, data, columns, onExport }: MasterDataTa
               onClick={() => setIsVisible(!isVisible)}
               className="flex items-center gap-1"
             >
-              {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              {isVisible ? 'Gizle' : 'Göster'}
+              {isVisible ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+              {isVisible ? "Gizle" : "Göster"}
             </Button>
             <Button
               variant="outline"
@@ -157,7 +218,7 @@ export function MasterDataTable({ title, data, columns, onExport }: MasterDataTa
           </div>
         </div>
       </CardHeader>
-      
+
       {isVisible && (
         <CardContent>
           {/* Search and Filter Controls */}
@@ -171,11 +232,14 @@ export function MasterDataTable({ title, data, columns, onExport }: MasterDataTa
                 className="w-64"
               />
             </div>
-            
-            <Select value={recordsPerPage.toString()} onValueChange={(value) => {
-              setRecordsPerPage(parseInt(value));
-              setCurrentPage(1);
-            }}>
+
+            <Select
+              value={recordsPerPage.toString()}
+              onValueChange={(value) => {
+                setRecordsPerPage(parseInt(value));
+                setCurrentPage(1);
+              }}
+            >
               <SelectTrigger className="w-32">
                 <SelectValue />
               </SelectTrigger>
@@ -189,7 +253,9 @@ export function MasterDataTable({ title, data, columns, onExport }: MasterDataTa
 
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <Filter className="h-4 w-4" />
-              {searchTerm ? `${filteredData.length} / ${data.length} kayıt` : `${data.length} toplam kayıt`}
+              {searchTerm
+                ? `${filteredData.length} / ${data.length} kayıt`
+                : `${data.length} toplam kayıt`}
             </div>
           </div>
 
@@ -208,7 +274,7 @@ export function MasterDataTable({ title, data, columns, onExport }: MasterDataTa
                         {col.label}
                         {sortColumn === col.key && (
                           <span className="text-xs">
-                            {sortDirection === 'asc' ? '↑' : '↓'}
+                            {sortDirection === "asc" ? "↑" : "↓"}
                           </span>
                         )}
                       </div>
@@ -218,9 +284,15 @@ export function MasterDataTable({ title, data, columns, onExport }: MasterDataTa
               </thead>
               <tbody>
                 {paginatedData.map((row, index) => (
-                  <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <tr
+                    key={index}
+                    className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                  >
                     {columns.map((col) => (
-                      <td key={col.key} className="border border-gray-200 px-4 py-2">
+                      <td
+                        key={col.key}
+                        className="border border-gray-200 px-4 py-2"
+                      >
                         {renderCellValue(row[col.key], col.type)}
                       </td>
                     ))}
@@ -234,10 +306,12 @@ export function MasterDataTable({ title, data, columns, onExport }: MasterDataTa
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-4 p-4 bg-gray-50 rounded-lg">
               <div className="text-sm text-gray-600">
-                Sayfa {currentPage} / {totalPages} 
-                (Gösterilen: {startIndex + 1}-{Math.min(startIndex + recordsPerPage, sortedData.length)} / {sortedData.length})
+                Sayfa {currentPage} / {totalPages}
+                (Gösterilen: {startIndex + 1}-
+                {Math.min(startIndex + recordsPerPage, sortedData.length)} /{" "}
+                {sortedData.length})
               </div>
-              
+
               <div className="flex gap-2">
                 <Button
                   variant="outline"
@@ -247,9 +321,10 @@ export function MasterDataTable({ title, data, columns, onExport }: MasterDataTa
                 >
                   Önceki
                 </Button>
-                
+
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
+                  const pageNum =
+                    Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
                   return (
                     <Button
                       key={pageNum}
@@ -261,11 +336,13 @@ export function MasterDataTable({ title, data, columns, onExport }: MasterDataTa
                     </Button>
                   );
                 })}
-                
+
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  onClick={() =>
+                    setCurrentPage(Math.min(totalPages, currentPage + 1))
+                  }
                   disabled={currentPage === totalPages}
                 >
                   Sonraki

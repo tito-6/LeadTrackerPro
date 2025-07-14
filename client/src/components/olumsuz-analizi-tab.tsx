@@ -1,20 +1,58 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { AlertCircle, TrendingDown, Users, Target, FileText, Calendar, Phone, Filter, X } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+import {
+  AlertCircle,
+  TrendingDown,
+  Users,
+  Target,
+  FileText,
+  Calendar,
+  Phone,
+  Filter,
+  X,
+} from "lucide-react";
 import { MasterDataTable } from "@/components/ui/master-data-table";
 import { DataTable } from "@/components/ui/data-table";
-import DateFilter from './ui/date-filter';
-import UniversalFilter, { UniversalFilters } from './ui/universal-filter';
-import NegativeReasonsSummaryTable from './negative-reasons-summary-table';
-import { getStandardColor, getPersonnelColor, getStatusColor } from '@/lib/color-system';
+import DateFilter from "./ui/date-filter";
+import UniversalFilter, { UniversalFilters } from "./ui/universal-filter";
+import NegativeReasonsSummaryTable from "./negative-reasons-summary-table";
+import {
+  getStandardColor,
+  getPersonnelColor,
+  getStatusColor,
+} from "@/lib/color-system";
 
 interface NegativeAnalysisData {
   totalNegative: number;
@@ -33,37 +71,39 @@ interface NegativeAnalysisData {
 }
 
 export default function OlumsuzAnaliziTab() {
-  const [selectedPersonnel, setSelectedPersonnel] = useState<string>('all');
-  const [selectedReason, setSelectedReason] = useState<string>('all');
-  const [chartType, setChartType] = useState<'pie' | 'bar'>('bar');
-  const [viewMode, setViewMode] = useState<'summary' | 'detailed'>('summary');
+  const [selectedPersonnel, setSelectedPersonnel] = useState<string>("all");
+  const [selectedReason, setSelectedReason] = useState<string>("all");
+  const [chartType, setChartType] = useState<"pie" | "bar">("bar");
+  const [viewMode, setViewMode] = useState<"summary" | "detailed">("summary");
   const [dateFilters, setDateFilters] = useState({
-    startDate: '',
-    endDate: '',
-    month: '',
-    year: ''
+    startDate: "",
+    endDate: "",
+    month: "",
+    year: "",
   });
-  
+
   const [universalFilters, setUniversalFilters] = useState<UniversalFilters>({
-    startDate: '',
-    endDate: '',
-    month: '',
-    year: '',
-    leadType: '',
-    projectName: '',
-    salesRep: '',
-    status: ''
+    startDate: "",
+    endDate: "",
+    month: "",
+    year: "",
+    leadType: "all-types",
+    projectName: "all-projects",
+    salesRep: "",
+    status: "",
   });
 
   // Fetch negative analysis data
   const { data: negativeAnalysis, isLoading } = useQuery<NegativeAnalysisData>({
-    queryKey: ['/api/negative-analysis', dateFilters],
+    queryKey: ["/api/negative-analysis", dateFilters],
     queryFn: async () => {
       const params = new URLSearchParams();
       Object.entries(dateFilters).forEach(([key, value]) => {
         if (value) params.append(key, value);
       });
-      const response = await fetch(`/api/negative-analysis?${params.toString()}`);
+      const response = await fetch(
+        `/api/negative-analysis?${params.toString()}`
+      );
       return response.json();
     },
     refetchInterval: 5000,
@@ -71,7 +111,7 @@ export default function OlumsuzAnaliziTab() {
 
   // Fetch detailed leads data for advanced table
   const { data: leadsData = [] } = useQuery({
-    queryKey: ['/api/leads', dateFilters],
+    queryKey: ["/api/leads", dateFilters],
     queryFn: async () => {
       const params = new URLSearchParams();
       Object.entries(dateFilters).forEach(([key, value]) => {
@@ -79,81 +119,110 @@ export default function OlumsuzAnaliziTab() {
       });
       const response = await fetch(`/api/leads?${params.toString()}`);
       return response.json();
-    }
+    },
   });
 
   // Filter negative leads based on selections - use same logic as NegativeReasonsSummaryTable
   const filteredNegativeLeads = useMemo(() => {
-    return leadsData.filter(lead => {
+    return leadsData.filter((lead) => {
       // Match exactly how server and summary table filter olumsuz leads
-      const isNegativeLead = lead.status?.includes('Olumsuz') || lead.status?.toLowerCase().includes('olumsuz');
-      const matchesPersonnel = selectedPersonnel === 'all' || lead.assignedPersonnel === selectedPersonnel;
-      const reasonToCheck = (lead.negativeReason && lead.negativeReason.trim() !== '') 
-        ? lead.negativeReason.trim() 
-        : lead.status || 'Belirtilmemiş';
-      const matchesReason = selectedReason === 'all' || reasonToCheck === selectedReason;
-      
+      const isNegativeLead =
+        lead.status?.includes("Olumsuz") ||
+        lead.status?.toLowerCase().includes("olumsuz");
+      const matchesPersonnel =
+        selectedPersonnel === "all" ||
+        lead.assignedPersonnel === selectedPersonnel;
+      const reasonToCheck =
+        lead.negativeReason && lead.negativeReason.trim() !== ""
+          ? lead.negativeReason.trim()
+          : lead.status || "Belirtilmemiş";
+      const matchesReason =
+        selectedReason === "all" || reasonToCheck === selectedReason;
+
       // Additional universal filters
-      const matchesProject = !universalFilters.projectName || lead.projectName === universalFilters.projectName;
-      const matchesLeadType = !universalFilters.leadType || lead.leadType === universalFilters.leadType;
-      
-      return isNegativeLead && matchesPersonnel && matchesReason && matchesProject && matchesLeadType;
+      const matchesProject =
+        !universalFilters.projectName ||
+        universalFilters.projectName === "all-projects" ||
+        lead.projectName === universalFilters.projectName;
+      const matchesLeadType =
+        !universalFilters.leadType ||
+        universalFilters.leadType === "all-types" ||
+        lead.leadType === universalFilters.leadType;
+
+      return (
+        isNegativeLead &&
+        matchesPersonnel &&
+        matchesReason &&
+        matchesProject &&
+        matchesLeadType
+      );
     });
   }, [leadsData, selectedPersonnel, selectedReason, universalFilters]);
 
   // Get unique personnel and reasons for filtering - use same logic as summary table
   const uniquePersonnel = useMemo(() => {
     const personnel = leadsData
-      .filter(lead => lead.status?.includes('Olumsuz') || lead.status?.toLowerCase().includes('olumsuz'))
-      .map(lead => lead.assignedPersonnel)
+      .filter(
+        (lead) =>
+          lead.status?.includes("Olumsuz") ||
+          lead.status?.toLowerCase().includes("olumsuz")
+      )
+      .map((lead) => lead.assignedPersonnel)
       .filter(Boolean);
     return [...new Set(personnel)];
   }, [leadsData]);
 
   const uniqueReasons = useMemo(() => {
-    const negativeLeads = leadsData.filter(lead => 
-      lead.status?.includes('Olumsuz') || lead.status?.toLowerCase().includes('olumsuz')
+    const negativeLeads = leadsData.filter(
+      (lead) =>
+        lead.status?.includes("Olumsuz") ||
+        lead.status?.toLowerCase().includes("olumsuz")
     );
-    
+
     // More comprehensive reason extraction - check multiple fields
-    const reasons = negativeLeads.map(lead => {
-      // Priority: negativeReason -> lastMeetingNote -> responseResult -> status
-      if (lead.negativeReason && lead.negativeReason.trim() !== '') {
-        return lead.negativeReason.trim();
-      }
-      if (lead.lastMeetingNote && lead.lastMeetingNote.trim() !== '') {
-        return lead.lastMeetingNote.trim();
-      }
-      if (lead.responseResult && lead.responseResult.trim() !== '') {
-        return lead.responseResult.trim();
-      }
-      return lead.status || 'Belirtilmemiş';
-    }).filter(Boolean);
-    
+    const reasons = negativeLeads
+      .map((lead) => {
+        // Priority: negativeReason -> lastMeetingNote -> responseResult -> status
+        if (lead.negativeReason && lead.negativeReason.trim() !== "") {
+          return lead.negativeReason.trim();
+        }
+        if (lead.lastMeetingNote && lead.lastMeetingNote.trim() !== "") {
+          return lead.lastMeetingNote.trim();
+        }
+        if (lead.responseResult && lead.responseResult.trim() !== "") {
+          return lead.responseResult.trim();
+        }
+        return lead.status || "Belirtilmemiş";
+      })
+      .filter(Boolean);
+
     return [...new Set(reasons)];
   }, [leadsData]);
 
   // Optimize reason display for "all" view - limit to top 10 reasons
   const optimizedReasonData = useMemo(() => {
     if (!negativeAnalysis?.reasonAnalysis) return [];
-    
-    if (selectedPersonnel === 'all') {
+
+    if (selectedPersonnel === "all") {
       // Show only top 10 reasons when all personnel selected
       return negativeAnalysis.reasonAnalysis
         .sort((a, b) => b.count - a.count)
         .slice(0, 10)
-        .map(item => ({
+        .map((item) => ({
           ...item,
-          name: item.reason.length > 25 ? item.reason.substring(0, 25) + '...' : item.reason,
-          fullReason: item.reason
+          name:
+            item.reason.length > 25
+              ? item.reason.substring(0, 25) + "..."
+              : item.reason,
+          fullReason: item.reason,
         }));
     }
-    
+
     // Show all reasons when specific personnel selected
-    return negativeAnalysis.reasonAnalysis.map(item => ({
+    return negativeAnalysis.reasonAnalysis.map((item) => ({
       ...item,
       name: item.reason,
-      fullReason: item.reason
+      fullReason: item.reason,
     }));
   }, [negativeAnalysis, selectedPersonnel]);
 
@@ -163,7 +232,9 @@ export default function OlumsuzAnaliziTab() {
         <div className="flex justify-center items-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-            <p className="text-gray-600">Olumsuz analiz verileri yükleniyor...</p>
+            <p className="text-gray-600">
+              Olumsuz analiz verileri yükleniyor...
+            </p>
           </div>
         </div>
       </div>
@@ -178,8 +249,8 @@ export default function OlumsuzAnaliziTab() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <TrendingDown className="h-5 w-5 text-red-600" />
-                ❌ Olumsuzluk Nedenleri Analizi
+                <TrendingDown className="h-5 w-5 text-red-600" />❌ Olumsuzluk
+                Nedenleri Analizi
               </CardTitle>
               <CardDescription>
                 Olumsuz lead'lerin detaylı analizi ve nedenlerin incelenmesi
@@ -213,14 +284,19 @@ export default function OlumsuzAnaliziTab() {
               onFilterChange={setDateFilters}
               initialFilters={dateFilters}
             />
-            <Select value={selectedPersonnel} onValueChange={setSelectedPersonnel}>
+            <Select
+              value={selectedPersonnel}
+              onValueChange={setSelectedPersonnel}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Personel Seçin" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tüm Personel</SelectItem>
-                {uniquePersonnel.map(personnel => (
-                  <SelectItem key={personnel} value={personnel}>{personnel}</SelectItem>
+                {uniquePersonnel.map((personnel) => (
+                  <SelectItem key={personnel} value={personnel}>
+                    {personnel}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -230,9 +306,11 @@ export default function OlumsuzAnaliziTab() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tüm Nedenler</SelectItem>
-                {uniqueReasons.map(reason => (
+                {uniqueReasons.map((reason) => (
                   <SelectItem key={reason} value={reason}>
-                    {reason.length > 30 ? reason.substring(0, 30) + '...' : reason}
+                    {reason.length > 30
+                      ? reason.substring(0, 30) + "..."
+                      : reason}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -259,24 +337,38 @@ export default function OlumsuzAnaliziTab() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Toplam Olumsuz Lead</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Toplam Olumsuz Lead
+              </CardTitle>
               <TrendingDown className="h-4 w-4 text-red-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">{filteredNegativeLeads.length}</div>
+              <div className="text-2xl font-bold text-red-600">
+                {filteredNegativeLeads.length}
+              </div>
               <p className="text-xs text-muted-foreground">
-                Tüm lead'lerin %{Math.round((filteredNegativeLeads.length / (negativeAnalysis.totalLeads || 1)) * 100)}'i
+                Tüm lead'lerin %
+                {Math.round(
+                  (filteredNegativeLeads.length /
+                    (negativeAnalysis.totalLeads || 1)) *
+                    100
+                )}
+                'i
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Farklı Neden Sayısı</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Farklı Neden Sayısı
+              </CardTitle>
               <FileText className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{uniqueReasons.length}</div>
+              <div className="text-2xl font-bold text-orange-600">
+                {uniqueReasons.length}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Benzersiz olumsuzluk nedeni
               </p>
@@ -285,11 +377,15 @@ export default function OlumsuzAnaliziTab() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Etkilenen Personel</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Etkilenen Personel
+              </CardTitle>
               <Users className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{uniquePersonnel.length}</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {uniquePersonnel.length}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Olumsuz lead'e sahip personel
               </p>
@@ -298,15 +394,21 @@ export default function OlumsuzAnaliziTab() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">En Çok Görülen</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                En Çok Görülen
+              </CardTitle>
               <Target className="h-4 w-4 text-purple-600" />
             </CardHeader>
             <CardContent>
               <div className="text-sm font-bold text-purple-600">
-                {negativeAnalysis.reasonAnalysis[0]?.reason.substring(0, 20) + (negativeAnalysis.reasonAnalysis[0]?.reason.length > 20 ? '...' : '') || 'Veri yok'}
+                {negativeAnalysis.reasonAnalysis[0]?.reason.substring(0, 20) +
+                  (negativeAnalysis.reasonAnalysis[0]?.reason.length > 20
+                    ? "..."
+                    : "") || "Veri yok"}
               </div>
               <p className="text-xs text-muted-foreground">
-                {negativeAnalysis.reasonAnalysis[0]?.count || 0} lead (%{negativeAnalysis.reasonAnalysis[0]?.percentage || 0})
+                {negativeAnalysis.reasonAnalysis[0]?.count || 0} lead (%
+                {negativeAnalysis.reasonAnalysis[0]?.percentage || 0})
               </p>
             </CardContent>
           </Card>
@@ -323,25 +425,24 @@ export default function OlumsuzAnaliziTab() {
 
         <TabsContent value="reasons" className="space-y-4">
           {/* Comprehensive Negative Reasons Summary Table */}
-          <NegativeReasonsSummaryTable 
+          <NegativeReasonsSummaryTable
             leads={leadsData}
             selectedPersonnel={selectedPersonnel}
           />
-          
+
           {/* Chart Visualization */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 📊 Olumsuzluk Nedenleri Dağılımı - Grafik
-                {selectedPersonnel === 'all' && (
+                {selectedPersonnel === "all" && (
                   <Badge variant="secondary">İlk 10 neden gösteriliyor</Badge>
                 )}
               </CardTitle>
               <CardDescription>
-                {selectedPersonnel === 'all' 
-                  ? 'Tüm personel için en sık görülen olumsuzluk nedenleri (optimize edilmiş görünüm)'
-                  : `${selectedPersonnel} için olumsuzluk nedenleri`
-                }
+                {selectedPersonnel === "all"
+                  ? "Tüm personel için en sık görülen olumsuzluk nedenleri (optimize edilmiş görünüm)"
+                  : `${selectedPersonnel} için olumsuzluk nedenleri`}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -349,65 +450,79 @@ export default function OlumsuzAnaliziTab() {
                 <>
                   <div className="mb-6">
                     <ResponsiveContainer width="100%" height={400}>
-                      {chartType === 'pie' ? (
+                      {chartType === "pie" ? (
                         <PieChart>
                           <Pie
                             data={optimizedReasonData}
                             cx="50%"
                             cy="50%"
                             labelLine={false}
-                            label={({ value, percentage }) => `${value} (%${percentage})`}
+                            label={({ value, percentage }) =>
+                              `${value} (%${percentage})`
+                            }
                             outerRadius={120}
                             fill="#8884d8"
                             dataKey="count"
                           >
                             {optimizedReasonData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={getStandardColor('NEGATIVE', entry.fullReason)} />
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={getStandardColor(
+                                  "NEGATIVE",
+                                  entry.fullReason
+                                )}
+                              />
                             ))}
                           </Pie>
-                          <Tooltip 
+                          <Tooltip
                             formatter={(value, name, props) => [
                               `${value} lead`,
-                              props.payload.fullReason
+                              props.payload.fullReason,
                             ]}
                           />
                         </PieChart>
                       ) : (
                         <BarChart data={optimizedReasonData}>
                           <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis 
-                            dataKey="name" 
-                            angle={-45} 
-                            textAnchor="end" 
+                          <XAxis
+                            dataKey="name"
+                            angle={-45}
+                            textAnchor="end"
                             height={100}
                             interval={0}
                           />
                           <YAxis />
-                          <Tooltip 
+                          <Tooltip
                             formatter={(value, name, props) => [
                               `${value} lead`,
-                              props.payload.fullReason
+                              props.payload.fullReason,
                             ]}
                           />
-                          <Bar dataKey="count" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                          <Bar
+                            dataKey="count"
+                            fill="#ef4444"
+                            radius={[4, 4, 0, 0]}
+                          />
                         </BarChart>
                       )}
                     </ResponsiveContainer>
                   </div>
-                  
+
                   <DataTable
                     title="Olumsuzluk Nedenleri Grafik Detayları"
-                    data={optimizedReasonData.map(item => ({
-                      'Neden': item.fullReason,
-                      'Adet': item.count,
-                      'Yüzde': `%${item.percentage}`
+                    data={optimizedReasonData.map((item) => ({
+                      Neden: item.fullReason,
+                      Adet: item.count,
+                      Yüzde: `%${item.percentage}`,
                     }))}
                   />
                 </>
               ) : (
                 <div className="text-center py-8">
                   <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">Seçilen kriterlere uygun olumsuz lead bulunamadı</p>
+                  <p className="text-gray-500">
+                    Seçilen kriterlere uygun olumsuz lead bulunamadı
+                  </p>
                 </div>
               )}
             </CardContent>
@@ -423,37 +538,54 @@ export default function OlumsuzAnaliziTab() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {negativeAnalysis?.personnelAnalysis && negativeAnalysis.personnelAnalysis.length > 0 ? (
+              {negativeAnalysis?.personnelAnalysis &&
+              negativeAnalysis.personnelAnalysis.length > 0 ? (
                 <>
                   <div className="mb-6">
                     <ResponsiveContainer width="100%" height={400}>
                       <BarChart data={negativeAnalysis.personnelAnalysis}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="personnel" angle={-45} textAnchor="end" height={80} />
+                        <XAxis
+                          dataKey="personnel"
+                          angle={-45}
+                          textAnchor="end"
+                          height={80}
+                        />
                         <YAxis />
                         <Tooltip />
-                        <Bar dataKey="count" fill="#f97316" radius={[4, 4, 0, 0]}>
-                          {negativeAnalysis.personnelAnalysis.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={getPersonnelColor(entry.personnel)} />
-                          ))}
+                        <Bar
+                          dataKey="count"
+                          fill="#f97316"
+                          radius={[4, 4, 0, 0]}
+                        >
+                          {negativeAnalysis.personnelAnalysis.map(
+                            (entry, index) => (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={getPersonnelColor(entry.personnel)}
+                              />
+                            )
+                          )}
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
-                  
+
                   <DataTable
                     title="Personel Olumsuz Lead Detayları"
-                    data={negativeAnalysis.personnelAnalysis.map(item => ({
-                      'Personel': item.personnel,
-                      'Olumsuz Lead': item.count,
-                      'Yüzde': `%${item.percentage}`
+                    data={negativeAnalysis.personnelAnalysis.map((item) => ({
+                      Personel: item.personnel,
+                      "Olumsuz Lead": item.count,
+                      Yüzde: `%${item.percentage}`,
                     }))}
                   />
                 </>
               ) : (
                 <div className="text-center py-8">
                   <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">Personel analizi için veri bulunamadı</p>
+                  <p className="text-gray-500">
+                    Personel analizi için veri bulunamadı
+                  </p>
                 </div>
               )}
             </CardContent>
@@ -477,14 +609,17 @@ export default function OlumsuzAnaliziTab() {
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
-                    <Label className="text-xs">Satış Personeli</Label>
-                    <Select value={selectedPersonnel} onValueChange={setSelectedPersonnel}>
+                    <span className="text-xs font-medium">Satış Personeli</span>
+                    <Select
+                      value={selectedPersonnel}
+                      onValueChange={setSelectedPersonnel}
+                    >
                       <SelectTrigger className="h-9">
                         <SelectValue placeholder="Personel seçin" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Tüm Personel</SelectItem>
-                        {uniquePersonnel.map(personnel => (
+                        {uniquePersonnel.map((personnel) => (
                           <SelectItem key={personnel} value={personnel}>
                             {personnel}
                           </SelectItem>
@@ -492,36 +627,56 @@ export default function OlumsuzAnaliziTab() {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div>
-                    <Label className="text-xs">Olumsuzluk Nedeni</Label>
-                    <Select value={selectedReason} onValueChange={setSelectedReason}>
+                    <span className="text-xs font-medium">
+                      Olumsuzluk Nedeni
+                    </span>
+                    <Select
+                      value={selectedReason}
+                      onValueChange={setSelectedReason}
+                    >
                       <SelectTrigger className="h-9">
                         <SelectValue placeholder="Neden seçin" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Tüm Nedenler</SelectItem>
-                        {uniqueReasons.map(reason => (
+                        {uniqueReasons.map((reason) => (
                           <SelectItem key={reason} value={reason}>
-                            {reason.length > 30 ? reason.substring(0, 30) + '...' : reason}
+                            {reason.length > 30
+                              ? reason.substring(0, 30) + "..."
+                              : reason}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div>
-                    <Label className="text-xs">Proje</Label>
-                    <Select 
-                      value={universalFilters.projectName} 
-                      onValueChange={(value) => setUniversalFilters({...universalFilters, projectName: value})}
+                    <span className="text-xs font-medium">Proje</span>
+                    <Select
+                      value={universalFilters.projectName}
+                      onValueChange={(value) =>
+                        setUniversalFilters({
+                          ...universalFilters,
+                          projectName: value,
+                        })
+                      }
                     >
                       <SelectTrigger className="h-9">
                         <SelectValue placeholder="Proje seçin" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Tüm Projeler</SelectItem>
-                        {[...new Set(filteredNegativeLeads.map(lead => lead.projectName).filter(Boolean))].map(project => (
+                        <SelectItem value="all-projects">
+                          Tüm Projeler
+                        </SelectItem>
+                        {[
+                          ...new Set(
+                            filteredNegativeLeads
+                              .map((lead) => lead.projectName)
+                              .filter(Boolean)
+                          ),
+                        ].map((project) => (
                           <SelectItem key={project} value={project}>
                             {project}
                           </SelectItem>
@@ -529,25 +684,30 @@ export default function OlumsuzAnaliziTab() {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div>
-                    <Label className="text-xs">Lead Tipi</Label>
-                    <Select 
-                      value={universalFilters.leadType} 
-                      onValueChange={(value) => setUniversalFilters({...universalFilters, leadType: value})}
+                    <span className="text-xs font-medium">Lead Tipi</span>
+                    <Select
+                      value={universalFilters.leadType}
+                      onValueChange={(value) =>
+                        setUniversalFilters({
+                          ...universalFilters,
+                          leadType: value,
+                        })
+                      }
                     >
                       <SelectTrigger className="h-9">
                         <SelectValue placeholder="Tip seçin" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Tüm Tipler</SelectItem>
+                        <SelectItem value="all-types">Tüm Tipler</SelectItem>
                         <SelectItem value="satis">Satılık</SelectItem>
                         <SelectItem value="kiralama">Kiralık</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
-                
+
                 <div className="mt-4 flex items-center gap-2">
                   <Badge variant="outline">
                     {filteredNegativeLeads.length} olumsuz lead görüntüleniyor
@@ -559,16 +719,32 @@ export default function OlumsuzAnaliziTab() {
                     {uniqueReasons.length} neden
                   </Badge>
                   <Badge variant="secondary">
-                    {[...new Set(filteredNegativeLeads.map(lead => lead.projectName).filter(Boolean))].length} proje
+                    {
+                      [
+                        ...new Set(
+                          filteredNegativeLeads
+                            .map((lead) => lead.projectName)
+                            .filter(Boolean)
+                        ),
+                      ].length
+                    }{" "}
+                    proje
                   </Badge>
-                  {(selectedPersonnel !== 'all' || selectedReason !== 'all' || universalFilters.projectName || universalFilters.leadType) && (
+                  {(selectedPersonnel !== "all" ||
+                    selectedReason !== "all" ||
+                    universalFilters.projectName ||
+                    universalFilters.leadType) && (
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        setSelectedPersonnel('all');
-                        setSelectedReason('all');
-                        setUniversalFilters({...universalFilters, projectName: '', leadType: ''});
+                        setSelectedPersonnel("all");
+                        setSelectedReason("all");
+                        setUniversalFilters({
+                          ...universalFilters,
+                          projectName: "all-projects",
+                          leadType: "all-types",
+                        });
                       }}
                       className="h-7 text-xs"
                     >
@@ -578,47 +754,78 @@ export default function OlumsuzAnaliziTab() {
                   )}
                 </div>
               </div>
-              
+
               {filteredNegativeLeads.length > 0 ? (
                 <MasterDataTable
                   title="Olumsuz Lead Detayları"
                   data={filteredNegativeLeads}
                   columns={[
-                    { key: 'customerName', label: 'Müşteri Adı', type: 'text' },
-                    { 
-                      key: 'effectiveReason', 
-                      label: 'Olumsuzluk Nedeni', 
-                      type: 'badge',
+                    { key: "customerName", label: "Müşteri Adı", type: "text" },
+                    {
+                      key: "effectiveReason",
+                      label: "Olumsuzluk Nedeni",
+                      type: "badge",
                       render: (lead) => {
-                        if (lead.negativeReason && lead.negativeReason.trim() !== '') {
+                        if (
+                          lead.negativeReason &&
+                          lead.negativeReason.trim() !== ""
+                        ) {
                           return lead.negativeReason.trim();
                         }
-                        if (lead.lastMeetingNote && lead.lastMeetingNote.trim() !== '') {
+                        if (
+                          lead.lastMeetingNote &&
+                          lead.lastMeetingNote.trim() !== ""
+                        ) {
                           return lead.lastMeetingNote.trim();
                         }
-                        if (lead.responseResult && lead.responseResult.trim() !== '') {
+                        if (
+                          lead.responseResult &&
+                          lead.responseResult.trim() !== ""
+                        ) {
                           return lead.responseResult.trim();
                         }
-                        return lead.status || 'Belirtilmemiş';
-                      }
+                        return lead.status || "Belirtilmemiş";
+                      },
                     },
-                    { key: 'assignedPersonnel', label: 'Atanan Personel', type: 'badge' },
-                    { key: 'projectName', label: 'Proje', type: 'text' },
-                    { key: 'leadType', label: 'Lead Tipi', type: 'badge' },
-                    { key: 'requestDate', label: 'Talep Tarihi', type: 'date' },
-                    { key: 'status', label: 'Durum', type: 'badge' },
-                    { key: 'lastMeetingNote', label: 'Son Görüşme Notu', type: 'text' },
-                    { key: 'responseResult', label: 'Dönüş Sonucu', type: 'text' },
-                    { key: 'firstCustomerSource', label: 'İlk Müşteri Kaynağı', type: 'text' },
-                    { key: 'formCustomerSource', label: 'Form Müşteri Kaynağı', type: 'text' },
-                    { key: 'customerId', label: 'Müşteri ID', type: 'text' },
-                    { key: 'contactId', label: 'İletişim ID', type: 'text' }
+                    {
+                      key: "assignedPersonnel",
+                      label: "Atanan Personel",
+                      type: "badge",
+                    },
+                    { key: "projectName", label: "Proje", type: "text" },
+                    { key: "leadType", label: "Lead Tipi", type: "badge" },
+                    { key: "requestDate", label: "Talep Tarihi", type: "date" },
+                    { key: "status", label: "Durum", type: "badge" },
+                    {
+                      key: "lastMeetingNote",
+                      label: "Son Görüşme Notu",
+                      type: "text",
+                    },
+                    {
+                      key: "responseResult",
+                      label: "Dönüş Sonucu",
+                      type: "text",
+                    },
+                    {
+                      key: "firstCustomerSource",
+                      label: "İlk Müşteri Kaynağı",
+                      type: "text",
+                    },
+                    {
+                      key: "formCustomerSource",
+                      label: "Form Müşteri Kaynağı",
+                      type: "text",
+                    },
+                    { key: "customerId", label: "Müşteri ID", type: "text" },
+                    { key: "contactId", label: "İletişim ID", type: "text" },
                   ]}
                 />
               ) : (
                 <div className="text-center py-8">
                   <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">Seçilen kriterlere uygun olumsuz lead bulunamadı</p>
+                  <p className="text-gray-500">
+                    Seçilen kriterlere uygun olumsuz lead bulunamadı
+                  </p>
                 </div>
               )}
             </CardContent>
@@ -626,12 +833,14 @@ export default function OlumsuzAnaliziTab() {
         </TabsContent>
       </Tabs>
 
-      {selectedPersonnel === 'all' && (
+      {selectedPersonnel === "all" && (
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            <strong>Optimize Edilmiş Görünüm:</strong> Tüm personel seçildiğinde performans için sadece en sık görülen 10 olumsuzluk nedeni gösterilmektedir. 
-            Belirli bir personel seçerek o personele ait tüm olumsuzluk nedenlerini görebilirsiniz.
+            <strong>Optimize Edilmiş Görünüm:</strong> Tüm personel seçildiğinde
+            performans için sadece en sık görülen 10 olumsuzluk nedeni
+            gösterilmektedir. Belirli bir personel seçerek o personele ait tüm
+            olumsuzluk nedenlerini görebilirsiniz.
           </AlertDescription>
         </Alert>
       )}

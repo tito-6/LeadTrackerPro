@@ -3,13 +3,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { User, Save, Download, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useSalesReps } from "@/hooks/use-leads";
+import ColorSettingsSection from "./color-settings";
 
 interface AppSettings {
   companyName: string;
@@ -29,7 +36,7 @@ interface AppSettings {
 export default function SettingsTab() {
   const { toast } = useToast();
   const { data: salesReps = [] } = useSalesReps();
-  
+
   const [settings, setSettings] = useState<AppSettings>({
     companyName: "",
     currency: "TRY",
@@ -84,17 +91,23 @@ export default function SettingsTab() {
   // Initialize targets from sales reps
   useEffect(() => {
     if (salesReps.length > 0) {
-      const targetsMap = salesReps.reduce((acc: Record<number, number>, rep) => {
-        acc[rep.id] = rep.monthlyTarget;
-        return acc;
-      }, {});
+      const targetsMap = salesReps.reduce(
+        (acc: Record<number, number>, rep) => {
+          acc[rep.id] = rep.monthlyTarget;
+          return acc;
+        },
+        {}
+      );
       setTargets(targetsMap);
     }
   }, [salesReps]);
 
   const saveSettingMutation = useMutation({
     mutationFn: async ({ key, value }: { key: string; value: string }) => {
-      const response = await apiRequest("POST", "/api/settings", { key, value });
+      const response = await apiRequest("POST", "/api/settings", {
+        key,
+        value,
+      });
       return response.json();
     },
     onSuccess: () => {
@@ -103,8 +116,16 @@ export default function SettingsTab() {
   });
 
   const updateSalesRepMutation = useMutation({
-    mutationFn: async ({ id, monthlyTarget }: { id: number; monthlyTarget: number }) => {
-      const response = await apiRequest("PUT", `/api/sales-reps/${id}`, { monthlyTarget });
+    mutationFn: async ({
+      id,
+      monthlyTarget,
+    }: {
+      id: number;
+      monthlyTarget: number;
+    }) => {
+      const response = await apiRequest("PUT", `/api/sales-reps/${id}`, {
+        monthlyTarget,
+      });
       return response.json();
     },
     onSuccess: () => {
@@ -113,7 +134,7 @@ export default function SettingsTab() {
   });
 
   const handleSettingChange = (key: string, value: string | boolean) => {
-    setSettings(prev => {
+    setSettings((prev) => {
       if (key.startsWith("colors.")) {
         const colorKey = key.split(".")[1];
         return {
@@ -144,7 +165,9 @@ export default function SettingsTab() {
       ];
 
       await Promise.all(
-        settingsToSave.map(setting => saveSettingMutation.mutateAsync(setting))
+        settingsToSave.map((setting) =>
+          saveSettingMutation.mutateAsync(setting)
+        )
       );
 
       toast({
@@ -164,7 +187,10 @@ export default function SettingsTab() {
     try {
       await Promise.all(
         Object.entries(targets).map(([id, monthlyTarget]) =>
-          updateSalesRepMutation.mutateAsync({ id: parseInt(id), monthlyTarget })
+          updateSalesRepMutation.mutateAsync({
+            id: parseInt(id),
+            monthlyTarget,
+          })
         )
       );
 
@@ -182,7 +208,7 @@ export default function SettingsTab() {
   };
 
   const handleTargetChange = (repId: number, target: number) => {
-    setTargets(prev => ({ ...prev, [repId]: target }));
+    setTargets((prev) => ({ ...prev, [repId]: target }));
   };
 
   const handleBackupData = () => {
@@ -214,13 +240,20 @@ export default function SettingsTab() {
                 <Input
                   id="companyName"
                   value={settings.companyName}
-                  onChange={(e) => handleSettingChange("companyName", e.target.value)}
+                  onChange={(e) =>
+                    handleSettingChange("companyName", e.target.value)
+                  }
                   placeholder="Şirket adını girin"
                 />
               </div>
               <div>
                 <Label htmlFor="currency">Para Birimi</Label>
-                <Select value={settings.currency} onValueChange={(value) => handleSettingChange("currency", value)}>
+                <Select
+                  value={settings.currency}
+                  onValueChange={(value) =>
+                    handleSettingChange("currency", value)
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -233,7 +266,12 @@ export default function SettingsTab() {
               </div>
               <div>
                 <Label htmlFor="language">Dil</Label>
-                <Select value={settings.language} onValueChange={(value) => handleSettingChange("language", value)}>
+                <Select
+                  value={settings.language}
+                  onValueChange={(value) =>
+                    handleSettingChange("language", value)
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -249,7 +287,9 @@ export default function SettingsTab() {
                 <Checkbox
                   id="darkMode"
                   checked={settings.darkMode}
-                  onCheckedChange={(checked) => handleSettingChange("darkMode", !!checked)}
+                  onCheckedChange={(checked) =>
+                    handleSettingChange("darkMode", !!checked)
+                  }
                 />
                 <Label htmlFor="darkMode">Koyu Tema</Label>
               </div>
@@ -257,7 +297,9 @@ export default function SettingsTab() {
                 <Checkbox
                   id="notifications"
                   checked={settings.notifications}
-                  onCheckedChange={(checked) => handleSettingChange("notifications", !!checked)}
+                  onCheckedChange={(checked) =>
+                    handleSettingChange("notifications", !!checked)
+                  }
                 />
                 <Label htmlFor="notifications">Bildirimler</Label>
               </div>
@@ -265,14 +307,19 @@ export default function SettingsTab() {
                 <Checkbox
                   id="autoSave"
                   checked={settings.autoSave}
-                  onCheckedChange={(checked) => handleSettingChange("autoSave", !!checked)}
+                  onCheckedChange={(checked) =>
+                    handleSettingChange("autoSave", !!checked)
+                  }
                 />
                 <Label htmlFor="autoSave">Otomatik Kaydet</Label>
               </div>
             </div>
           </div>
           <div className="flex justify-end mt-6">
-            <Button onClick={handleSaveSettings} disabled={saveSettingMutation.isPending}>
+            <Button
+              onClick={handleSaveSettings}
+              disabled={saveSettingMutation.isPending}
+            >
               <Save className="h-4 w-4 mr-2" />
               Ayarları Kaydet
             </Button>
@@ -280,64 +327,8 @@ export default function SettingsTab() {
         </CardContent>
       </Card>
 
-      {/* Chart Colors */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Grafik Renkleri</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <Label htmlFor="successColor">Bilgi Verildi</Label>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="color"
-                  value={settings.colors.success}
-                  onChange={(e) => handleSettingChange("colors.success", e.target.value)}
-                  className="w-10 h-10 rounded border border-gray-300"
-                />
-                <span className="text-sm text-gray-600">{settings.colors.success}</span>
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="errorColor">Olumsuz</Label>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="color"
-                  value={settings.colors.error}
-                  onChange={(e) => handleSettingChange("colors.error", e.target.value)}
-                  className="w-10 h-10 rounded border border-gray-300"
-                />
-                <span className="text-sm text-gray-600">{settings.colors.error}</span>
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="primaryColor">Satış</Label>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="color"
-                  value={settings.colors.primary}
-                  onChange={(e) => handleSettingChange("colors.primary", e.target.value)}
-                  className="w-10 h-10 rounded border border-gray-300"
-                />
-                <span className="text-sm text-gray-600">{settings.colors.primary}</span>
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="warningColor">Bekliyor</Label>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="color"
-                  value={settings.colors.warning}
-                  onChange={(e) => handleSettingChange("colors.warning", e.target.value)}
-                  className="w-10 h-10 rounded border border-gray-300"
-                />
-                <span className="text-sm text-gray-600">{settings.colors.warning}</span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Color Settings - New Comprehensive Color Management */}
+      <ColorSettingsSection />
 
       {/* Monthly Targets */}
       <Card>
@@ -347,7 +338,10 @@ export default function SettingsTab() {
         <CardContent>
           <div className="space-y-4">
             {salesReps.map((rep) => (
-              <div key={rep.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+              <div
+                key={rep.id}
+                className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
+              >
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
                     <User className="h-5 w-5 text-gray-600" />
@@ -359,7 +353,9 @@ export default function SettingsTab() {
                     type="number"
                     className="w-20"
                     value={targets[rep.id] || rep.monthlyTarget}
-                    onChange={(e) => handleTargetChange(rep.id, parseInt(e.target.value) || 0)}
+                    onChange={(e) =>
+                      handleTargetChange(rep.id, parseInt(e.target.value) || 0)
+                    }
                     min="1"
                   />
                   <span className="text-sm text-gray-600">satış/ay</span>
@@ -368,7 +364,10 @@ export default function SettingsTab() {
             ))}
           </div>
           <div className="flex justify-end mt-4">
-            <Button onClick={handleSaveTargets} disabled={updateSalesRepMutation.isPending}>
+            <Button
+              onClick={handleSaveTargets}
+              disabled={updateSalesRepMutation.isPending}
+            >
               <Save className="h-4 w-4 mr-2" />
               Hedefleri Kaydet
             </Button>

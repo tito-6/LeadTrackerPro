@@ -1,4 +1,17 @@
-import { leads, salesReps, settings, leadExpenses, type Lead, type InsertLead, type SalesRep, type InsertSalesRep, type Settings, type InsertSettings, type LeadExpense, type InsertLeadExpense } from "@shared/schema";
+import {
+  leads,
+  salesReps,
+  settings,
+  leadExpenses,
+  type Lead,
+  type InsertLead,
+  type SalesRep,
+  type InsertSalesRep,
+  type Settings,
+  type InsertSettings,
+  type LeadExpense,
+  type InsertLeadExpense,
+} from "@shared/schema";
 
 export interface IStorage {
   // Leads
@@ -23,7 +36,10 @@ export interface IStorage {
   getSalesRepById(id: number): Promise<SalesRep | undefined>;
   createSalesRep(salesRep: InsertSalesRep): Promise<SalesRep>;
   createSalesRepByName(name: string): Promise<SalesRep>;
-  updateSalesRep(id: number, salesRep: Partial<InsertSalesRep>): Promise<SalesRep | undefined>;
+  updateSalesRep(
+    id: number,
+    salesRep: Partial<InsertSalesRep>
+  ): Promise<SalesRep | undefined>;
   deleteSalesRep(id: number): Promise<boolean>;
 
   // Settings
@@ -35,7 +51,10 @@ export interface IStorage {
   getLeadExpenses(): Promise<LeadExpense[]>;
   getLeadExpenseById(id: number): Promise<LeadExpense | undefined>;
   createLeadExpense(expense: InsertLeadExpense): Promise<LeadExpense>;
-  updateLeadExpense(id: number, expense: Partial<InsertLeadExpense>): Promise<LeadExpense | undefined>;
+  updateLeadExpense(
+    id: number,
+    expense: Partial<InsertLeadExpense>
+  ): Promise<LeadExpense | undefined>;
   deleteLeadExpense(id: number): Promise<boolean>;
   getLeadExpensesByMonth(month: string): Promise<LeadExpense[]>;
 }
@@ -80,18 +99,9 @@ export class MemStorage implements IStorage {
   }
 
   private initializeDefaults() {
-    const defaultSalesReps = [
-      { name: "Alperen Yerlikaya", monthlyTarget: 10, isActive: true },
-      { name: "Mehmet Demir", monthlyTarget: 8, isActive: true },
-      { name: "Ayşe Kaya", monthlyTarget: 8, isActive: true },
-    ];
+    // No default sales reps - all data should come from imported files
 
-    defaultSalesReps.forEach(rep => {
-      const salesRep: SalesRep = { ...rep, id: this.currentSalesRepId++ };
-      this.salesReps.set(salesRep.id, salesRep);
-    });
-
-    // Default settings
+    // Default settings only
     const defaultSettings = [
       { key: "companyName", value: "" },
       { key: "currency", value: "TRY" },
@@ -105,7 +115,7 @@ export class MemStorage implements IStorage {
       { key: "colors.warning", value: "#FF9800" },
     ];
 
-    defaultSettings.forEach(setting => {
+    defaultSettings.forEach((setting) => {
       const settingObj: Settings = { ...setting, id: this.currentSettingsId++ };
       this.settings.set(setting.key, settingObj);
     });
@@ -166,7 +176,10 @@ export class MemStorage implements IStorage {
     return lead;
   }
 
-  async updateLead(id: number, updateData: Partial<InsertLead>): Promise<Lead | undefined> {
+  async updateLead(
+    id: number,
+    updateData: Partial<InsertLead>
+  ): Promise<Lead | undefined> {
     const existingLead = this.leads.get(id);
     if (!existingLead) return undefined;
 
@@ -197,36 +210,50 @@ export class MemStorage implements IStorage {
 
     // Date filtering
     if (filters.startDate || filters.endDate || filters.month || filters.year) {
-      filteredLeads = filteredLeads.filter(lead => {
+      filteredLeads = filteredLeads.filter((lead) => {
         if (!lead.requestDate) return true; // Include leads without dates
-        
+
         const leadDate = new Date(lead.requestDate);
         if (isNaN(leadDate.getTime())) return true; // Include leads with invalid dates
-        
+
         // Year filter
-        if (filters.year && leadDate.getFullYear().toString() !== filters.year) return false;
-        
+        if (filters.year && leadDate.getFullYear().toString() !== filters.year)
+          return false;
+
         // Month filter (1-12 to 01-12)
-        if (filters.month && (leadDate.getMonth() + 1).toString().padStart(2, '0') !== filters.month) return false;
-        
+        if (
+          filters.month &&
+          (leadDate.getMonth() + 1).toString().padStart(2, "0") !==
+            filters.month
+        )
+          return false;
+
         // Date range filter
-        if (filters.startDate && leadDate < new Date(filters.startDate)) return false;
-        if (filters.endDate && leadDate > new Date(filters.endDate)) return false;
-        
+        if (filters.startDate && leadDate < new Date(filters.startDate))
+          return false;
+        if (filters.endDate && leadDate > new Date(filters.endDate))
+          return false;
+
         return true;
       });
     }
 
     if (filters.salesRep) {
-      filteredLeads = filteredLeads.filter(lead => lead.assignedPersonnel === filters.salesRep);
+      filteredLeads = filteredLeads.filter(
+        (lead) => lead.assignedPersonnel === filters.salesRep
+      );
     }
 
     if (filters.leadType) {
-      filteredLeads = filteredLeads.filter(lead => lead.leadType === filters.leadType);
+      filteredLeads = filteredLeads.filter(
+        (lead) => lead.leadType === filters.leadType
+      );
     }
 
     if (filters.status) {
-      filteredLeads = filteredLeads.filter(lead => lead.status === filters.status);
+      filteredLeads = filteredLeads.filter(
+        (lead) => lead.status === filters.status
+      );
     }
 
     return filteredLeads;
@@ -234,7 +261,7 @@ export class MemStorage implements IStorage {
 
   // Sales Reps
   async getSalesReps(): Promise<SalesRep[]> {
-    return Array.from(this.salesReps.values()).filter(rep => rep.isActive);
+    return Array.from(this.salesReps.values()).filter((rep) => rep.isActive);
   }
 
   async getSalesRepById(id: number): Promise<SalesRep | undefined> {
@@ -243,11 +270,11 @@ export class MemStorage implements IStorage {
 
   async createSalesRep(insertSalesRep: InsertSalesRep): Promise<SalesRep> {
     const id = this.currentSalesRepId++;
-    const salesRep: SalesRep = { 
-      ...insertSalesRep, 
+    const salesRep: SalesRep = {
+      ...insertSalesRep,
       id,
       monthlyTarget: insertSalesRep.monthlyTarget ?? 10,
-      isActive: insertSalesRep.isActive ?? true
+      isActive: insertSalesRep.isActive ?? true,
     };
     this.salesReps.set(id, salesRep);
     return salesRep;
@@ -255,9 +282,11 @@ export class MemStorage implements IStorage {
 
   async createSalesRepByName(name: string): Promise<SalesRep> {
     // Check if salesperson already exists
-    const existing = Array.from(this.salesReps.values()).find(rep => rep.name === name);
+    const existing = Array.from(this.salesReps.values()).find(
+      (rep) => rep.name === name
+    );
     if (existing) return existing;
-    
+
     // Create new salesperson with default target
     return this.createSalesRep({
       name,
@@ -266,7 +295,10 @@ export class MemStorage implements IStorage {
     });
   }
 
-  async updateSalesRep(id: number, updateData: Partial<InsertSalesRep>): Promise<SalesRep | undefined> {
+  async updateSalesRep(
+    id: number,
+    updateData: Partial<InsertSalesRep>
+  ): Promise<SalesRep | undefined> {
     const existingSalesRep = this.salesReps.get(id);
     if (!existingSalesRep) return undefined;
 
@@ -316,27 +348,32 @@ export class MemStorage implements IStorage {
     return this.leadExpenses.get(id);
   }
 
-  async createLeadExpense(insertExpense: InsertLeadExpense): Promise<LeadExpense> {
+  async createLeadExpense(
+    insertExpense: InsertLeadExpense
+  ): Promise<LeadExpense> {
     const id = this.currentExpenseId++;
     const now = new Date();
-    const expense: LeadExpense = { 
-      ...insertExpense, 
+    const expense: LeadExpense = {
+      ...insertExpense,
       id,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
     };
     this.leadExpenses.set(id, expense);
     return expense;
   }
 
-  async updateLeadExpense(id: number, updateData: Partial<InsertLeadExpense>): Promise<LeadExpense | undefined> {
+  async updateLeadExpense(
+    id: number,
+    updateData: Partial<InsertLeadExpense>
+  ): Promise<LeadExpense | undefined> {
     const existingExpense = this.leadExpenses.get(id);
     if (!existingExpense) return undefined;
 
-    const updatedExpense: LeadExpense = { 
-      ...existingExpense, 
+    const updatedExpense: LeadExpense = {
+      ...existingExpense,
       ...updateData,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
     this.leadExpenses.set(id, updatedExpense);
     return updatedExpense;
@@ -347,7 +384,9 @@ export class MemStorage implements IStorage {
   }
 
   async getLeadExpensesByMonth(month: string): Promise<LeadExpense[]> {
-    return Array.from(this.leadExpenses.values()).filter(expense => expense.month === month);
+    return Array.from(this.leadExpenses.values()).filter(
+      (expense) => expense.month === month
+    );
   }
 }
 
