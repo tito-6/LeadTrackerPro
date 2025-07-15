@@ -27,18 +27,20 @@ import {
   BarChart,
   PieChart,
   LineChart,
+  Building,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useLeads, useSalesReps } from "@/hooks/use-leads";
 import { createChart } from "@/lib/chart-utils";
-import InteractiveChart from "@/components/interactive-chart";
+import StandardChart from "@/components/charts/StandardChart";
 import DateFilter from "@/components/ui/date-filter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MeetingAnalyticsTab } from "./meeting-analytics-tab";
+import MeetingAnalyticsTab from "./meeting-analytics-tab";
 import { TargetAudienceAnalyticsTab } from "./target-audience-analytics-tab";
 import { ArtworkAnalyticsTab } from "./artwork-analytics-tab";
 import { MarketingAnalyticsTab } from "./marketing-analytics-tab";
 import type { Lead, SalesRep } from "@shared/schema";
+import ProjectFilter from "./project-filter";
 
 interface ReportFilters {
   startDate: string;
@@ -47,6 +49,7 @@ interface ReportFilters {
   year: string;
   salesRep: string;
   leadType: string;
+  project: string; // Add project filter
 }
 
 export default function ReportsTab() {
@@ -58,6 +61,7 @@ export default function ReportsTab() {
     year: "",
     salesRep: "",
     leadType: "",
+    project: "all", // Default to all projects
   });
 
   const [selectedPersonnel, setSelectedPersonnel] = useState<string>("");
@@ -75,15 +79,27 @@ export default function ReportsTab() {
     }));
   };
 
+  // Add handler for project filter
+  const handleProjectChange = (project: string) => {
+    setFilters((prev) => ({ ...prev, project }));
+  };
+
   const { data: filteredLeads = [] } = useQuery({
     queryKey: ["/api/leads", filters],
     queryFn: async () => {
       const params = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
-        if (value) params.append(key, value);
+        if (value && key !== "project") params.append(key, value);
       });
+      // Fetch all leads, then filter by project client-side
       const response = await fetch(`/api/leads?${params.toString()}`);
-      return response.json();
+      let leads = await response.json();
+      if (filters.project && filters.project !== "all") {
+        // Use the project detector to filter leads by project
+        const { filterLeadsByProject } = await import("@/lib/project-detector");
+        leads = filterLeadsByProject(leads, filters.project);
+      }
+      return leads;
     },
   });
 
@@ -145,7 +161,7 @@ export default function ReportsTab() {
   // Generate chart data for Lead Status Distribution (100% sync with Overview)
   const statusChartData = useMemo(() => {
     const statusCounts = filteredLeads.reduce(
-      (acc: { [key: string]: number }, lead) => {
+      (acc: { [key: string]: number }, lead: any) => {
         const status = lead.status || "Tanımsız";
         acc[status] = (acc[status] || 0) + 1;
         return acc;
@@ -156,15 +172,15 @@ export default function ReportsTab() {
     const total = filteredLeads.length;
     return Object.entries(statusCounts).map(([status, count]) => ({
       name: status,
-      value: count,
-      percentage: total > 0 ? Math.round((count / total) * 100) : 0,
+      value: Number(count),
+      percentage: total > 0 ? Math.round((Number(count) / total) * 100) : 0,
     }));
   }, [filteredLeads]);
 
   // Generate chart data for Personnel Performance (100% sync with Overview)
   const personnelChartData = useMemo(() => {
     const personnelCounts = filteredLeads.reduce(
-      (acc: { [key: string]: number }, lead) => {
+      (acc: { [key: string]: number }, lead: any) => {
         const personnel = lead.assignedPersonnel || "Atanmamış";
         acc[personnel] = (acc[personnel] || 0) + 1;
         return acc;
@@ -175,8 +191,8 @@ export default function ReportsTab() {
     const total = filteredLeads.length;
     return Object.entries(personnelCounts).map(([personnel, count]) => ({
       name: personnel,
-      value: count,
-      percentage: total > 0 ? Math.round((count / total) * 100) : 0,
+      value: Number(count),
+      percentage: total > 0 ? Math.round((Number(count) / total) * 100) : 0,
     }));
   }, [filteredLeads]);
 
@@ -223,7 +239,7 @@ export default function ReportsTab() {
     <div className="space-y-6">
       {/* Date Filter and Controls */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 space-y-4">
           <DateFilter
             onFilterChange={handleDateFilterChange}
             initialFilters={{
@@ -233,6 +249,20 @@ export default function ReportsTab() {
               year: filters.year,
             }}
           />
+          <Card className="w-full max-w-xs">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Building className="h-4 w-4 text-blue-600" />
+                Proje Filtresi
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProjectFilter
+                value={filters.project}
+                onChange={handleProjectChange}
+              />
+            </CardContent>
+          </Card>
         </div>
 
         <div className="lg:col-span-2">
@@ -290,19 +320,37 @@ export default function ReportsTab() {
       {/* Interactive Charts Section */}
       <div className="grid gap-6">
         {/* Lead Status Distribution Chart */}
-        <InteractiveChart
-          title="📊 Filtrelenmiş Lead - Durum Dağılımı (SON GORUSME SONUCU)"
+        <StandardChart
+          title="Filtrelenmiş Lead - Durum Dağılımı (SON GORUSME SONUCU)"
           data={statusChartData}
           onItemClick={handleStatusChartClick}
           height={350}
+          chartType="3d-pie"
+          showDataTable={true}
+          showBadge={true}
+          badgeText={`${filteredLeads.length} Lead`}
+          gradientColors={["from-blue-50", "to-indigo-100"]}
+          borderColor="border-blue-100 dark:border-blue-800"
+          description="Filtrelenmiş lead verilerinin durum analizi"
+          icon="📊"
+          tableTitle="Durum Detayları"
         />
 
         {/* Personnel Lead Distribution Chart */}
-        <InteractiveChart
-          title="👨‍💼 Filtrelenmiş Personel - Lead Dağılımı (Atanan Personel)"
+        <StandardChart
+          title="Filtrelenmiş Personel - Lead Dağılımı (Atanan Personel)"
           data={personnelChartData}
           onItemClick={handlePersonnelChartClick}
           height={350}
+          chartType="bar"
+          showDataTable={true}
+          showBadge={true}
+          badgeText={`${personnelChartData.length} Personel`}
+          gradientColors={["from-green-50", "to-emerald-100"]}
+          borderColor="border-green-100 dark:border-green-800"
+          description="Personel bazında lead dağılımı"
+          icon="👨‍💼"
+          tableTitle="Personel Detayları"
         />
 
         {/* Lead Type Distribution Charts */}

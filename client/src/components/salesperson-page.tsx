@@ -36,7 +36,7 @@ import {
   getStatusColor,
   getPersonnelColor,
 } from "@/lib/color-system";
-import { MeetingAnalyticsTab } from "./meeting-analytics-tab";
+import MeetingAnalyticsTab from "./meeting-analytics-tab";
 
 interface SalespersonPageProps {
   salespersonName: string;

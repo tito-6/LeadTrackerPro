@@ -22,9 +22,7 @@ import ReportsTab from "@/components/reports-tab";
 import ExportTab from "@/components/export-tab";
 import SettingsTab from "@/components/settings-tab";
 import OlumsuzAnaliziTab from "@/components/olumsuz-analizi-tab";
-import TakipteAnaliziTab from "@/components/takipte-analizi-tab";
-import TakipRaporuTab from "@/components/takip-raporu-tab";
-import UnifiedTakipteTab from "@/components/unified-takipte-tab";
+import FollowUpAnalyticsTab from "@/components/follow-up-analytics-tab";
 import IntelligentSettingsTab from "@/components/intelligent-settings-tab";
 import ExcelInputTab from "@/components/excel-input-tab";
 import DuplicateDetectionTab from "@/components/duplicate-detection-tab";
@@ -35,6 +33,7 @@ import UnifiedExpenseManagementTab from "@/components/unified-expense-management
 import SalespersonPage from "@/components/salesperson-page";
 import { useQuery } from "@tanstack/react-query";
 import { SalesRep } from "@shared/schema";
+import UnifiedDataInputTab from "@/components/unified-data-input-tab";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -110,18 +109,11 @@ export default function Dashboard() {
                   <span>🧠 Akıllı Dashboard</span>
                 </TabsTrigger>
                 <TabsTrigger
-                  value="excel-input"
+                  value="unified-data-input"
                   className="flex items-center space-x-2 p-3"
                 >
                   <Grid className="h-4 w-4" />
-                  <span>Excel Girişi</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="data-entry"
-                  className="flex items-center space-x-2 p-3"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>🧠 Akıllı Veri Girişi</span>
+                  <span>Veri Girişi</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="reports"
@@ -163,11 +155,11 @@ export default function Dashboard() {
                   <span>Olumsuz Analizi</span>
                 </TabsTrigger>
                 <TabsTrigger
-                  value="unified-takipte"
+                  value="follow-up-analytics"
                   className="flex items-center space-x-2 p-3"
                 >
                   <Phone className="h-4 w-4" />
-                  <span>Unified Takip Analizi</span>
+                  <span>📊 Takip Analizi</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="duplicate-detection"
@@ -218,32 +210,24 @@ export default function Dashboard() {
             <EnhancedOverviewDashboardTab />
           </TabsContent>
 
-          <TabsContent value="expense-management">
-            <UnifiedExpenseManagementTab />
-          </TabsContent>
-
-          <TabsContent value="excel-input">
-            <ExcelInputTab />
-          </TabsContent>
-
-          <TabsContent value="data-entry">
-            <DataEntryTab />
+          <TabsContent value="unified-data-input">
+            <UnifiedDataInputTab />
           </TabsContent>
 
           <TabsContent value="reports">
             <ReportsTab />
           </TabsContent>
 
+          <TabsContent value="expense-management">
+            <UnifiedExpenseManagementTab />
+          </TabsContent>
+
           <TabsContent value="olumsuz-analizi">
             <OlumsuzAnaliziTab />
           </TabsContent>
 
-          <TabsContent value="unified-takipte">
-            <UnifiedTakipteTab />
-          </TabsContent>
-
-          <TabsContent value="takipte-analizi">
-            <TakipteAnaliziTab />
+          <TabsContent value="follow-up-analytics">
+            <FollowUpAnalyticsTab />
           </TabsContent>
 
           <TabsContent value="duplicate-detection">
@@ -252,10 +236,6 @@ export default function Dashboard() {
 
           <TabsContent value="export">
             <ExportTab />
-          </TabsContent>
-
-          <TabsContent value="takip-raporu">
-            <TakipRaporuTab />
           </TabsContent>
 
           <TabsContent value="intelligent-settings">

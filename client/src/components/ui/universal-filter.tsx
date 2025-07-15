@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calendar, X, Filter, Building, Users, Target } from "lucide-react";
+import ProjectFilter from "../../components/project-filter";
 
 export interface UniversalFilters {
   startDate: string;
@@ -92,6 +93,10 @@ export default function UniversalFilter({
     }
   };
 
+  const handleProjectChange = (project: string) => {
+    handleFilterChange("projectName", project);
+  };
+
   const clearFilters = () => {
     const clearedFilters: UniversalFilters = {
       startDate: "",
@@ -134,6 +139,13 @@ export default function UniversalFilter({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Project Filter */}
+        {showProjectFilter && (
+          <ProjectFilter
+            onProjectChange={handleProjectChange}
+            availableProjects={availableProjects}
+          />
+        )}
         {/* Date Filters */}
         <div className="space-y-3">
           <Label className="text-xs font-medium flex items-center gap-1">

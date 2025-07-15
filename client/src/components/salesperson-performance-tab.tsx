@@ -46,7 +46,7 @@ import {
   DollarSign,
   Calculator,
 } from "lucide-react";
-import InteractiveChart from "./interactive-chart";
+import StandardChart from "@/components/charts/StandardChart";
 import DateFilter from "./ui/date-filter";
 import { useColors } from "@/hooks/use-colors";
 
@@ -464,7 +464,7 @@ export default function SalespersonPerformanceTab({
                 <CardDescription>Tüm leadlerin durum analizi</CardDescription>
               </CardHeader>
               <CardContent>
-                <InteractiveChart
+                <StandardChart
                   title="Genel Performance"
                   data={[
                     ...Object.entries(salesStats)
@@ -601,7 +601,7 @@ export default function SalespersonPerformanceTab({
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <InteractiveChart
+                <StandardChart
                   title="Satış Performance"
                   data={Object.entries(salesStats)
                     .filter(([key]) => key !== "total")
@@ -909,7 +909,7 @@ export default function SalespersonPerformanceTab({
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <InteractiveChart
+                <StandardChart
                   title="Kiralama Performance"
                   data={Object.entries(rentalStats)
                     .filter(([key]) => key !== "total")

@@ -35,6 +35,7 @@ import {
 import { addDays, format } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { InfoIcon } from "lucide-react";
+import ProjectFilter from "./project-filter";
 
 interface MeetingAnalyticsTabProps {
   filters?: {
@@ -44,6 +45,7 @@ interface MeetingAnalyticsTabProps {
     year?: string;
     salesRep?: string;
     leadType?: string;
+    project?: string;
   };
 }
 
@@ -80,7 +82,7 @@ interface TimeChartItem {
   color: string;
 }
 
-export function MeetingAnalyticsTab({
+export default function MeetingAnalyticsTab({
   filters: parentFilters,
 }: MeetingAnalyticsTabProps) {
   // State for filters
@@ -99,6 +101,9 @@ export function MeetingAnalyticsTab({
   );
   const [selectedSalesRep, setSelectedSalesRep] = React.useState<string>(
     parentFilters?.salesRep || "all"
+  );
+  const [selectedProject, setSelectedProject] = React.useState<string>(
+    parentFilters?.project || "all"
   );
   const [filterType, setFilterType] = React.useState<"month" | "dateRange">(
     parentFilters?.month ? "month" : "dateRange"
@@ -143,10 +148,9 @@ export function MeetingAnalyticsTab({
     },
   });
 
-  // Build the filter params
+  // Add selectedProject to query key and API params
   const filters = React.useMemo(() => {
     const params = new URLSearchParams();
-
     if (filterType === "dateRange" && date.from && date.to) {
       params.append("startDate", format(date.from, "yyyy-MM-dd"));
       params.append("endDate", format(date.to, "yyyy-MM-dd"));
@@ -154,17 +158,17 @@ export function MeetingAnalyticsTab({
       params.append("month", month);
       params.append("year", year);
     }
-
     if (parentFilters?.salesRep) {
       params.append("salesRep", parentFilters.salesRep);
     } else if (selectedSalesRep !== "all") {
       params.append("salesRep", selectedSalesRep);
     }
-
     if (parentFilters?.leadType) {
       params.append("leadType", parentFilters.leadType);
     }
-
+    if (selectedProject !== "all") {
+      params.append("project", selectedProject);
+    }
     return params;
   }, [
     date.from,
@@ -174,10 +178,11 @@ export function MeetingAnalyticsTab({
     selectedSalesRep,
     filterType,
     parentFilters,
+    selectedProject,
   ]);
 
-  const { data: meetingAnalytics, isLoading } = useQuery<MeetingAnalyticsData>({
-    queryKey: ["/api/meeting-analytics", filters.toString()],
+  const { data: meetingAnalytics, isLoading } = useQuery({
+    queryKey: ["/api/meeting-analytics", filters.toString(), selectedProject],
     queryFn: async () => {
       const response = await fetch(`/api/meeting-analytics?${filters}`);
       if (!response.ok) {
@@ -358,25 +363,28 @@ export function MeetingAnalyticsTab({
     }
   };
 
-  return (
+  const content = (
     <div className="space-y-6">
-      {/* Chart type selection */}
-      <div className="flex justify-end space-x-2">
-        <Select
-          value={chartType}
-          onValueChange={(value: any) =>
-            setChartType(value as "bar" | "pie" | "line")
-          }
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Grafik Tipi" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="bar">Bar Grafik</SelectItem>
-            <SelectItem value="pie">Pasta Grafik</SelectItem>
-            <SelectItem value="line">Çizgi Grafik</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <ProjectFilter value={selectedProject} onChange={setSelectedProject} />
+        {/* Chart type selection */}
+        <div className="flex justify-end space-x-2">
+          <Select
+            value={chartType}
+            onValueChange={(value: any) =>
+              setChartType(value as "bar" | "pie" | "line")
+            }
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Grafik Tipi" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="bar">Bar Grafik</SelectItem>
+              <SelectItem value="pie">Pasta Grafik</SelectItem>
+              <SelectItem value="line">Çizgi Grafik</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Overview statistics */}
@@ -608,4 +616,6 @@ export function MeetingAnalyticsTab({
       </Tabs>
     </div>
   );
+
+  return <div>{content}</div>;
 }

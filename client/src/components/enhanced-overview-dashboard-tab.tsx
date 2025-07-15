@@ -47,7 +47,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import InteractiveChart from "./interactive-chart";
+import StandardChart from "@/components/charts/StandardChart";
 
 import { DataTable } from "@/components/ui/data-table";
 import { MasterDataTable } from "@/components/ui/master-data-table";
@@ -57,6 +57,11 @@ import DateFilter from "@/components/ui/date-filter";
 import LeadDataExplorer from "@/components/lead-data-explorer";
 import { useColors } from "@/hooks/use-colors";
 import { getSourceColor } from "@/lib/color-system";
+import ProjectFilter from "./project-filter";
+import {
+  filterLeadsByProject,
+  detectProjectFromWebFormNotu,
+} from "@/lib/project-detector";
 
 export default function EnhancedOverviewDashboardTab() {
   const { getColor } = useColors();
@@ -64,6 +69,7 @@ export default function EnhancedOverviewDashboardTab() {
   const [chartType, setChartType] = useState<"pie" | "bar" | "line">("pie");
   const [selectedPersonnel, setSelectedPersonnel] = useState<string>("all");
   const [selectedOffice, setSelectedOffice] = useState<string>("all");
+  const [selectedProject, setSelectedProject] = useState<string>("all");
   const [dateFilters, setDateFilters] = useState({
     startDate: "",
     endDate: "",
@@ -89,29 +95,37 @@ export default function EnhancedOverviewDashboardTab() {
       )?.enable3D
     : true;
 
+  // Add selectedProject to dateFilters for all queries
+  const filters = { ...dateFilters, project: selectedProject };
+
   // Fetch enhanced stats that combine both data sources
   const { data: enhancedStats } = useQuery({
-    queryKey: ["/api/enhanced-stats", dateFilters],
+    queryKey: ["/api/enhanced-stats", filters],
     refetchInterval: 5000,
   });
 
   // Fetch takipte data
-  const { data: takipteData = [] } = useQuery({
-    queryKey: ["/api/takipte", dateFilters],
+  const { data: takipteData = [] } = useQuery<any[]>({
+    queryKey: ["/api/takipte", filters],
   });
 
   // Fetch leads data for detailed analysis with date filtering
   const { data: leadsData = [] } = useQuery({
-    queryKey: ["/api/leads", dateFilters],
+    queryKey: ["/api/leads", filters],
     queryFn: async () => {
       const params = new URLSearchParams();
-      Object.entries(dateFilters).forEach(([key, value]) => {
+      Object.entries(filters).forEach(([key, value]) => {
         if (value) params.append(key, value);
       });
       const response = await fetch(`/api/leads?${params.toString()}`);
       return response.json();
     },
   });
+
+  // Apply robust project filtering to leadsData
+  const filteredLeads = useMemo(() => {
+    return filterLeadsByProject(leadsData, selectedProject);
+  }, [leadsData, selectedProject]);
 
   const hasSecondaryData = enhancedStats?.takipte?.hasData || false;
 
@@ -230,10 +244,10 @@ export default function EnhancedOverviewDashboardTab() {
 
   // Personnel status matrix calculation with normalized statuses
   const personnelStatusMatrix = useMemo(() => {
-    if (!leadsData.length || !enhancedStats) return [];
+    if (!filteredLeads.length || !enhancedStats) return [];
 
     const { takipte, leads } = enhancedStats;
-    const personnelStats = {};
+    const personnelStats: { [key: string]: any } = {};
 
     // Initialize all personnel with all statuses set to 0
     const allPersonnel = Object.keys(leads.byPersonnel || {});
@@ -255,7 +269,7 @@ export default function EnhancedOverviewDashboardTab() {
     });
 
     // Count actual lead statuses with normalization
-    leadsData.forEach((lead) => {
+    filteredLeads.forEach((lead) => {
       const personnel = lead.assignedPersonnel || "Atanmamış";
       const originalStatus = lead.status || "Bilinmiyor";
       const normalizedStatus = normalizeStatus(originalStatus);
@@ -294,7 +308,7 @@ export default function EnhancedOverviewDashboardTab() {
     );
 
     return Object.values(personnelStats);
-  }, [leadsData, enhancedStats, statusColumns, normalizeStatus]);
+  }, [filteredLeads, enhancedStats, statusColumns, normalizeStatus]);
 
   // Toggle column visibility
   const toggleColumn = (columnKey: string) => {
@@ -311,11 +325,11 @@ export default function EnhancedOverviewDashboardTab() {
 
   // Memoized calculations for performance - NOW USING FILTERED DATA
   const dashboardMetrics = useMemo(() => {
-    if (!leadsData || leadsData.length === 0) return null;
+    if (!filteredLeads || filteredLeads.length === 0) return null;
 
     // Apply date filtering to ALL calculations
-    const filteredLeads = leadsData;
-    const filteredTakipte = takipteData.filter((t) => {
+    const filteredLeadsForDate = filteredLeads;
+    const filteredTakipte = takipteData.filter((t: any) => {
       if (
         !dateFilters.startDate &&
         !dateFilters.endDate &&
@@ -347,7 +361,7 @@ export default function EnhancedOverviewDashboardTab() {
     });
 
     // Core KPIs from filtered data
-    const totalLeads = filteredLeads.length;
+    const totalLeads = filteredLeadsForDate.length;
     const totalTakipte = filteredTakipte.length;
     const dataCompletnessScore =
       totalTakipte > 0
@@ -355,7 +369,7 @@ export default function EnhancedOverviewDashboardTab() {
         : 0;
 
     // Status distribution for charts from filtered leads
-    const statusCounts = filteredLeads.reduce((acc: any, lead) => {
+    const statusCounts = filteredLeadsForDate.reduce((acc: any, lead) => {
       const status = lead.status || "Tanımsız";
       acc[status] = (acc[status] || 0) + 1;
       return acc;
@@ -368,7 +382,7 @@ export default function EnhancedOverviewDashboardTab() {
     }));
 
     // Personnel data for charts from filtered data
-    const personnelCounts = filteredLeads.reduce((acc: any, lead) => {
+    const personnelCounts = filteredLeadsForDate.reduce((acc: any, lead) => {
       const personnel = lead.assignedPersonnel || "Atanmamış";
       acc[personnel] = (acc[personnel] || 0) + 1;
       return acc;
@@ -377,7 +391,7 @@ export default function EnhancedOverviewDashboardTab() {
     const personnelData = Object.entries(personnelCounts).map(
       ([person, leadCount]) => {
         const takipteCount = filteredTakipte.filter(
-          (t) => (t["Personel Adı(203)"] || t.assignedPersonnel) === person
+          (t: any) => (t["Personel Adı(203)"] || t.assignedPersonnel) === person
         ).length;
         return {
           name: person,
@@ -392,7 +406,7 @@ export default function EnhancedOverviewDashboardTab() {
     );
 
     // Lead type distribution from filtered data
-    const typeCounts = filteredLeads.reduce((acc: any, lead) => {
+    const typeCounts = filteredLeadsForDate.reduce((acc: any, lead) => {
       const type = lead.leadType || "Bilinmiyor";
       acc[type] = (acc[type] || 0) + 1;
       return acc;
@@ -411,16 +425,16 @@ export default function EnhancedOverviewDashboardTab() {
       statusData,
       personnelData,
       typeData,
-      leads: filteredLeads,
+      leads: filteredLeadsForDate,
     };
-  }, [leadsData, takipteData, dateFilters]);
+  }, [filteredLeads, takipteData, dateFilters]);
 
   // Advanced Takipte Analytics - NOW USING FILTERED DATA
   const takipteAnalytics = useMemo(() => {
     if (!hasSecondaryData || takipteData.length === 0) return null;
 
     // Apply date filtering to takipte data
-    const filteredTakipte = takipteData.filter((t) => {
+    let filteredTakipte = takipteData.filter((t: any) => {
       if (
         !dateFilters.startDate &&
         !dateFilters.endDate &&
@@ -451,11 +465,24 @@ export default function EnhancedOverviewDashboardTab() {
       return true;
     });
 
+    // Apply project filter to takipte data (robust logic)
+    if (selectedProject && selectedProject !== "all") {
+      filteredTakipte = filteredTakipte.filter((t: any) => {
+        const projectField = t.projectName || t["Proje"] || "";
+        const webFormNotu = t.webFormNote || t["WebForm Notu"] || "";
+        const detectedProject = detectProjectFromWebFormNotu(webFormNotu);
+        return (
+          projectField === selectedProject ||
+          detectedProject === selectedProject
+        );
+      });
+    }
+
     const total = filteredTakipte.length;
     if (total === 0) return null;
 
     // Customer source analysis from filtered data
-    const sourceCounts = filteredTakipte.reduce((acc: any, t) => {
+    const sourceCounts = filteredTakipte.reduce((acc: any, t: any) => {
       const source = t["İrtibat Müşteri Kaynağı"] || t.source || "Bilinmiyor";
       acc[source] = (acc[source] || 0) + 1;
       return acc;
@@ -468,7 +495,7 @@ export default function EnhancedOverviewDashboardTab() {
     }));
 
     // Meeting type distribution from filtered data
-    const meetingCounts = filteredTakipte.reduce((acc: any, t) => {
+    const meetingCounts = filteredTakipte.reduce((acc: any, t: any) => {
       const type = t["Görüşme Tipi"] || t.meetingType || "Bilinmiyor";
       acc[type] = (acc[type] || 0) + 1;
       return acc;
@@ -483,7 +510,7 @@ export default function EnhancedOverviewDashboardTab() {
     );
 
     // Office performance from filtered data
-    const officeCounts = filteredTakipte.reduce((acc: any, t) => {
+    const officeCounts = filteredTakipte.reduce((acc: any, t: any) => {
       const office = t.Ofis || t.office || "Bilinmiyor";
       acc[office] = (acc[office] || 0) + 1;
       return acc;
@@ -496,7 +523,7 @@ export default function EnhancedOverviewDashboardTab() {
     }));
 
     // Customer criteria (Satış vs Kira) from filtered data
-    const kriterCounts = filteredTakipte.reduce((acc: any, t) => {
+    const kriterCounts = filteredTakipte.reduce((acc: any, t: any) => {
       const kriter = t.Kriter || t.criteria || "Bilinmiyor";
       acc[kriter] = (acc[kriter] || 0) + 1;
       return acc;
@@ -514,7 +541,7 @@ export default function EnhancedOverviewDashboardTab() {
       officeData,
       kriterData,
     };
-  }, [takipteData, hasSecondaryData, dateFilters]);
+  }, [takipteData, hasSecondaryData, dateFilters, selectedProject]);
 
   if (!enhancedStats) {
     return (
@@ -548,6 +575,10 @@ export default function EnhancedOverviewDashboardTab() {
 
   return (
     <div className="space-y-6">
+      {/* Project Filter at the top */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <ProjectFilter value={selectedProject} onChange={setSelectedProject} />
+      </div>
       {/* Header with Data Completeness Alert */}
       <div className="flex justify-between items-start">
         <div>
@@ -904,7 +935,7 @@ export default function EnhancedOverviewDashboardTab() {
               <CardContent>
                 {dashboardMetrics?.statusData && (
                   <>
-                    <InteractiveChart
+                    <StandardChart
                       title=""
                       data={dashboardMetrics.statusData}
                       height={400}
@@ -932,7 +963,7 @@ export default function EnhancedOverviewDashboardTab() {
               <CardContent>
                 {dashboardMetrics?.typeData && (
                   <>
-                    <InteractiveChart
+                    <StandardChart
                       title=""
                       data={dashboardMetrics.typeData}
                       height={400}
@@ -1018,58 +1049,50 @@ export default function EnhancedOverviewDashboardTab() {
             <div className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Customer Source Analysis */}
-                <Card className="p-6 shadow-lg border-2 border-blue-100 dark:border-blue-800">
-                  <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                      📱 Müşteri Kaynak Analizi
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Lead kaynaklarının dağılımı
-                    </p>
-                  </div>
-                  <InteractiveChart
-                    title=""
-                    data={takipteAnalytics.sourceData}
-                    height={300}
-                    chartType={chartType}
-                  />
-                  <DataTable
-                    data={takipteAnalytics.sourceData.map((item) => ({
-                      Kaynak: item.name,
-                      Adet: item.value,
-                      Yüzde: `${item.value} (%${item.percentage})`,
-                    }))}
-                    title="Kaynak Detayları"
-                    className="mt-4"
-                  />
-                </Card>
+                <StandardChart
+                  title="Müşteri Kaynak Analizi"
+                  data={
+                    takipteAnalytics.sourceData?.map((item, index) => ({
+                      name: item.name,
+                      value: Number(item.value),
+                      percentage: item.percentage,
+                      color: `hsl(${index * 45}, 70%, 60%)`,
+                    })) || []
+                  }
+                  showDataTable={true}
+                  showBadge={false}
+                  gradientColors={["from-blue-50", "to-indigo-100"]}
+                  borderColor="border-blue-100 dark:border-blue-800"
+                  height={300}
+                  chartType={chartType}
+                  allowTypeChange={false}
+                  description="Lead kaynaklarının dağılımı"
+                  icon="📱"
+                  tableTitle="Kaynak Detayları"
+                />
 
                 {/* Meeting Type Distribution */}
-                <Card className="p-6 shadow-lg border-2 border-green-100 dark:border-green-800">
-                  <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                      🤝 Görüşme Tipi Dağılımı
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      İletişim yöntemlerinin analizi
-                    </p>
-                  </div>
-                  <InteractiveChart
-                    title=""
-                    data={takipteAnalytics.meetingTypeData}
-                    height={300}
-                    chartType={chartType}
-                  />
-                  <DataTable
-                    data={takipteAnalytics.meetingTypeData.map((item) => ({
-                      "Görüşme Tipi": item.name,
-                      Adet: item.value,
-                      Yüzde: `${item.value} (%${item.percentage})`,
-                    }))}
-                    title="Görüşme Detayları"
-                    className="mt-4"
-                  />
-                </Card>
+                <StandardChart
+                  title="Görüşme Tipi Dağılımı"
+                  data={
+                    takipteAnalytics.meetingTypeData?.map((item, index) => ({
+                      name: item.name,
+                      value: Number(item.value),
+                      percentage: item.percentage,
+                      color: `hsl(${index * 60}, 65%, 55%)`,
+                    })) || []
+                  }
+                  showDataTable={true}
+                  showBadge={false}
+                  gradientColors={["from-green-50", "to-emerald-100"]}
+                  borderColor="border-green-100 dark:border-green-800"
+                  height={300}
+                  chartType={chartType}
+                  allowTypeChange={false}
+                  description="İletişim yöntemlerinin analizi"
+                  icon="🤝"
+                  tableTitle="Görüşme Detayları"
+                />
               </div>
 
               {/* Lead Source from Main Data */}
@@ -1259,7 +1282,7 @@ export default function EnhancedOverviewDashboardTab() {
                       Satış vs Kira müşteri analizi
                     </p>
                   </div>
-                  <InteractiveChart
+                  <StandardChart
                     title=""
                     data={takipteAnalytics.kriterData}
                     height={300}
@@ -1286,7 +1309,7 @@ export default function EnhancedOverviewDashboardTab() {
                       Şube bazlı aktivite analizi
                     </p>
                   </div>
-                  <InteractiveChart
+                  <StandardChart
                     title=""
                     data={takipteAnalytics.officeData}
                     height={300}
@@ -1316,25 +1339,86 @@ export default function EnhancedOverviewDashboardTab() {
                         Lead durumlarının detaylı incelemesi
                       </p>
                     </div>
-                    <InteractiveChart
-                      title=""
-                      data={Object.entries(
-                        dashboardMetrics.leads.reduce((acc: any, lead) => {
-                          const status = lead.status || "Tanımsız";
-                          acc[status] = (acc[status] || 0) + 1;
-                          return acc;
-                        }, {})
-                      ).map(([status, count]) => ({
-                        name: status,
-                        value: count,
-                        percentage: Math.round(
-                          ((count as number) / dashboardMetrics.leads.length) *
-                            100
-                        ),
-                      }))}
-                      height={300}
-                      chartType={chartType}
-                    />
+                    <div className="flex flex-row">
+                      <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                          <Pie
+                            data={Object.entries(
+                              dashboardMetrics.leads.reduce(
+                                (acc: any, lead) => {
+                                  const status = lead.status || "Tanımsız";
+                                  acc[status] = (acc[status] || 0) + 1;
+                                  return acc;
+                                },
+                                {}
+                              )
+                            ).map(([status, count]) => ({
+                              name: status,
+                              value: count,
+                              percentage: Math.round(
+                                ((count as number) /
+                                  dashboardMetrics.leads.length) *
+                                  100
+                              ),
+                            }))}
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                          >
+                            {Object.entries(
+                              dashboardMetrics.leads.reduce(
+                                (acc: any, lead) => {
+                                  const status = lead.status || "Tanımsız";
+                                  acc[status] = (acc[status] || 0) + 1;
+                                  return acc;
+                                },
+                                {}
+                              )
+                            ).map((entry, index) => (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={getColor("STATUS", entry[0])}
+                              />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="ml-6 flex flex-col justify-center">
+                        <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                          Durum Dağılımı
+                        </h4>
+                        <div className="flex flex-col gap-2">
+                          {Object.entries(
+                            dashboardMetrics.leads.reduce((acc: any, lead) => {
+                              const status = lead.status || "Tanımsız";
+                              acc[status] = (acc[status] || 0) + 1;
+                              return acc;
+                            }, {})
+                          ).map(([status, count]) => (
+                            <div key={status} className="flex items-center">
+                              <div
+                                className="w-4 h-4 rounded-full mr-2"
+                                style={{
+                                  backgroundColor: getColor("STATUS", status),
+                                }}
+                              ></div>
+                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                {status}: {count as number} (
+                                {Math.round(
+                                  ((count as number) /
+                                    dashboardMetrics.leads.length) *
+                                    100
+                                )}
+                                %)
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   </Card>
 
                   <Card className="p-6 shadow-lg border-2 border-emerald-100 dark:border-emerald-800">
@@ -1434,7 +1518,7 @@ export default function EnhancedOverviewDashboardTab() {
                           ).map((entry, index) => (
                             <Cell
                               key={`cell-${index}`}
-                              fill={getColor("STATUS", entry[0] || entry.name)}
+                              fill={getColor("STATUS", entry[0])}
                             />
                           ))}
                         </Pie>
@@ -1545,7 +1629,7 @@ export default function EnhancedOverviewDashboardTab() {
         </TabsContent>
 
         <TabsContent value="data-explorer" className="space-y-4">
-          <LeadDataExplorer leads={leadsData || []} isLoading={false} />
+          <LeadDataExplorer leads={filteredLeads || []} isLoading={false} />
 
           {/* Enhanced Data Tables Section */}
           <div className="space-y-6 mt-8">

@@ -1,29 +1,47 @@
 import { useMemo, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useQuery } from "@tanstack/react-query";
 import { Lead } from "@shared/schema";
-import { ChevronDown, Copy, Users, AlertTriangle, Trash2, Eye, CheckCircle } from "lucide-react";
-import InteractiveChart from "./interactive-chart";
+import {
+  ChevronDown,
+  Copy,
+  Users,
+  AlertTriangle,
+  Trash2,
+  Eye,
+  CheckCircle,
+} from "lucide-react";
+import StandardChart from "@/components/charts/StandardChart";
 
 interface DuplicateGroup {
   id: string;
   leads: Lead[];
-  matchType: 'customer_id' | 'contact_id' | 'name' | 'multiple';
+  matchType: "customer_id" | "contact_id" | "name" | "multiple";
   matchValue: string;
-  severity: 'high' | 'medium' | 'low';
+  severity: "high" | "medium" | "low";
 }
 
 export default function DuplicateDetectionTab() {
   const { data: leads = [], isLoading } = useQuery<Lead[]>({
-    queryKey: ['/api/leads'],
+    queryKey: ["/api/leads"],
   });
 
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [selectedLeads, setSelectedLeads] = useState<Set<number>>(new Set());
-  const [chartType, setChartType] = useState<'pie' | 'bar' | 'line'>('pie');
+  const [chartType, setChartType] = useState<"pie" | "bar" | "line">("pie");
 
   // Detect duplicates based on multiple criteria
   const duplicateGroups = useMemo(() => {
@@ -34,50 +52,55 @@ export default function DuplicateDetectionTab() {
 
     // Helper function to normalize names for comparison
     const normalizeName = (name: string) => {
-      return name?.toLowerCase()
-        .replace(/[^a-zöçşğüıİ\s]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim() || '';
+      return (
+        name
+          ?.toLowerCase()
+          .replace(/[^a-zöçşğüıİ\s]/g, "")
+          .replace(/\s+/g, " ")
+          .trim() || ""
+      );
     };
 
     // Helper function to determine match severity
-    const getMatchSeverity = (leads: Lead[], matchType: string): 'high' | 'medium' | 'low' => {
-      if (matchType === 'customer_id' || matchType === 'contact_id') return 'high';
-      if (matchType === 'multiple') return 'high';
-      if (leads.length > 3) return 'high';
-      if (leads.length > 2) return 'medium';
-      return 'low';
+    const getMatchSeverity = (
+      leads: Lead[],
+      matchType: string
+    ): "high" | "medium" | "low" => {
+      if (matchType === "customer_id" || matchType === "contact_id")
+        return "high";
+      if (matchType === "multiple") return "high";
+      if (leads.length > 3) return "high";
+      if (leads.length > 2) return "medium";
+      return "low";
     };
 
-    leads.forEach(lead => {
+    leads.forEach((lead) => {
       if (processedLeads.has(lead.id)) return;
 
       const potentialDuplicates: Lead[] = [];
-      let matchType: DuplicateGroup['matchType'] = 'name';
-      let matchValue = '';
+      let matchType: DuplicateGroup["matchType"] = "name";
+      let matchValue = "";
 
       // Find duplicates based on Customer ID
       if (lead.customerId) {
-        const customerIdMatches = leads.filter(l => 
-          !processedLeads.has(l.id) && 
-          l.customerId === lead.customerId
+        const customerIdMatches = leads.filter(
+          (l) => !processedLeads.has(l.id) && l.customerId === lead.customerId
         );
         if (customerIdMatches.length > 1) {
           potentialDuplicates.push(...customerIdMatches);
-          matchType = 'customer_id';
+          matchType = "customer_id";
           matchValue = lead.customerId;
         }
       }
 
       // Find duplicates based on Contact ID
       if (potentialDuplicates.length === 0 && lead.contactId) {
-        const contactIdMatches = leads.filter(l => 
-          !processedLeads.has(l.id) && 
-          l.contactId === lead.contactId
+        const contactIdMatches = leads.filter(
+          (l) => !processedLeads.has(l.id) && l.contactId === lead.contactId
         );
         if (contactIdMatches.length > 1) {
           potentialDuplicates.push(...contactIdMatches);
-          matchType = 'contact_id';
+          matchType = "contact_id";
           matchValue = lead.contactId;
         }
       }
@@ -86,14 +109,15 @@ export default function DuplicateDetectionTab() {
       if (potentialDuplicates.length === 0 && lead.customerName) {
         const normalizedName = normalizeName(lead.customerName);
         if (normalizedName.length > 2) {
-          const nameMatches = leads.filter(l => 
-            !processedLeads.has(l.id) && 
-            l.customerName &&
-            normalizeName(l.customerName) === normalizedName
+          const nameMatches = leads.filter(
+            (l) =>
+              !processedLeads.has(l.id) &&
+              l.customerName &&
+              normalizeName(l.customerName) === normalizedName
           );
           if (nameMatches.length > 1) {
             potentialDuplicates.push(...nameMatches);
-            matchType = 'name';
+            matchType = "name";
             matchValue = lead.customerName;
           }
         }
@@ -102,12 +126,20 @@ export default function DuplicateDetectionTab() {
       // If we found duplicates, create a group
       if (potentialDuplicates.length > 1) {
         // Check for multiple match types
-        const hasCustomerId = potentialDuplicates.some(l => l.customerId === lead.customerId);
-        const hasContactId = potentialDuplicates.some(l => l.contactId === lead.contactId);
+        const hasCustomerId = potentialDuplicates.some(
+          (l) => l.customerId === lead.customerId
+        );
+        const hasContactId = potentialDuplicates.some(
+          (l) => l.contactId === lead.contactId
+        );
         const hasNameMatch = true; // Already filtered by name
-        
-        if ((hasCustomerId && hasContactId) || (hasCustomerId && hasNameMatch) || (hasContactId && hasNameMatch)) {
-          matchType = 'multiple';
+
+        if (
+          (hasCustomerId && hasContactId) ||
+          (hasCustomerId && hasNameMatch) ||
+          (hasContactId && hasNameMatch)
+        ) {
+          matchType = "multiple";
         }
 
         const groupId = `duplicate_${groups.length + 1}`;
@@ -116,11 +148,11 @@ export default function DuplicateDetectionTab() {
           leads: potentialDuplicates,
           matchType,
           matchValue,
-          severity: getMatchSeverity(potentialDuplicates, matchType)
+          severity: getMatchSeverity(potentialDuplicates, matchType),
         });
 
         // Mark all leads in this group as processed
-        potentialDuplicates.forEach(l => processedLeads.add(l.id));
+        potentialDuplicates.forEach((l) => processedLeads.add(l.id));
       }
     });
 
@@ -145,17 +177,21 @@ export default function DuplicateDetectionTab() {
 
     const total = duplicateGroups.length;
     const colors = {
-      high: '#EF4444',
-      medium: '#F59E0B',
-      low: '#10B981'
+      high: "#EF4444",
+      medium: "#F59E0B",
+      low: "#10B981",
     };
 
     return Object.entries(severityCounts).map(([severity, count]) => ({
-      name: severity === 'high' ? 'Yüksek Risk' : 
-            severity === 'medium' ? 'Orta Risk' : 'Düşük Risk',
+      name:
+        severity === "high"
+          ? "Yüksek Risk"
+          : severity === "medium"
+          ? "Orta Risk"
+          : "Düşük Risk",
       value: count,
       percentage: Math.round((count / total) * 100),
-      color: colors[severity as keyof typeof colors]
+      color: colors[severity as keyof typeof colors],
     }));
   }, [duplicateGroups]);
 
@@ -182,35 +218,47 @@ export default function DuplicateDetectionTab() {
   };
 
   // Get match type display info
-  const getMatchTypeInfo = (matchType: DuplicateGroup['matchType']) => {
+  const getMatchTypeInfo = (matchType: DuplicateGroup["matchType"]) => {
     switch (matchType) {
-      case 'customer_id':
-        return { label: 'Müşteri ID', icon: '🆔', color: 'text-red-600' };
-      case 'contact_id':
-        return { label: 'İletişim ID', icon: '📞', color: 'text-orange-600' };
-      case 'name':
-        return { label: 'İsim Benzerliği', icon: '👤', color: 'text-blue-600' };
-      case 'multiple':
-        return { label: 'Çoklu Eşleşme', icon: '🔗', color: 'text-purple-600' };
+      case "customer_id":
+        return { label: "Müşteri ID", icon: "🆔", color: "text-red-600" };
+      case "contact_id":
+        return { label: "İletişim ID", icon: "📞", color: "text-orange-600" };
+      case "name":
+        return { label: "İsim Benzerliği", icon: "👤", color: "text-blue-600" };
+      case "multiple":
+        return { label: "Çoklu Eşleşme", icon: "🔗", color: "text-purple-600" };
     }
   };
 
   // Get severity display info
-  const getSeverityInfo = (severity: DuplicateGroup['severity']) => {
+  const getSeverityInfo = (severity: DuplicateGroup["severity"]) => {
     switch (severity) {
-      case 'high':
-        return { label: 'Yüksek Risk', color: 'bg-red-100 text-red-800 border-red-200', icon: '🚨' };
-      case 'medium':
-        return { label: 'Orta Risk', color: 'bg-orange-100 text-orange-800 border-orange-200', icon: '⚠️' };
-      case 'low':
-        return { label: 'Düşük Risk', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: '📋' };
+      case "high":
+        return {
+          label: "Yüksek Risk",
+          color: "bg-red-100 text-red-800 border-red-200",
+          icon: "🚨",
+        };
+      case "medium":
+        return {
+          label: "Orta Risk",
+          color: "bg-orange-100 text-orange-800 border-orange-200",
+          icon: "⚠️",
+        };
+      case "low":
+        return {
+          label: "Düşük Risk",
+          color: "bg-yellow-100 text-yellow-800 border-yellow-200",
+          icon: "📋",
+        };
     }
   };
 
   const chartTypeOptions = [
-    { value: 'pie' as const, label: 'Pasta Grafik', icon: '🥧' },
-    { value: 'bar' as const, label: 'Sütun Grafik', icon: '📊' },
-    { value: 'line' as const, label: 'Çizgi Grafik', icon: '📈' }
+    { value: "pie" as const, label: "Pasta Grafik", icon: "🥧" },
+    { value: "bar" as const, label: "Sütun Grafik", icon: "📊" },
+    { value: "line" as const, label: "Çizgi Grafik", icon: "📈" },
   ];
 
   if (isLoading) {
@@ -236,20 +284,21 @@ export default function DuplicateDetectionTab() {
               🔍 Duplicate Analizi
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Müşteri ID, İletişim ID ve isim benzerliği ile otomatik duplicate tespit
+              Müşteri ID, İletişim ID ve isim benzerliği ile otomatik duplicate
+              tespit
             </p>
           </div>
-          
+
           {/* Chart Type Selector */}
           <div className="flex space-x-2">
-            {chartTypeOptions.map(option => (
+            {chartTypeOptions.map((option) => (
               <button
                 key={option.value}
                 onClick={() => setChartType(option.value)}
                 className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   chartType === option.value
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                    ? "bg-blue-500 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                 }`}
               >
                 {option.icon} {option.label}
@@ -257,19 +306,31 @@ export default function DuplicateDetectionTab() {
             ))}
           </div>
         </div>
-        
+
         {/* Action Buttons */}
         {selectedLeads.size > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-red-600 border-red-200 hover:bg-red-50"
+            >
               <Trash2 className="w-4 h-4 mr-2" />
               Seçili Leadleri Sil ({selectedLeads.size})
             </Button>
-            <Button variant="outline" size="sm" className="text-blue-600 border-blue-200 hover:bg-blue-50">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-blue-600 border-blue-200 hover:bg-blue-50"
+            >
               <Eye className="w-4 h-4 mr-2" />
               Detaylı İncele
             </Button>
-            <Button variant="outline" size="sm" className="text-green-600 border-green-200 hover:bg-green-50">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-green-600 border-green-200 hover:bg-green-50"
+            >
               <CheckCircle className="w-4 h-4 mr-2" />
               Duplicate Değil Olarak İşaretle
             </Button>
@@ -285,49 +346,72 @@ export default function DuplicateDetectionTab() {
               <Copy className="h-6 w-6 text-white" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Duplicate Grup</p>
-              <p className="text-2xl font-bold text-red-600 dark:text-red-400">{duplicateGroups.length}</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Duplicate Grup
+              </p>
+              <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+                {duplicateGroups.length}
+              </p>
             </div>
           </div>
         </Card>
-        
+
         <Card className="p-4 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20">
           <div className="flex items-center">
             <div className="p-2 bg-orange-500 rounded-lg">
               <Users className="h-6 w-6 text-white" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Etkilenen Lead</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Etkilenen Lead
+              </p>
               <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                {duplicateGroups.reduce((sum, group) => sum + group.leads.length, 0)}
+                {duplicateGroups.reduce(
+                  (sum, group) => sum + group.leads.length,
+                  0
+                )}
               </p>
             </div>
           </div>
         </Card>
-        
+
         <Card className="p-4 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
           <div className="flex items-center">
             <div className="p-2 bg-purple-500 rounded-lg">
               <AlertTriangle className="h-6 w-6 text-white" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Yüksek Risk</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Yüksek Risk
+              </p>
               <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                {duplicateGroups.filter(g => g.severity === 'high').length}
+                {duplicateGroups.filter((g) => g.severity === "high").length}
               </p>
             </div>
           </div>
         </Card>
-        
+
         <Card className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
           <div className="flex items-center">
             <div className="p-2 bg-blue-500 rounded-lg">
               <CheckCircle className="h-6 w-6 text-white" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Duplicate Oranı</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Duplicate Oranı
+              </p>
               <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {leads.length > 0 ? Math.round((duplicateGroups.reduce((sum, group) => sum + group.leads.length, 0) / leads.length) * 100) : 0}%
+                {leads.length > 0
+                  ? Math.round(
+                      (duplicateGroups.reduce(
+                        (sum, group) => sum + group.leads.length,
+                        0
+                      ) /
+                        leads.length) *
+                        100
+                    )
+                  : 0}
+                %
               </p>
             </div>
           </div>
@@ -345,7 +429,7 @@ export default function DuplicateDetectionTab() {
               Duplicate gruplarının risk seviyelerine göre dağılımı
             </p>
           </div>
-          <InteractiveChart 
+          <StandardChart
             title=""
             data={duplicateChartData}
             height={300}
@@ -356,15 +440,18 @@ export default function DuplicateDetectionTab() {
 
       {/* Duplicate Groups */}
       <div className="space-y-4">
-        {duplicateGroups.map(group => {
+        {duplicateGroups.map((group) => {
           const matchTypeInfo = getMatchTypeInfo(group.matchType);
           const severityInfo = getSeverityInfo(group.severity);
           const isExpanded = expandedGroups.has(group.id);
 
           return (
-            <Card key={group.id} className="shadow-lg border-2 border-gray-100 dark:border-gray-800">
+            <Card
+              key={group.id}
+              className="shadow-lg border-2 border-gray-100 dark:border-gray-800"
+            >
               <Collapsible>
-                <CollapsibleTrigger 
+                <CollapsibleTrigger
                   className="w-full"
                   onClick={() => toggleGroup(group.id)}
                 >
@@ -372,33 +459,42 @@ export default function DuplicateDetectionTab() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         <div className="flex items-center space-x-2">
-                          <ChevronDown className={`w-5 h-5 transition-transform ${isExpanded ? 'transform rotate-180' : ''}`} />
+                          <ChevronDown
+                            className={`w-5 h-5 transition-transform ${
+                              isExpanded ? "transform rotate-180" : ""
+                            }`}
+                          />
                           <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                            Duplicate Grup #{group.id.split('_')[1]}
+                            Duplicate Grup #{group.id.split("_")[1]}
                           </span>
                         </div>
-                        
+
                         <Badge className={severityInfo.color}>
                           {severityInfo.icon} {severityInfo.label}
                         </Badge>
-                        
-                        <Badge variant="outline" className={matchTypeInfo.color}>
+
+                        <Badge
+                          variant="outline"
+                          className={matchTypeInfo.color}
+                        >
                           {matchTypeInfo.icon} {matchTypeInfo.label}
                         </Badge>
                       </div>
-                      
+
                       <div className="flex items-center space-x-2">
                         <span className="text-sm text-gray-600 dark:text-gray-400">
                           {group.leads.length} lead
                         </span>
                         <Badge variant="secondary">
-                          {group.matchValue.length > 30 ? group.matchValue.substring(0, 30) + '...' : group.matchValue}
+                          {group.matchValue.length > 30
+                            ? group.matchValue.substring(0, 30) + "..."
+                            : group.matchValue}
                         </Badge>
                       </div>
                     </div>
                   </CardHeader>
                 </CollapsibleTrigger>
-                
+
                 <CollapsibleContent>
                   <CardContent className="pt-0">
                     <div className="overflow-x-auto">
@@ -406,61 +502,97 @@ export default function DuplicateDetectionTab() {
                         <thead className="bg-gray-50 dark:bg-gray-800">
                           <tr className="border-b border-gray-200 dark:border-gray-700">
                             <th className="text-left p-3">
-                              <input 
-                                type="checkbox" 
+                              <input
+                                type="checkbox"
                                 className="rounded"
                                 onChange={(e) => {
                                   if (e.target.checked) {
                                     const newSelected = new Set(selectedLeads);
-                                    group.leads.forEach(lead => newSelected.add(lead.id));
+                                    group.leads.forEach((lead) =>
+                                      newSelected.add(lead.id)
+                                    );
                                     setSelectedLeads(newSelected);
                                   } else {
                                     const newSelected = new Set(selectedLeads);
-                                    group.leads.forEach(lead => newSelected.delete(lead.id));
+                                    group.leads.forEach((lead) =>
+                                      newSelected.delete(lead.id)
+                                    );
                                     setSelectedLeads(newSelected);
                                   }
                                 }}
                               />
                             </th>
-                            <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">Müşteri</th>
-                            <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">Müşteri ID</th>
-                            <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">İletişim ID</th>
-                            <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">Personel</th>
-                            <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">Durum</th>
-                            <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">Tarih</th>
-                            <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">Proje</th>
+                            <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
+                              Müşteri
+                            </th>
+                            <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
+                              Müşteri ID
+                            </th>
+                            <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
+                              İletişim ID
+                            </th>
+                            <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
+                              Personel
+                            </th>
+                            <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
+                              Durum
+                            </th>
+                            <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
+                              Tarih
+                            </th>
+                            <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
+                              Proje
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
                           {group.leads.map((lead, index) => (
-                            <tr 
-                              key={lead.id} 
+                            <tr
+                              key={lead.id}
                               className={`border-b border-gray-100 dark:border-gray-800 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 ${
-                                index % 2 === 0 ? 'bg-gray-50 dark:bg-gray-800/50' : 'bg-white dark:bg-gray-900'
-                              } ${selectedLeads.has(lead.id) ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                                index % 2 === 0
+                                  ? "bg-gray-50 dark:bg-gray-800/50"
+                                  : "bg-white dark:bg-gray-900"
+                              } ${
+                                selectedLeads.has(lead.id)
+                                  ? "bg-blue-50 dark:bg-blue-900/20"
+                                  : ""
+                              }`}
                             >
                               <td className="p-3">
-                                <input 
+                                <input
                                   type="checkbox"
                                   className="rounded"
                                   checked={selectedLeads.has(lead.id)}
                                   onChange={() => toggleLeadSelection(lead.id)}
                                 />
                               </td>
-                              <td className="p-3 font-medium text-gray-900 dark:text-gray-100">{lead.customerName}</td>
-                              <td className="p-3 text-gray-700 dark:text-gray-300 font-mono text-sm">{lead.customerId || '-'}</td>
-                              <td className="p-3 text-gray-700 dark:text-gray-300 font-mono text-sm">{lead.contactId || '-'}</td>
-                              <td className="p-3 text-gray-700 dark:text-gray-300">{lead.assignedPersonnel}</td>
+                              <td className="p-3 font-medium text-gray-900 dark:text-gray-100">
+                                {lead.customerName}
+                              </td>
+                              <td className="p-3 text-gray-700 dark:text-gray-300 font-mono text-sm">
+                                {lead.customerId || "-"}
+                              </td>
+                              <td className="p-3 text-gray-700 dark:text-gray-300 font-mono text-sm">
+                                {lead.contactId || "-"}
+                              </td>
+                              <td className="p-3 text-gray-700 dark:text-gray-300">
+                                {lead.assignedPersonnel}
+                              </td>
                               <td className="p-3">
                                 <Badge variant="outline" className="text-xs">
                                   {lead.status}
                                 </Badge>
                               </td>
                               <td className="p-3 text-gray-700 dark:text-gray-300 text-sm">
-                                {lead.requestDate ? new Date(lead.requestDate).toLocaleDateString('tr-TR') : '-'}
+                                {lead.requestDate
+                                  ? new Date(
+                                      lead.requestDate
+                                    ).toLocaleDateString("tr-TR")
+                                  : "-"}
                               </td>
                               <td className="p-3 text-gray-700 dark:text-gray-300 text-sm max-w-xs truncate">
-                                {lead.projectName || '-'}
+                                {lead.projectName || "-"}
                               </td>
                             </tr>
                           ))}
@@ -486,7 +618,8 @@ export default function DuplicateDetectionTab() {
               Duplicate Lead Bulunamadı
             </h3>
             <p className="text-gray-600 dark:text-gray-400">
-              Müşteri ID, İletişim ID ve isim benzerliği kontrolünde duplicate lead tespit edilmedi.
+              Müşteri ID, İletişim ID ve isim benzerliği kontrolünde duplicate
+              lead tespit edilmedi.
             </p>
           </div>
         </Card>

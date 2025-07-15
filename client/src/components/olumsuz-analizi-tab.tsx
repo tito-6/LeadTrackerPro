@@ -44,6 +44,7 @@ import {
   Phone,
   Filter,
   X,
+  Building,
 } from "lucide-react";
 import { MasterDataTable } from "@/components/ui/master-data-table";
 import { DataTable } from "@/components/ui/data-table";
@@ -55,6 +56,7 @@ import {
   getPersonnelColor,
   getStatusColor,
 } from "@/lib/color-system";
+import ProjectFilter from "./project-filter";
 
 interface NegativeAnalysisData {
   totalNegative: number;
@@ -83,6 +85,7 @@ export default function OlumsuzAnaliziTab() {
     month: "",
     year: "",
   });
+  const [selectedProject, setSelectedProject] = useState<string>("all");
 
   // Chart type options matching the takipte-analizi design
   const chartTypeOptions = [
@@ -101,6 +104,9 @@ export default function OlumsuzAnaliziTab() {
     salesRep: "",
     status: "",
   });
+
+  // Add project to universalFilters
+  const filters = { ...universalFilters, project: selectedProject };
 
   // Fetch negative analysis data
   const { data: negativeAnalysis, isLoading } = useQuery<NegativeAnalysisData>({
@@ -133,7 +139,7 @@ export default function OlumsuzAnaliziTab() {
 
   // Filter negative leads based on selections - use same logic as NegativeReasonsSummaryTable
   const filteredNegativeLeads = useMemo(() => {
-    return leadsData.filter((lead) => {
+    return leadsData.filter((lead: any) => {
       // Match exactly how server and summary table filter olumsuz leads
       const isNegativeLead =
         lead.status?.includes("Olumsuz") ||
@@ -172,25 +178,25 @@ export default function OlumsuzAnaliziTab() {
   const uniquePersonnel = useMemo(() => {
     const personnel = leadsData
       .filter(
-        (lead) =>
+        (lead: any) =>
           lead.status?.includes("Olumsuz") ||
           lead.status?.toLowerCase().includes("olumsuz")
       )
-      .map((lead) => lead.assignedPersonnel)
+      .map((lead: any) => lead.assignedPersonnel)
       .filter(Boolean);
-    return [...new Set(personnel)];
+    return Array.from(new Set(personnel)) as string[];
   }, [leadsData]);
 
   const uniqueReasons = useMemo(() => {
     const negativeLeads = leadsData.filter(
-      (lead) =>
+      (lead: any) =>
         lead.status?.includes("Olumsuz") ||
         lead.status?.toLowerCase().includes("olumsuz")
     );
 
     // More comprehensive reason extraction - check multiple fields
     const reasons = negativeLeads
-      .map((lead) => {
+      .map((lead: any) => {
         // Priority: negativeReason -> lastMeetingNote -> responseResult -> status
         if (lead.negativeReason && lead.negativeReason.trim() !== "") {
           return lead.negativeReason.trim();
@@ -205,7 +211,7 @@ export default function OlumsuzAnaliziTab() {
       })
       .filter(Boolean);
 
-    return [...new Set(reasons)];
+    return Array.from(new Set(reasons)) as string[];
   }, [leadsData]);
 
   // Optimize reason display for "all" view - limit to top 10 reasons
@@ -266,7 +272,10 @@ export default function OlumsuzAnaliziTab() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              <Select value={viewMode} onValueChange={setViewMode}>
+              <Select
+                value={viewMode}
+                onValueChange={(v) => setViewMode(v as "summary" | "detailed")}
+              >
                 <SelectTrigger className="w-32">
                   <SelectValue />
                 </SelectTrigger>
@@ -300,10 +309,39 @@ export default function OlumsuzAnaliziTab() {
               initialFilters={dateFilters}
             />
             <Select
+              value={universalFilters.projectName}
+              onValueChange={(value) =>
+                setUniversalFilters({
+                  ...universalFilters,
+                  projectName: value,
+                })
+              }
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Proje Seçin" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all-projects">Tüm Projeler</SelectItem>
+                {(
+                  Array.from(
+                    new Set(
+                      filteredNegativeLeads
+                        .map((lead: any) => lead.projectName)
+                        .filter(Boolean)
+                    )
+                  ) as string[]
+                ).map((project) => (
+                  <SelectItem key={project} value={project}>
+                    {project}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
               value={selectedPersonnel}
               onValueChange={setSelectedPersonnel}
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-9">
                 <SelectValue placeholder="Personel Seçin" />
               </SelectTrigger>
               <SelectContent>
@@ -316,12 +354,12 @@ export default function OlumsuzAnaliziTab() {
               </SelectContent>
             </Select>
             <Select value={selectedReason} onValueChange={setSelectedReason}>
-              <SelectTrigger>
+              <SelectTrigger className="h-9">
                 <SelectValue placeholder="Neden Seçin" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tüm Nedenler</SelectItem>
-                {uniqueReasons.map((reason) => (
+                {uniqueReasons.map((reason: string) => (
                   <SelectItem key={reason} value={reason}>
                     {reason.length > 30
                       ? reason.substring(0, 30) + "..."
@@ -333,19 +371,6 @@ export default function OlumsuzAnaliziTab() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Universal Filters */}
-      <UniversalFilter
-        onFilterChange={setUniversalFilters}
-        initialFilters={universalFilters}
-        availableProjects={[]}
-        availableSalesReps={uniquePersonnel}
-        availableStatuses={[]}
-        showProjectFilter={true}
-        showSalesRepFilter={true}
-        showStatusFilter={false}
-        showLeadTypeFilter={true}
-      />
 
       {/* Summary Statistics */}
       {negativeAnalysis && (
@@ -686,7 +711,7 @@ export default function OlumsuzAnaliziTab() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Tüm Nedenler</SelectItem>
-                        {uniqueReasons.map((reason) => (
+                        {uniqueReasons.map((reason: string) => (
                           <SelectItem key={reason} value={reason}>
                             {reason.length > 30
                               ? reason.substring(0, 30) + "..."
@@ -715,13 +740,15 @@ export default function OlumsuzAnaliziTab() {
                         <SelectItem value="all-projects">
                           Tüm Projeler
                         </SelectItem>
-                        {[
-                          ...new Set(
-                            filteredNegativeLeads
-                              .map((lead) => lead.projectName)
-                              .filter(Boolean)
-                          ),
-                        ].map((project) => (
+                        {(
+                          Array.from(
+                            new Set(
+                              filteredNegativeLeads
+                                .map((lead: any) => lead.projectName)
+                                .filter(Boolean)
+                            )
+                          ) as string[]
+                        ).map((project) => (
                           <SelectItem key={project} value={project}>
                             {project}
                           </SelectItem>
@@ -765,13 +792,13 @@ export default function OlumsuzAnaliziTab() {
                   </Badge>
                   <Badge variant="secondary">
                     {
-                      [
-                        ...new Set(
+                      Array.from(
+                        new Set(
                           filteredNegativeLeads
-                            .map((lead) => lead.projectName)
+                            .map((lead: any) => lead.projectName)
                             .filter(Boolean)
-                        ),
-                      ].length
+                        )
+                      ).length
                     }{" "}
                     proje
                   </Badge>
@@ -803,34 +830,47 @@ export default function OlumsuzAnaliziTab() {
               {filteredNegativeLeads.length > 0 ? (
                 <MasterDataTable
                   title="Olumsuz Lead Detayları"
-                  data={filteredNegativeLeads}
+                  data={filteredNegativeLeads.map((lead: any) => ({
+                    customerName: lead.customerName,
+                    effectiveReason: (() => {
+                      if (
+                        lead.negativeReason &&
+                        lead.negativeReason.trim() !== ""
+                      ) {
+                        return lead.negativeReason.trim();
+                      }
+                      if (
+                        lead.lastMeetingNote &&
+                        lead.lastMeetingNote.trim() !== ""
+                      ) {
+                        return lead.lastMeetingNote.trim();
+                      }
+                      if (
+                        lead.responseResult &&
+                        lead.responseResult.trim() !== ""
+                      ) {
+                        return lead.responseResult.trim();
+                      }
+                      return lead.status || "Belirtilmemiş";
+                    })(),
+                    assignedPersonnel: lead.assignedPersonnel,
+                    projectName: lead.projectName,
+                    leadType: lead.leadType,
+                    requestDate: lead.requestDate,
+                    status: lead.status,
+                    lastMeetingNote: lead.lastMeetingNote,
+                    responseResult: lead.responseResult,
+                    firstCustomerSource: lead.firstCustomerSource,
+                    formCustomerSource: lead.formCustomerSource,
+                    customerId: lead.customerId,
+                    contactId: lead.contactId,
+                  }))}
                   columns={[
                     { key: "customerName", label: "Müşteri Adı", type: "text" },
                     {
                       key: "effectiveReason",
                       label: "Olumsuzluk Nedeni",
                       type: "badge",
-                      render: (lead) => {
-                        if (
-                          lead.negativeReason &&
-                          lead.negativeReason.trim() !== ""
-                        ) {
-                          return lead.negativeReason.trim();
-                        }
-                        if (
-                          lead.lastMeetingNote &&
-                          lead.lastMeetingNote.trim() !== ""
-                        ) {
-                          return lead.lastMeetingNote.trim();
-                        }
-                        if (
-                          lead.responseResult &&
-                          lead.responseResult.trim() !== ""
-                        ) {
-                          return lead.responseResult.trim();
-                        }
-                        return lead.status || "Belirtilmemiş";
-                      },
                     },
                     {
                       key: "assignedPersonnel",

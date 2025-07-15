@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Dashboard from "@/pages/dashboard";
 import NotFound from "@/pages/not-found";
 import ChatDrawer from "@/components/ChatDrawer";
+import { FilterProvider } from "@/contexts/filter-context";
 
 function Router() {
   return (
@@ -19,11 +20,13 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-        <ChatDrawer />
-      </TooltipProvider>
+      <FilterProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+          <ChatDrawer />
+        </TooltipProvider>
+      </FilterProvider>
     </QueryClientProvider>
   );
 }

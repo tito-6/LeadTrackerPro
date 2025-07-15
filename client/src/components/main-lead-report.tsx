@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import { LeadExpense } from "@shared/schema";
 import DateFilter from "@/components/ui/date-filter";
+import ProjectFilter from "@/components/project-filter";
+import { filterLeadsByProject } from "@/lib/project-detector";
 
 interface ExpenseStats {
   leadCount: number;
@@ -59,15 +61,43 @@ export default function MainLeadReport() {
     year: "",
   });
 
+  // Add project filter state
+  const [projectFilter, setProjectFilter] = useState<string>("all");
+
+  // Fetch all leads for robust project filtering
+  const { data: allLeads = [], isLoading: leadsLoading } = useQuery({
+    queryKey: ["/api/leads", dateFilters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      Object.entries(dateFilters).forEach(([key, value]) => {
+        if (value) params.append(key, value);
+      });
+      const response = await fetch(`/api/leads?${params.toString()}`);
+      return response.json();
+    },
+  });
+
+  // Apply robust project filtering to allLeads
+  const filteredLeads = filterLeadsByProject(allLeads, projectFilter);
+
+  // Calculate leadCount and other metrics from filteredLeads
+  const leadCount = filteredLeads.length;
+
   // Fetch lead expense statistics with date filtering
   const { data: expenseStats, isLoading: expenseLoading } =
     useQuery<ExpenseStats>({
-      queryKey: ["/api/lead-expenses/stats", dateFilters],
+      queryKey: ["/api/lead-expenses/stats", dateFilters, projectFilter], // Add projectFilter to the query key
       queryFn: async () => {
         const params = new URLSearchParams();
         Object.entries(dateFilters).forEach(([key, value]) => {
           if (value) params.append(key, value);
         });
+
+        // Add project filter to API request if selected
+        if (projectFilter !== "all") {
+          params.append("project", projectFilter);
+        }
+
         const response = await fetch(
           `/api/lead-expenses/stats?${params.toString()}`
         );
@@ -78,12 +108,18 @@ export default function MainLeadReport() {
   // Fetch manual expenses from Manuel Gider Yönetimi with date filtering
   const { data: manualExpenses = [], isLoading: manualExpensesLoading } =
     useQuery<LeadExpense[]>({
-      queryKey: ["/api/lead-expenses", dateFilters],
+      queryKey: ["/api/lead-expenses", dateFilters, projectFilter],
       queryFn: async () => {
         const params = new URLSearchParams();
         Object.entries(dateFilters).forEach(([key, value]) => {
           if (value) params.append(key, value);
         });
+
+        // Add project filter to API request if selected
+        if (projectFilter !== "all") {
+          params.append("project", projectFilter);
+        }
+
         const response = await fetch(`/api/lead-expenses?${params.toString()}`);
         return response.json();
       },
@@ -94,6 +130,8 @@ export default function MainLeadReport() {
     useQuery<ExchangeRateInfo>({
       queryKey: ["/api/exchange-rate/usd"],
     });
+
+  // Projects are now fetched and handled by the ProjectFilter component
 
   if (expenseLoading || rateLoading || manualExpensesLoading) {
     return (
@@ -122,6 +160,8 @@ export default function MainLeadReport() {
   const manualExpensesUSD = exchangeRate
     ? manualExpensesTotals.total / exchangeRate.rate
     : 0;
+
+  // Expense stats are already filtered by project via the API call
 
   // Combined totals (automatic from leads + manual expenses)
   const combinedTotals = {
@@ -155,8 +195,38 @@ export default function MainLeadReport() {
     }).format(amount);
   };
 
+  // Project filtering is now handled by the ProjectFilter component
+
+  // Apply project filter to data
+  // const filterDataByProject = (data: any) => {
+  //   if (!data || projectFilter === "all") return data;
+
+  //   // For expenses, we'd need to link expenses to projects by their related lead data
+  //   // This is a simple implementation - you may need to adjust based on your data structure
+  //   return {
+  //     ...data,
+  //     leadCount: data.leadCount * 0.7, // Example: adjust this based on actual project filtering logic
+  //     expenses: {
+  //       tl: {
+  //         totalAgencyFees: data.expenses.tl.totalAgencyFees * 0.7,
+  //         totalAdsExpenses: data.expenses.tl.totalAdsExpenses * 0.7,
+  //         totalExpenses: data.expenses.tl.totalExpenses * 0.7
+  //       },
+  //       usd: {
+  //         totalExpenses: data.expenses.usd.totalExpenses * 0.7,
+  //         avgCostPerLead: data.expenses.usd.totalExpenses * 0.7 / (data.leadCount * 0.7)
+  //       }
+  //     }
+  //   };
+  // };
+
+  // Apply project filtering to the expense stats - remove this line as we'll place it above
+
   return (
     <div className="space-y-6">
+      {/* Project Filter */}
+      <ProjectFilter onProjectChange={setProjectFilter} />
+
       {/* Date Filter */}
       <Card>
         <CardHeader>
@@ -178,6 +248,15 @@ export default function MainLeadReport() {
         <p className="text-gray-600">
           Toplam lead maliyeti ve performans analizi
         </p>
+        {projectFilter !== "all" && (
+          <Badge
+            variant="outline"
+            className="mt-2 bg-blue-50 text-blue-700 border-blue-200 px-3 py-1"
+          >
+            <Building className="h-4 w-4 mr-1 inline-block" />
+            {projectFilter}
+          </Badge>
+        )}
       </div>
 
       {/* Exchange Rate Info */}
@@ -225,7 +304,7 @@ export default function MainLeadReport() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {expenseStats.leadCount.toLocaleString()}
+                {leadCount.toLocaleString()}
               </div>
               <p className="text-xs text-muted-foreground">
                 Sistemdeki toplam lead sayısı
@@ -404,7 +483,7 @@ export default function MainLeadReport() {
                       Performans Özeti
                     </h4>
                     <div className="text-xs text-blue-800 mt-1">
-                      <p>• Toplam {expenseStats?.leadCount || 0} lead için</p>
+                      <p>• Toplam {leadCount || 0} lead için</p>
                       <p>
                         • {formatCurrency(combinedTotals.usd.total, "USD")}{" "}
                         toplam maliyet

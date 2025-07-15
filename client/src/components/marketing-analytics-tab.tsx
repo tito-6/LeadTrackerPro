@@ -25,6 +25,7 @@ import {
   TableRow,
 } from "./ui/table";
 import { Badge } from "./ui/badge";
+import ProjectFilter from "./project-filter";
 
 interface MarketingAnalyticsTabProps {
   filters?: {
@@ -51,6 +52,9 @@ export function MarketingAnalyticsTab({
   const [selectedSalesRep, setSelectedSalesRep] = React.useState<string>(
     parentFilters?.salesRep || "all"
   );
+  const [selectedProject, setSelectedProject] = React.useState<string>(
+    parentFilters?.project || "all"
+  );
   const [filterType, setFilterType] = React.useState<"month" | "dateRange">(
     parentFilters?.month ? "month" : "dateRange"
   );
@@ -64,7 +68,7 @@ export function MarketingAnalyticsTab({
     },
   });
 
-  // Build the filter params
+  // Add selectedProject to query key and API params
   const filters = React.useMemo(() => {
     const params = new URLSearchParams();
 
@@ -77,8 +81,12 @@ export function MarketingAnalyticsTab({
       params.append("salesRep", selectedSalesRep);
     }
 
+    if (selectedProject !== "all") {
+      params.append("project", selectedProject);
+    }
+
     return params;
-  }, [filterType, month, year, selectedSalesRep]);
+  }, [filterType, month, year, selectedSalesRep, selectedProject]);
 
   // Fetch marketing analytics data
   const {
@@ -86,7 +94,7 @@ export function MarketingAnalyticsTab({
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["/api/marketing-analytics", filters.toString()],
+    queryKey: ["/api/marketing-analytics", filters.toString(), selectedProject],
     queryFn: async () => {
       const response = await fetch(`/api/marketing-analytics?${filters}`);
       if (!response.ok) {
@@ -124,9 +132,10 @@ export function MarketingAnalyticsTab({
     );
   }
 
-  return (
+  const content = (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <ProjectFilter value={selectedProject} onChange={setSelectedProject} />
         <Tabs
           value={filterType}
           onValueChange={(v) => setFilterType(v as "month" | "dateRange")}
@@ -302,4 +311,8 @@ export function MarketingAnalyticsTab({
       )}
     </div>
   );
+
+  return <div>{content}</div>;
 }
+
+export default MarketingAnalyticsTab;
