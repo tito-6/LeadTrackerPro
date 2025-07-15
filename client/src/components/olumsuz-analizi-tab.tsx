@@ -31,6 +31,8 @@ import {
   PieChart,
   Pie,
   Cell,
+  LineChart,
+  Line,
 } from "recharts";
 import {
   AlertCircle,
@@ -73,7 +75,7 @@ interface NegativeAnalysisData {
 export default function OlumsuzAnaliziTab() {
   const [selectedPersonnel, setSelectedPersonnel] = useState<string>("all");
   const [selectedReason, setSelectedReason] = useState<string>("all");
-  const [chartType, setChartType] = useState<"pie" | "bar">("bar");
+  const [chartType, setChartType] = useState<"pie" | "bar" | "line">("bar");
   const [viewMode, setViewMode] = useState<"summary" | "detailed">("summary");
   const [dateFilters, setDateFilters] = useState({
     startDate: "",
@@ -81,6 +83,13 @@ export default function OlumsuzAnaliziTab() {
     month: "",
     year: "",
   });
+
+  // Chart type options matching the takipte-analizi design
+  const chartTypeOptions = [
+    { value: "pie" as const, label: "Pasta Grafik", icon: "🥧" },
+    { value: "bar" as const, label: "Sütun Grafik", icon: "📊" },
+    { value: "line" as const, label: "Çizgi Grafik", icon: "📈" },
+  ];
 
   const [universalFilters, setUniversalFilters] = useState<UniversalFilters>({
     startDate: "",
@@ -266,15 +275,21 @@ export default function OlumsuzAnaliziTab() {
                   <SelectItem value="detailed">Detaylı</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={chartType} onValueChange={setChartType}>
-                <SelectTrigger className="w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bar">Bar</SelectItem>
-                  <SelectItem value="pie">Pie</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                {chartTypeOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setChartType(option.value)}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      chartType === option.value
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                    }`}
+                  >
+                    {option.icon} {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -468,7 +483,7 @@ export default function OlumsuzAnaliziTab() {
                               <Cell
                                 key={`cell-${index}`}
                                 fill={getStandardColor(
-                                  "NEGATIVE",
+                                  "STATUS",
                                   entry.fullReason
                                 )}
                               />
@@ -481,6 +496,36 @@ export default function OlumsuzAnaliziTab() {
                             ]}
                           />
                         </PieChart>
+                      ) : chartType === "line" ? (
+                        <LineChart data={optimizedReasonData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis
+                            dataKey="name"
+                            angle={-45}
+                            textAnchor="end"
+                            height={100}
+                            interval={0}
+                          />
+                          <YAxis />
+                          <Tooltip
+                            formatter={(value, name, props) => [
+                              `${value} lead`,
+                              props.payload.fullReason,
+                            ]}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="count"
+                            stroke="#ef4444"
+                            strokeWidth={3}
+                            dot={{ fill: "#ef4444", strokeWidth: 2, r: 6 }}
+                            activeDot={{
+                              r: 8,
+                              stroke: "#ef4444",
+                              strokeWidth: 2,
+                            }}
+                          />
+                        </LineChart>
                       ) : (
                         <BarChart data={optimizedReasonData}>
                           <CartesianGrid strokeDasharray="3 3" />

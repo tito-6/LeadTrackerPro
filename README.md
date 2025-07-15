@@ -5,29 +5,34 @@ A comprehensive **Real Estate Lead Management & Analytics System** built with mo
 ## 🚀 Features
 
 ### 📊 Advanced Analytics Dashboard
+
 - **Interactive Charts**: Real-time pie charts, bar charts, and trend analysis
 - **Lead Performance Metrics**: Comprehensive sales funnel analytics
 - **Negative Reasons Analysis**: Detailed chart showing most common rejection reasons
 - **Personnel Performance Tracking**: Individual salesperson analytics and KPIs
 
 ### 🎨 Dynamic Color System
+
 - **Customizable Color Themes**: Personalize colors for personnel, statuses, and categories
 - **Consistent Coloring**: Same personnel/status appears with same color across all tabs
 - **Real-time Updates**: Colors sync instantly across all components
 - **Smart Color Assignment**: Automatic color assignment for new data
 
 ### 🤖 AI Integration
+
 - **Local AI Assistant**: Ollama integration for lead analysis
 - **Smart Data Processing**: AI-powered insights and recommendations
 - **Natural Language Queries**: Ask questions about your lead data
 
 ### 📁 Data Management
+
 - **Excel/CSV Import**: Seamless data import with validation
 - **Export Capabilities**: Export filtered data to Excel/CSV
 - **Data Validation**: Automatic data cleaning and validation
 - **Real-time Filtering**: Advanced filtering and search capabilities
 
 ### 📱 Modern UI/UX
+
 - **Responsive Design**: Works on desktop, tablet, and mobile
 - **Dark/Light Themes**: Customizable appearance
 - **Interactive Components**: Hover effects, tooltips, and smooth animations
@@ -47,30 +52,52 @@ A comprehensive **Real Estate Lead Management & Analytics System** built with mo
 
 - Node.js 18 or higher
 - npm or yarn package manager
-- Git
 
-## 🔧 Installation
+## 🚀 Quick Start
 
 1. **Clone the repository**
+
    ```bash
-   git clone https://github.com/YOUR_USERNAME/LeadTrackerPro.git
+   git clone https://github.com/your-username/LeadTrackerPro.git
    cd LeadTrackerPro
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
-3. **Start the development server**
+3. **Start development server**
+
    ```bash
    npm run dev
    ```
 
-4. **Open your browser**
-   Navigate to `http://localhost:5173`
+4. **Open in browser**
+   - Navigate to `http://localhost:5000`
+   - The application runs on a single port serving both API and client
 
-## 🚀 Quick Start
+## 📖 Documentation
+
+- **[Local Development Guide](LOCAL_DEVELOPMENT.md)** - Complete setup and development guide
+- **[AI Features Guide](AI-USER-GUIDE.md)** - AI assistant setup and usage
+- **[Implementation Guide](AI-IMPLEMENTATION-COMPLETE.md)** - Technical implementation details
+
+## 🔧 Environment Configuration
+
+Copy `.env.example` to `.env` and configure as needed:
+
+```bash
+# Basic local development setup
+NODE_ENV=development
+STORAGE_TYPE=memory
+PORT=5000
+```
+
+The application works out-of-the-box with in-memory storage - no database setup required for local development!
+
+## � Quick Start Guide
 
 1. **Import Data**: Use the "Excel Girişi" tab to import your lead data
 2. **Customize Colors**: Go to Settings → Color Settings to personalize colors
@@ -94,6 +121,7 @@ A comprehensive **Real Estate Lead Management & Analytics System** built with mo
 ## 📊 Data Format
 
 The system accepts Excel/CSV files with the following columns:
+
 - Customer ID, Contact ID, Customer Name
 - Phone, Email, Lead Type, Customer Source
 - Office, Salesperson, Status, Meeting Type
@@ -102,12 +130,14 @@ The system accepts Excel/CSV files with the following columns:
 ## 🎨 Customization
 
 ### Color System
+
 - Navigate to Settings → Color Settings
 - Customize colors for personnel, statuses, and categories
 - Colors automatically sync across all components
 - Export/import color configurations
 
 ### AI Configuration
+
 - Local Ollama setup for privacy-focused AI
 - Configurable AI models and prompts
 - Real-time lead analysis and insights

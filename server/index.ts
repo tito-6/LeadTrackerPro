@@ -61,14 +61,19 @@ app.use((req, res, next) => {
   // It is the only port that is not firewalled.
   const port = 5000;
   const host = process.platform === "win32" ? "localhost" : "0.0.0.0";
-  server.listen(
-    {
-      port,
-      host,
-      reusePort: process.platform !== "win32",
-    },
-    () => {
-      log(`serving on port ${port} (${host})`);
-    }
-  );
+
+  if (server) {
+    server.listen(
+      {
+        port,
+        host,
+        reusePort: process.platform !== "win32",
+      },
+      () => {
+        log(`serving on port ${port} (${host})`);
+      }
+    );
+  } else {
+    log("Failed to create server, server is undefined");
+  }
 })();

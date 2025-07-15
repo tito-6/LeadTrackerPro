@@ -401,7 +401,7 @@ export default function UnifiedTakipteTab() {
       <div className="flex justify-between items-start">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">
-            📞 Unified Takip Analizi
+            Unified Takip Analizi
           </h2>
           <p className="text-gray-600 mt-1">
             Takipte analizi ve takip raporu birleşik görünümü

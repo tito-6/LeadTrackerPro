@@ -1416,7 +1416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ];
 
       const summaryWS = XLSX.utils.json_to_sheet(summaryData);
-      XLSX.utils.book_append_sheet(workbook, summaryWS, "Rapor Özeti");
+      XLSX.utils.book_append_sheet(wb, summaryWS, "Rapor Özeti");
 
       // Write the workbook to buffer
       const excelBuffer = XLSX.write(workbook, {
@@ -1441,24 +1441,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-
-  function getMonthName(month: number): string {
-    const months = [
-      "Ocak",
-      "Subat",
-      "Mart",
-      "Nisan",
-      "Mayis",
-      "Haziran",
-      "Temmuz",
-      "Agustos",
-      "Eylul",
-      "Ekim",
-      "Kasim",
-      "Aralik",
-    ];
-    return months[month - 1] || "Bilinmiyor";
-  }
 
   app.get("/api/export/json", async (req, res) => {
     try {
@@ -2171,11 +2153,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return acc;
           }, {} as Record<string, number>),
           byPersonnel: filteredTakipte.reduce((acc, item) => {
+            // Debug: Log available fields in the first record
+            if (Object.keys(acc).length === 0) {
+              console.log("Available takipte fields:", Object.keys(item));
+              console.log("Sample item:", JSON.stringify(item, null, 2));
+            }
+
+            // Try multiple possible field names for personnel
             const personnel =
-              item["Personel Adı(203)"] ||
-              item["Atanan Personel"] ||
+              item["Personel Adı(11,908)"] ||
+              item["Personel Adı"] ||
+              item["Personnel"] ||
+              item["personel"] ||
               "Belirtilmemiş";
-            acc[personnel] = (acc[personnel] || 0) + 1;
+
+            // Check "Son Sonuç Adı" for takipte status
+            const sonSonuc = item["Son Sonuç Adı"] || "";
+            const isTakipte =
+              sonSonuc.toLowerCase().includes("takipte") ||
+              sonSonuc.toLowerCase().includes("takide");
+
+            // Only count if it's a takipte record
+            if (isTakipte) {
+              const normalizedPersonnel = personnel.trim();
+              acc[normalizedPersonnel] = (acc[normalizedPersonnel] || 0) + 1;
+            }
             return acc;
           }, {} as Record<string, number>),
         },
@@ -2191,59 +2193,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // USD Exchange Rate API endpoints
-  app.get("/api/exchange-rate/usd", async (req, res) => {
-    try {
-      const rate = await usdExchangeService.getCurrentRate();
-      const fullRateInfo = await usdExchangeService.getUSDToTRYRate();
-
-      res.json({
-        rate: rate,
-        buyingRate: fullRateInfo.buyingRate,
-        sellingRate: fullRateInfo.sellingRate,
-        lastUpdated: fullRateInfo.lastUpdated,
-        source: "Turkey Central Bank (TCMB)",
-      });
-    } catch (error) {
-      console.error("Error fetching USD exchange rate:", error);
-      res.status(500).json({
-        message: "Failed to fetch exchange rate",
-        error: (error as Error).message,
-      });
-    }
-  });
-
-  // Convert TL to USD endpoint
-  app.post("/api/exchange-rate/convert-tl-to-usd", async (req, res) => {
-    try {
-      const { tlAmount } = req.body;
-
-      if (!tlAmount || isNaN(parseFloat(tlAmount))) {
-        return res.status(400).json({ error: "Valid TL amount is required" });
-      }
-
-      const usdAmount = await usdExchangeService.convertTLToUSD(
-        parseFloat(tlAmount)
-      );
-      const currentRate = await usdExchangeService.getCurrentRate();
-
-      res.json({
-        tlAmount: parseFloat(tlAmount),
-        usdAmount: Math.round(usdAmount * 100) / 100, // Round to 2 decimal places
-        exchangeRate: currentRate,
-        convertedAt: new Date().toISOString(),
-      });
-    } catch (error) {
-      console.error("Error converting TL to USD:", error);
-      res.status(500).json({
-        message: "Failed to convert currency",
-        error: (error as Error).message,
-      });
-    }
-  });
-
-  // Lead expenses statistics endpoint
-  app.get("/api/lead-expenses/stats", async (req, res) => {
+  // New endpoint for meetings analytics
+  app.get("/api/meeting-analytics", async (req, res) => {
     try {
       const { startDate, endDate, salesRep, leadType, month, year } = req.query;
 
@@ -2270,152 +2221,493 @@ export async function registerRoutes(app: Express): Promise<Server> {
         leadType: leadType as string,
       });
 
-      // Calculate total expenses in TL
-      let totalAgencyFees = 0;
-      let totalAdsExpenses = 0;
-      let leadCount = 0;
+      // Meeting analytics statistics
+      const totalLeads = leads.length;
+      let totalMeetings = 0;
+      let meetingsWithDates = 0;
+      const meetingsByPersonnel: Record<string, number> = {};
+      const meetingTimeDiffs: number[] = [];
+      let maxTimeDiff = 0;
+      let minTimeDiff = Infinity;
+      let totalTimeDiff = 0;
 
       leads.forEach((lead) => {
-        if (lead.agencyMonthlyFees) {
-          totalAgencyFees += parseFloat(lead.agencyMonthlyFees.toString());
+        const hasMeeting =
+          lead.oneOnOneMeeting?.toLowerCase() === "evet" ||
+          lead.oneOnOneMeeting?.toLowerCase() === "yes";
+
+        if (hasMeeting) {
+          totalMeetings++;
+          const personnel = lead.assignedPersonnel || "Belirtilmemiş";
+          meetingsByPersonnel[personnel] =
+            (meetingsByPersonnel[personnel] || 0) + 1;
+
+          // Calculate time difference if meeting date is available
+          if (lead.meetingDate && lead.requestDate) {
+            const meetingDate = new Date(lead.meetingDate);
+            const requestDate = new Date(lead.requestDate);
+
+            if (
+              !isNaN(meetingDate.getTime()) &&
+              !isNaN(requestDate.getTime())
+            ) {
+              meetingsWithDates++;
+              const timeDiff = Math.floor(
+                (meetingDate.getTime() - requestDate.getTime()) /
+                  (1000 * 60 * 60 * 24)
+              ); // days
+
+              if (timeDiff >= 0) {
+                // Only count positive differences (meeting after request)
+                meetingTimeDiffs.push(timeDiff);
+                totalTimeDiff += timeDiff;
+                maxTimeDiff = Math.max(maxTimeDiff, timeDiff);
+                minTimeDiff = Math.min(minTimeDiff, timeDiff);
+              }
+            }
+          }
         }
-        if (lead.adsExpenses) {
-          totalAdsExpenses += parseFloat(lead.adsExpenses.toString());
-        }
-        leadCount++;
       });
 
-      const totalExpensesTL = totalAgencyFees + totalAdsExpenses;
+      // Distribution of time to meeting
+      const timeRanges = {
+        "0-3 days": 0,
+        "4-7 days": 0,
+        "8-14 days": 0,
+        "15-30 days": 0,
+        "31+ days": 0,
+      };
 
-      // Convert to USD
-      const totalExpensesUSD = await usdExchangeService.convertTLToUSD(
-        totalExpensesTL
-      );
-      const avgCostPerLeadUSD =
-        leadCount > 0 ? totalExpensesUSD / leadCount : 0;
-      const currentRate = await usdExchangeService.getCurrentRate();
+      meetingTimeDiffs.forEach((days) => {
+        if (days <= 3) timeRanges["0-3 days"]++;
+        else if (days <= 7) timeRanges["4-7 days"]++;
+        else if (days <= 14) timeRanges["8-14 days"]++;
+        else if (days <= 30) timeRanges["15-30 days"]++;
+        else timeRanges["31+ days"]++;
+      });
+
+      const avgMeetingTime =
+        meetingsWithDates > 0
+          ? (totalTimeDiff / meetingsWithDates).toFixed(1)
+          : "0";
 
       res.json({
-        leadCount,
-        expenses: {
-          tl: {
-            totalAgencyFees: Math.round(totalAgencyFees * 100) / 100,
-            totalAdsExpenses: Math.round(totalAdsExpenses * 100) / 100,
-            totalExpenses: Math.round(totalExpensesTL * 100) / 100,
-          },
-          usd: {
-            totalExpenses: Math.round(totalExpensesUSD * 100) / 100,
-            avgCostPerLead: Math.round(avgCostPerLeadUSD * 100) / 100,
-          },
-        },
-        exchangeRate: {
-          rate: currentRate,
-          lastUpdated: new Date().toISOString(),
-        },
+        totalLeads,
+        totalMeetings,
+        meetingsPercentage:
+          totalLeads > 0 ? Math.round((totalMeetings / totalLeads) * 100) : 0,
+        avgDaysToMeeting: avgMeetingTime,
+        minDaysToMeeting: minTimeDiff === Infinity ? 0 : minTimeDiff,
+        maxDaysToMeeting: maxTimeDiff,
+        meetingsByPersonnel: Object.entries(meetingsByPersonnel)
+          .map(([personnel, count]) => ({
+            personnel,
+            count,
+            percentage:
+              totalMeetings > 0 ? Math.round((count / totalMeetings) * 100) : 0,
+          }))
+          .sort((a, b) => b.count - a.count),
+        meetingTimeDistribution: Object.entries(timeRanges).map(
+          ([range, count]) => ({
+            range,
+            count,
+            percentage:
+              meetingsWithDates > 0
+                ? Math.round((count / meetingsWithDates) * 100)
+                : 0,
+          })
+        ),
       });
     } catch (error) {
-      console.error("Error calculating lead expenses:", error);
+      console.error("Error calculating meeting analytics:", error);
       res.status(500).json({
-        message: "Failed to calculate lead expenses",
+        message: "Failed to calculate meeting analytics",
+        error: (error as Error).message,
+      });
+    }
+  });
+
+  // Target audience analytics endpoint
+  app.get("/api/target-audience-analytics", async (req, res) => {
+    try {
+      const { startDate, endDate, salesRep, leadType, month, year } = req.query;
+
+      // Enhanced filtering with automatic month logic
+      let finalStartDate = startDate as string;
+      let finalEndDate = endDate as string;
+
+      if (month && year) {
+        const monthNum = parseInt(month as string);
+        const yearNum = parseInt(year as string);
+        finalStartDate = `${yearNum}-${monthNum
+          .toString()
+          .padStart(2, "0")}-01`;
+        const lastDay = new Date(yearNum, monthNum, 0).getDate();
+        finalEndDate = `${yearNum}-${monthNum
+          .toString()
+          .padStart(2, "0")}-${lastDay}`;
+      }
+
+      const leads = await storage.getLeadsByFilter({
+        startDate: finalStartDate,
+        endDate: finalEndDate,
+        salesRep: salesRep as string,
+        leadType: leadType as string,
+      });
+
+      // Target audience analytics from infoFormLocation2
+      const audienceCounts: Record<string, number> = {};
+      const audienceSuccess: Record<
+        string,
+        { total: number; meetings: number; sales: number }
+      > = {};
+      let totalWithAudience = 0;
+
+      leads.forEach((lead) => {
+        const audience = lead.infoFormLocation2 || "Belirtilmemiş";
+        const hasMeeting =
+          lead.oneOnOneMeeting?.toLowerCase() === "evet" ||
+          lead.oneOnOneMeeting?.toLowerCase() === "yes";
+        const hasSale =
+          lead.wasSaleMade?.toLowerCase() === "evet" ||
+          lead.wasSaleMade?.toLowerCase() === "yes";
+
+        // Count by audience
+        audienceCounts[audience] = (audienceCounts[audience] || 0) + 1;
+
+        // Track success metrics by audience
+        if (!audienceSuccess[audience]) {
+          audienceSuccess[audience] = { total: 0, meetings: 0, sales: 0 };
+        }
+
+        audienceSuccess[audience].total++;
+        if (hasMeeting) audienceSuccess[audience].meetings++;
+        if (hasSale) audienceSuccess[audience].sales++;
+
+        if (audience !== "Belirtilmemiş") {
+          totalWithAudience++;
+        }
+      });
+
+      const audienceAnalysis = Object.entries(audienceCounts)
+        .map(([audience, count]) => ({
+          audience,
+          count,
+          percentage:
+            leads.length > 0 ? Math.round((count / leads.length) * 100) : 0,
+          meetingRate:
+            audienceSuccess[audience].total > 0
+              ? Math.round(
+                  (audienceSuccess[audience].meetings /
+                    audienceSuccess[audience].total) *
+                    100
+                )
+              : 0,
+          salesRate:
+            audienceSuccess[audience].total > 0
+              ? Math.round(
+                  (audienceSuccess[audience].sales /
+                    audienceSuccess[audience].total) *
+                    100
+                )
+              : 0,
+          meetings: audienceSuccess[audience].meetings,
+          sales: audienceSuccess[audience].sales,
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      res.json({
+        totalLeads: leads.length,
+        totalWithAudience,
+        audienceAnalysis,
+        audienceCoverage:
+          leads.length > 0
+            ? Math.round((totalWithAudience / leads.length) * 100)
+            : 0,
+      });
+    } catch (error) {
+      console.error("Error calculating target audience analytics:", error);
+      res.status(500).json({
+        message: "Failed to calculate target audience analytics",
+        error: (error as Error).message,
+      });
+    }
+  });
+
+  // Artwork analytics endpoint
+  app.get("/api/artwork-analytics", async (req, res) => {
+    try {
+      const { startDate, endDate, salesRep, leadType, month, year } = req.query;
+
+      // Enhanced filtering with automatic month logic
+      let finalStartDate = startDate as string;
+      let finalEndDate = endDate as string;
+
+      if (month && year) {
+        const monthNum = parseInt(month as string);
+        const yearNum = parseInt(year as string);
+        finalStartDate = `${yearNum}-${monthNum
+          .toString()
+          .padStart(2, "0")}-01`;
+        const lastDay = new Date(yearNum, monthNum, 0).getDate();
+        finalEndDate = `${yearNum}-${monthNum
+          .toString()
+          .padStart(2, "0")}-${lastDay}`;
+      }
+
+      const leads = await storage.getLeadsByFilter({
+        startDate: finalStartDate,
+        endDate: finalEndDate,
+        salesRep: salesRep as string,
+        leadType: leadType as string,
+      });
+
+      // Artwork analytics from infoFormLocation3
+      const artworkCounts: Record<string, number> = {};
+      const artworkSuccess: Record<
+        string,
+        { total: number; meetings: number; sales: number }
+      > = {};
+      let totalWithArtwork = 0;
+
+      leads.forEach((lead) => {
+        const artwork = lead.infoFormLocation3 || "Belirtilmemiş";
+        const hasMeeting =
+          lead.oneOnOneMeeting?.toLowerCase() === "evet" ||
+          lead.oneOnOneMeeting?.toLowerCase() === "yes";
+        const hasSale =
+          lead.wasSaleMade?.toLowerCase() === "evet" ||
+          lead.wasSaleMade?.toLowerCase() === "yes";
+
+        // Count by artwork
+        artworkCounts[artwork] = (artworkCounts[artwork] || 0) + 1;
+
+        // Track success metrics by artwork
+        if (!artworkSuccess[artwork]) {
+          artworkSuccess[artwork] = { total: 0, meetings: 0, sales: 0 };
+        }
+
+        artworkSuccess[artwork].total++;
+        if (hasMeeting) artworkSuccess[artwork].meetings++;
+        if (hasSale) artworkSuccess[artwork].sales++;
+
+        if (artwork !== "Belirtilmemiş") {
+          totalWithArtwork++;
+        }
+      });
+
+      const artworkAnalysis = Object.entries(artworkCounts)
+        .map(([artwork, count]) => ({
+          artwork,
+          count,
+          percentage:
+            leads.length > 0 ? Math.round((count / leads.length) * 100) : 0,
+          meetingRate:
+            artworkSuccess[artwork].total > 0
+              ? Math.round(
+                  (artworkSuccess[artwork].meetings /
+                    artworkSuccess[artwork].total) *
+                    100
+                )
+              : 0,
+          salesRate:
+            artworkSuccess[artwork].total > 0
+              ? Math.round(
+                  (artworkSuccess[artwork].sales /
+                    artworkSuccess[artwork].total) *
+                    100
+                )
+              : 0,
+          meetings: artworkSuccess[artwork].meetings,
+          sales: artworkSuccess[artwork].sales,
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      // Combined audience + artwork analysis
+      const combinedAnalysis: any[] = [];
+
+      leads.forEach((lead) => {
+        const audience = lead.infoFormLocation2 || "Belirtilmemiş";
+        const artwork = lead.infoFormLocation3 || "Belirtilmemiş";
+        const hasMeeting =
+          lead.oneOnOneMeeting?.toLowerCase() === "evet" ||
+          lead.oneOnOneMeeting?.toLowerCase() === "yes";
+        const hasSale =
+          lead.wasSaleMade?.toLowerCase() === "evet" ||
+          lead.wasSaleMade?.toLowerCase() === "yes";
+
+        const key = `${audience}|${artwork}`;
+
+        let found = combinedAnalysis.find((item) => item.key === key);
+        if (!found) {
+          found = {
+            key,
+            audience,
+            artwork,
+            count: 0,
+            meetings: 0,
+            sales: 0,
+          };
+          combinedAnalysis.push(found);
+        }
+
+        found.count++;
+        if (hasMeeting) found.meetings++;
+        if (hasSale) found.sales++;
+      });
+
+      // Calculate rates for combined analysis
+      combinedAnalysis.forEach((item) => {
+        item.meetingRate =
+          item.count > 0 ? Math.round((item.meetings / item.count) * 100) : 0;
+        item.salesRate =
+          item.count > 0 ? Math.round((item.sales / item.count) * 100) : 0;
+        item.percentage =
+          leads.length > 0 ? Math.round((item.count / leads.length) * 100) : 0;
+      });
+
+      // Sort by count descending
+      combinedAnalysis.sort((a, b) => b.count - a.count);
+
+      res.json({
+        totalLeads: leads.length,
+        totalWithArtwork,
+        artworkAnalysis,
+        combinedAnalysis: combinedAnalysis.slice(0, 20), // Limit to top 20 combinations
+        artworkCoverage:
+          leads.length > 0
+            ? Math.round((totalWithArtwork / leads.length) * 100)
+            : 0,
+      });
+    } catch (error) {
+      console.error("Error calculating artwork analytics:", error);
+      res.status(500).json({
+        message: "Failed to calculate artwork analytics",
+        error: (error as Error).message,
+      });
+    }
+  });
+
+  // Combined marketing analytics endpoint
+  app.get("/api/marketing-analytics", async (req, res) => {
+    try {
+      const { startDate, endDate, salesRep, leadType, month, year } = req.query;
+
+      // Enhanced filtering with automatic month logic
+      let finalStartDate = startDate as string;
+      let finalEndDate = endDate as string;
+
+      if (month && year) {
+        const monthNum = parseInt(month as string);
+        const yearNum = parseInt(year as string);
+        finalStartDate = `${yearNum}-${monthNum
+          .toString()
+          .padStart(2, "0")}-01`;
+        const lastDay = new Date(yearNum, monthNum, 0).getDate();
+        finalEndDate = `${yearNum}-${monthNum
+          .toString()
+          .padStart(2, "0")}-${lastDay}`;
+      }
+
+      const leads = await storage.getLeadsByFilter({
+        startDate: finalStartDate,
+        endDate: finalEndDate,
+        salesRep: salesRep as string,
+        leadType: leadType as string,
+      });
+
+      // Top performing combinations
+      const combinedPerformance: Record<
+        string,
+        {
+          audienceType: string;
+          artworkType: string;
+          total: number;
+          meetings: number;
+          meetingRate: number;
+          sales: number;
+          salesRate: number;
+        }
+      > = {};
+
+      leads.forEach((lead) => {
+        const audience = lead.infoFormLocation2 || "Belirtilmemiş";
+        const artwork = lead.infoFormLocation3 || "Belirtilmemiş";
+
+        if (audience === "Belirtilmemiş" && artwork === "Belirtilmemiş") {
+          return; // Skip entries with no marketing data
+        }
+
+        const key = `${audience}|${artwork}`;
+
+        if (!combinedPerformance[key]) {
+          combinedPerformance[key] = {
+            audienceType: audience,
+            artworkType: artwork,
+            total: 0,
+            meetings: 0,
+            meetingRate: 0,
+            sales: 0,
+            salesRate: 0,
+          };
+        }
+
+        combinedPerformance[key].total++;
+
+        if (
+          lead.oneOnOneMeeting?.toLowerCase() === "evet" ||
+          lead.oneOnOneMeeting?.toLowerCase() === "yes"
+        ) {
+          combinedPerformance[key].meetings++;
+        }
+
+        if (
+          lead.wasSaleMade?.toLowerCase() === "evet" ||
+          lead.wasSaleMade?.toLowerCase() === "yes"
+        ) {
+          combinedPerformance[key].sales++;
+        }
+      });
+
+      // Calculate rates and prepare final array
+      const marketingPerformance = Object.values(combinedPerformance)
+        .map((item) => {
+          if (item.total > 0) {
+            item.meetingRate = Math.round((item.meetings / item.total) * 100);
+            item.salesRate = Math.round((item.sales / item.total) * 100);
+          }
+          return item;
+        })
+        .filter((item) => item.total >= 5) // Only include combinations with at least 5 leads
+        .sort((a, b) => b.salesRate - a.salesRate);
+
+      res.json({
+        totalLeads: leads.length,
+        marketingPerformance,
+        topPerformingAudiences: marketingPerformance
+          .filter(
+            (v, i, a) =>
+              i === a.findIndex((t) => t.audienceType === v.audienceType)
+          )
+          .map((item) => ({ audienceType: item.audienceType }))
+          .slice(0, 5),
+        topPerformingArtworks: marketingPerformance
+          .filter(
+            (v, i, a) =>
+              i === a.findIndex((t) => t.artworkType === v.artworkType)
+          )
+          .map((item) => ({ artworkType: item.artworkType }))
+          .slice(0, 5),
+      });
+    } catch (error) {
+      console.error("Error calculating marketing analytics:", error);
+      res.status(500).json({
+        message: "Failed to calculate marketing analytics",
         error: (error as Error).message,
       });
     }
   });
 
   const httpServer = createServer(app);
-  // Lead Expenses CRUD API
-  app.get("/api/lead-expenses", async (req, res) => {
-    try {
-      const expenses = await storage.getLeadExpenses();
-      res.json(expenses);
-    } catch (error) {
-      console.error("Error fetching lead expenses:", error);
-      res.status(500).json({ error: "Failed to fetch lead expenses" });
-    }
-  });
-
-  app.get("/api/lead-expenses/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const expense = await storage.getLeadExpenseById(id);
-      if (!expense) {
-        return res.status(404).json({ error: "Lead expense not found" });
-      }
-      res.json(expense);
-    } catch (error) {
-      console.error("Error fetching lead expense:", error);
-      res.status(500).json({ error: "Failed to fetch lead expense" });
-    }
-  });
-
-  app.get("/api/lead-expenses/month/:month", async (req, res) => {
-    try {
-      const month = req.params.month;
-      const expenses = await storage.getLeadExpensesByMonth(month);
-      res.json(expenses);
-    } catch (error) {
-      console.error("Error fetching lead expenses by month:", error);
-      res.status(500).json({ error: "Failed to fetch lead expenses by month" });
-    }
-  });
-
-  app.post("/api/lead-expenses", async (req, res) => {
-    try {
-      const { insertLeadExpenseSchema } = await import("@shared/schema");
-      const expenseData = insertLeadExpenseSchema.parse(req.body);
-      const expense = await storage.createLeadExpense(expenseData);
-      res.status(201).json(expense);
-    } catch (error) {
-      console.error("Error creating lead expense:", error);
-      res
-        .status(400)
-        .json({ error: "Failed to create lead expense", details: error });
-    }
-  });
-
-  app.put("/api/lead-expenses/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const { insertLeadExpenseSchema } = await import("@shared/schema");
-      const expenseData = insertLeadExpenseSchema.partial().parse(req.body);
-      const expense = await storage.updateLeadExpense(id, expenseData);
-      if (!expense) {
-        return res.status(404).json({ error: "Lead expense not found" });
-      }
-      res.json(expense);
-    } catch (error) {
-      console.error("Error updating lead expense:", error);
-      res
-        .status(400)
-        .json({ error: "Failed to update lead expense", details: error });
-    }
-  });
-
-  app.delete("/api/lead-expenses/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const success = await storage.deleteLeadExpense(id);
-      if (!success) {
-        return res.status(404).json({ error: "Lead expense not found" });
-      }
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error deleting lead expense:", error);
-      res.status(500).json({ error: "Failed to delete lead expense" });
-    }
-  });
-
-  // AI Query endpoint
-  app.post("/api/ai/query", handleAIQuery);
-
-  // AI Test page (development only)
-  if (app.get("env") === "development") {
-    app.get("/ai-test", (req, res) => {
-      res.sendFile(
-        path.resolve(import.meta.dirname, "..", "client", "ai-test.html")
-      );
-    });
-  }
-
   return httpServer;
 }

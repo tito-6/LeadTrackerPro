@@ -231,10 +231,11 @@ export default function ColorSettingsSection() {
           </div>
 
           <Tabs defaultValue="personnel" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 lg:grid-cols-7">
+            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
               <TabsTrigger value="personnel">Personel</TabsTrigger>
               <TabsTrigger value="status">Durum</TabsTrigger>
               <TabsTrigger value="source">Kaynak</TabsTrigger>
+              <TabsTrigger value="project">Proje</TabsTrigger>
               <TabsTrigger value="office">Ofis</TabsTrigger>
               <TabsTrigger value="meeting">Görüşme</TabsTrigger>
               <TabsTrigger value="lead-type">Kriter</TabsTrigger>
@@ -251,6 +252,10 @@ export default function ColorSettingsSection() {
 
             <TabsContent value="source" className="mt-6">
               {renderColorPicker("CUSTOMER_SOURCE", "Müşteri Kaynak Renkleri")}
+            </TabsContent>
+
+            <TabsContent value="project" className="mt-6">
+              {renderColorPicker("PROJECT", "Proje Renkleri")}
             </TabsContent>
 
             <TabsContent value="office" className="mt-6">

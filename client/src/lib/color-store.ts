@@ -13,6 +13,7 @@ export interface ColorSettings {
   STATUS: ColorConfig;
   LEAD_TYPE: ColorConfig;
   CUSTOMER_SOURCE: ColorConfig;
+  PROJECT: ColorConfig;
   OFFICE: ColorConfig;
   MEETING_TYPE: ColorConfig;
   PRIORITY: ColorConfig;
@@ -34,6 +35,10 @@ export const DEFAULT_COLORS: ColorSettings = {
 
   CUSTOMER_SOURCE: {
     // No predefined sources - will be populated from imported data
+  },
+
+  PROJECT: {
+    // No predefined projects - will be populated from imported data
   },
 
   OFFICE: {
@@ -200,6 +205,10 @@ class ColorManager {
         CUSTOMER_SOURCE: this.generateColorsForSet(
           customerSourceSet,
           this.colors.CUSTOMER_SOURCE
+        ),
+        PROJECT: this.generateColorsForSet(
+          new Set(), // Will be populated from project names in data
+          this.colors.PROJECT
         ),
         OFFICE: this.generateColorsForSet(officeSet, this.colors.OFFICE),
         MEETING_TYPE: this.generateColorsForSet(
