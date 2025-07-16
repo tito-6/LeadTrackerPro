@@ -54,6 +54,14 @@ export function extractProjectsFromLeads(leads: any[]): string[] {
   return Array.from(projects);
 }
 
+// Add normalization helper
+function normalizeProjectName(name: string): string {
+  return (name || "")
+    .toLocaleLowerCase("tr-TR")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /**
  * Filter leads by project name
  * @param leads Array of lead records with WebForm Notu field
@@ -64,13 +72,14 @@ export function filterLeadsByProject(leads: any[], projectName: string): any[] {
   if (projectName === "all") {
     return leads;
   }
+  const normalizedProject = normalizeProjectName(projectName);
 
   return leads.filter((lead) => {
     // Check both projectName and detected project from WebForm Notu
-    const projectField = lead.projectName || lead["Proje"] || "";
+    const projectField = normalizeProjectName(lead.projectName || lead["Proje"] || "");
     const webFormNotu = lead.webFormNote || lead["WebForm Notu"] || "";
-    const detectedProject = detectProjectFromWebFormNotu(webFormNotu);
+    const detectedProject = normalizeProjectName(detectProjectFromWebFormNotu(webFormNotu) || "");
 
-    return projectField === projectName || detectedProject === projectName;
+    return projectField === normalizedProject || detectedProject === normalizedProject;
   });
 }

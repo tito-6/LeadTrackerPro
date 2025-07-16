@@ -234,91 +234,102 @@ export function TargetAudienceAnalyticsTab({
         </div>
       ) : (
         <>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Hedef Kitle Dağılımı</CardTitle>
-                <CardDescription>
-                  İnfo Form Geliş Yeri 2 alanında belirtilen hedef kitle
-                  dağılımı
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={audienceData?.audienceAnalysis.slice(0, 10) || []}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={true}
-                        outerRadius={100}
-                        fill="#8884d8"
-                        dataKey="count"
-                        nameKey="audience"
-                        label={({ name, percent }) =>
-                          `${name}: ${(percent * 100).toFixed(0)}%`
+          <div className="flex flex-row gap-8 w-full">
+            <div className="flex-1">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Hedef Kitle Dağılımı</CardTitle>
+                  <CardDescription>
+                    İnfo Form Geliş Yeri 2 alanında belirtilen hedef kitle dağılımı
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[400px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={audienceData?.audienceAnalysis.slice(0, 10) || []}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={120}
+                          fill="#8884d8"
+                          dataKey="count"
+                          nameKey="audience"
+                          label={({ name, percent }) => `${name}`}
+                        >
+                          {audienceData?.audienceAnalysis
+                            .slice(0, 10)
+                            .map((entry: any, index: number) => (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={COLORS[index % COLORS.length]}
+                              />
+                            ))}
+                        </Pie>
+                        <Tooltip formatter={(value, name) => [value, name]} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="mt-2">
+                      <Legend layout="horizontal" verticalAlign="bottom" align="center" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            <div className="w-2" /> {/* Divider space */}
+            <div className="flex-1">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Hedef Kitle Başarı Oranları</CardTitle>
+                  <CardDescription>
+                    Her hedef kitlenin görüşme ve satış başarı oranları
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="w-full" style={{ minWidth: 0 }}>
+                    <ResponsiveContainer width="100%" height={Math.max(400, (audienceData?.audienceAnalysis.length || 1) * 60)}>
+                      <BarChart
+                        layout="vertical"
+                        data={
+                          audienceData?.audienceAnalysis
+                            .filter((a: any) => a.audience !== "Belirtilmemiş")
+                            .slice(0, 8) || []
                         }
+                        margin={{
+                          top: 20,
+                          right: 40,
+                          left: 100, // More space for category names
+                          bottom: 20,
+                        }}
                       >
-                        {audienceData?.audienceAnalysis
-                          .slice(0, 10)
-                          .map((entry: any, index: number) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={COLORS[index % COLORS.length]}
-                            />
-                          ))}
-                      </Pie>
-                      <Tooltip formatter={(value, name) => [value, name]} />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Hedef Kitle Başarı Oranları</CardTitle>
-                <CardDescription>
-                  Her hedef kitlenin görüşme ve satış başarı oranları
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={
-                        audienceData?.audienceAnalysis
-                          .filter((a: any) => a.audience !== "Belirtilmemiş")
-                          .slice(0, 8) || []
-                      }
-                      margin={{
-                        top: 20,
-                        right: 30,
-                        left: 20,
-                        bottom: 5,
-                      }}
-                    >
-                      <XAxis dataKey="audience" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar
-                        dataKey="meetingRate"
-                        name="Görüşme Oranı (%)"
-                        fill="#8884d8"
-                      />
-                      <Bar
-                        dataKey="salesRate"
-                        name="Satış Oranı (%)"
-                        fill="#82ca9d"
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+                        <XAxis type="number" />
+                        <YAxis
+                          dataKey="audience"
+                          type="category"
+                          width={150}
+                          tick={{ fontSize: 14 }}
+                        />
+                        <Tooltip />
+                        <Legend layout="horizontal" verticalAlign="bottom" align="center" />
+                        <Bar
+                          dataKey="meetingRate"
+                          name="Görüşme Oranı (%)"
+                          fill="#8884d8"
+                          barSize={20}
+                        />
+                        <Bar
+                          dataKey="salesRate"
+                          name="Satış Oranı (%)"
+                          fill="#82ca9d"
+                          barSize={20}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
           <Card>

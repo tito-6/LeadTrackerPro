@@ -55,6 +55,7 @@ interface StandardChartProps {
   tableTitle?: string;
   emptyStateMessage?: string;
   emptyStateIcon?: string;
+  canvasId?: string;
 }
 
 const DEFAULT_COLORS = generateChartColors(30);
@@ -78,6 +79,7 @@ export default function StandardChart({
   tableTitle,
   emptyStateMessage = "Gösterilecek veri bulunamadı",
   emptyStateIcon = "📊",
+  canvasId,
 }: StandardChartProps) {
   const [currentChartType, setCurrentChartType] = React.useState<
     "pie" | "bar" | "line" | "3d-pie"

@@ -166,9 +166,7 @@ export default function MeetingAnalyticsTab({
     if (parentFilters?.leadType) {
       params.append("leadType", parentFilters.leadType);
     }
-    if (selectedProject !== "all") {
-      params.append("project", selectedProject);
-    }
+    params.append("project", selectedProject);
     return params;
   }, [
     date.from,

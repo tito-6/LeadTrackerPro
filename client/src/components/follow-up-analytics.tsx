@@ -301,114 +301,128 @@ export default function FollowUpAnalytics() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="status" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5" />
-                Durum Analizi
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <StandardChart
-                title="Takip Durumu Dağılımı"
-                data={analytics.statusData}
-                height={400}
-                chartType="pie"
-                allowTypeChange={true}
-                showDataTable={true}
-                tableTitle="Durum Detayları"
-              />
-            </CardContent>
-          </Card>
+        <TabsContent value="status" className="w-full">
+          <section className="w-full pt-0 pb-8">
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Durum Analizi
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <StandardChart
+                  title="Takip Durumu Dağılımı"
+                  data={analytics.statusData}
+                  height={400}
+                  chartType="pie"
+                  allowTypeChange={true}
+                  showDataTable={true}
+                  tableTitle="Durum Detayları"
+                />
+              </CardContent>
+            </Card>
+          </section>
+          <hr className="border-t border-gray-300 dark:border-gray-700 my-4" />
         </TabsContent>
 
-        <TabsContent value="personnel" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Personel Performans Analizi
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <StandardChart
-                title="Personel Bazında Takip Dağılımı"
-                data={analytics.personnelData}
-                height={400}
-                chartType="bar"
-                allowTypeChange={true}
-                showDataTable={true}
-                tableTitle="Personel Detayları"
-              />
-            </CardContent>
-          </Card>
+        <TabsContent value="personnel" className="w-full">
+          <section className="w-full py-8">
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Personel Performans Analizi
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <StandardChart
+                  title="Personel Bazında Takip Dağılımı"
+                  data={analytics.personnelData}
+                  height={400}
+                  chartType="bar"
+                  allowTypeChange={true}
+                  showDataTable={true}
+                  tableTitle="Personel Detayları"
+                />
+              </CardContent>
+            </Card>
+          </section>
+          <hr className="border-t border-gray-300 dark:border-gray-700 my-4" />
         </TabsContent>
 
-        <TabsContent value="project" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building className="h-5 w-5" />
-                Proje Analizi
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <StandardChart
-                title="Proje Bazında Takip Dağılımı"
-                data={analytics.projectData}
-                height={400}
-                chartType="bar"
-                allowTypeChange={true}
-                showDataTable={true}
-                tableTitle="Proje Detayları"
-              />
-            </CardContent>
-          </Card>
+        <TabsContent value="project" className="w-full">
+          <section className="w-full py-8">
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building className="h-5 w-5" />
+                  Proje Analizi
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <StandardChart
+                  title="Proje Bazında Takip Dağılımı"
+                  data={analytics.projectData}
+                  height={400}
+                  chartType="bar"
+                  allowTypeChange={true}
+                  showDataTable={true}
+                  tableTitle="Proje Detayları"
+                />
+              </CardContent>
+            </Card>
+          </section>
+          <hr className="border-t border-gray-300 dark:border-gray-700 my-4" />
         </TabsContent>
 
-        <TabsContent value="type" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                Lead Tipi Analizi
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <StandardChart
-                title="Lead Tipi Dağılımı"
-                data={analytics.typeData}
-                height={400}
-                chartType="pie"
-                allowTypeChange={true}
-                showDataTable={true}
-                tableTitle="Tip Detayları"
-              />
-            </CardContent>
-          </Card>
+        <TabsContent value="type" className="w-full">
+          <section className="w-full py-8">
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5" />
+                  Lead Tipi Analizi
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <StandardChart
+                  title="Lead Tipi Dağılımı"
+                  data={analytics.typeData}
+                  height={400}
+                  chartType="pie"
+                  allowTypeChange={true}
+                  showDataTable={true}
+                  tableTitle="Tip Detayları"
+                />
+              </CardContent>
+            </Card>
+          </section>
+          <hr className="border-t border-gray-300 dark:border-gray-700 my-4" />
         </TabsContent>
 
-        <TabsContent value="source" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <PieChart className="h-5 w-5" />
-                Kaynak Analizi
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <StandardChart
-                title="Kaynak Bazında Takip Dağılımı"
-                data={analytics.sourceData}
-                height={400}
-                chartType="pie"
-                allowTypeChange={true}
-                showDataTable={true}
-                tableTitle="Kaynak Detayları"
-              />
-            </CardContent>
-          </Card>
+        <TabsContent value="source" className="w-full">
+          <section className="w-full py-8">
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PieChart className="h-5 w-5" />
+                  Kaynak Analizi
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <StandardChart
+                  title="Kaynak Bazında Takip Dağılımı"
+                  data={analytics.sourceData}
+                  height={400}
+                  chartType="pie"
+                  allowTypeChange={true}
+                  showDataTable={true}
+                  tableTitle="Kaynak Detayları"
+                />
+              </CardContent>
+            </Card>
+          </section>
         </TabsContent>
       </Tabs>
 

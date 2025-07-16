@@ -63,6 +63,19 @@ import {
   detectProjectFromWebFormNotu,
 } from "@/lib/project-detector";
 
+// Add type for enhancedStats
+interface EnhancedStats {
+  leads: {
+    byPersonnel: Record<string, number>;
+    [key: string]: any;
+  };
+  takipte: {
+    byPersonnel: Record<string, number>;
+    [key: string]: any;
+  };
+  [key: string]: any;
+}
+
 export default function EnhancedOverviewDashboardTab() {
   const { getColor } = useColors();
 
@@ -99,7 +112,7 @@ export default function EnhancedOverviewDashboardTab() {
   const filters = { ...dateFilters, project: selectedProject };
 
   // Fetch enhanced stats that combine both data sources
-  const { data: enhancedStats } = useQuery({
+  const { data: enhancedStats } = useQuery<EnhancedStats>({
     queryKey: ["/api/enhanced-stats", filters],
     refetchInterval: 5000,
   });
@@ -258,6 +271,8 @@ export default function EnhancedOverviewDashboardTab() {
         name: personnel,
         totalLeads: 0,
         takipteCount: takipte.byPersonnel?.[personnel] || 0,
+        // Add a dedicated counter for Birebir Görüşme
+        birebirGorusmeCount: 0,
       };
 
       // Initialize all status columns to 0
@@ -279,6 +294,7 @@ export default function EnhancedOverviewDashboardTab() {
           name: personnel,
           totalLeads: 0,
           takipteCount: takipte.byPersonnel?.[personnel] || 0,
+          birebirGorusmeCount: 0,
         };
 
         // Initialize all status columns to 0 for new personnel
@@ -294,6 +310,11 @@ export default function EnhancedOverviewDashboardTab() {
       // Increment the normalized status count
       if (personnelStats[personnel][normalizedStatus] !== undefined) {
         personnelStats[personnel][normalizedStatus]++;
+      }
+
+      // Increment Birebir Görüşme count if oneOnOneMeeting === 'Evet'
+      if (lead.oneOnOneMeeting && lead.oneOnOneMeeting.trim().toLowerCase() === "evet") {
+        personnelStats[personnel].birebirGorusmeCount++;
       }
     });
 
@@ -835,12 +856,19 @@ export default function EnhancedOverviewDashboardTab() {
                             >
                               <span
                                 className={
-                                  person[column.key] > 0
+                                  // If this is the 'Toplantı - Birebir Görüşme' column, use the new count
+                                  column.key === "Toplantı - Birebir Görüşme"
+                                    ? person.birebirGorusmeCount > 0
+                                      ? "font-semibold text-blue-600"
+                                      : "text-gray-400"
+                                    : person[column.key] > 0
                                     ? "font-semibold text-blue-600"
                                     : "text-gray-400"
                                 }
                               >
-                                {person[column.key] || 0}
+                                {column.key === "Toplantı - Birebir Görüşme"
+                                  ? person.birebirGorusmeCount || 0
+                                  : person[column.key] || 0}
                               </span>
                             </td>
                           ))}
@@ -879,10 +907,17 @@ export default function EnhancedOverviewDashboardTab() {
                             key={column.key}
                             className="text-center p-2 border-r"
                           >
-                            {personnelStatusMatrix.reduce(
-                              (sum, person) => sum + (person[column.key] || 0),
-                              0
-                            )}
+                            {column.key === "Toplantı - Birebir Görüşme"
+                              ? personnelStatusMatrix.reduce(
+                                  (sum, person) =>
+                                    sum + (person.birebirGorusmeCount || 0),
+                                  0
+                                )
+                              : personnelStatusMatrix.reduce(
+                                  (sum, person) =>
+                                    sum + (person[column.key] || 0),
+                                  0
+                                )}
                           </td>
                         ))}
                       <td className="text-center p-2 bg-green-100">
@@ -1605,7 +1640,7 @@ export default function EnhancedOverviewDashboardTab() {
                               (l) => (l.projectName || "Bilinmiyor") === project
                             ).length /
                               dashboardMetrics.leads.length) *
-                              100
+                            100
                           )}`,
                         }))
                         .sort((a, b) => b["Adet"] - a["Adet"])

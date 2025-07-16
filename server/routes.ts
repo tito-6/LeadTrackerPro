@@ -12,6 +12,8 @@ import multer from "multer";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import path from "path";
+import { generateReportPDF } from './pdfReport';
+import express from 'express';
 
 // Enhanced function to extract both project name and lead type from WebForm Notu
 function extractDataFromWebForm(webFormNote: string | undefined): {
@@ -824,481 +826,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Advanced Export endpoints with comprehensive filtering
-  app.get("/api/export/:format", async (req, res) => {
-    try {
-      const { format } = req.params;
-      const {
-        startDate,
-        endDate,
-        salesRep,
-        month,
-        year,
-        leadType,
-        reportType,
-        includeCharts,
-        includeAnalytics,
-        includeRawData,
-        customTitle,
-        projects,
-        statuses,
-      } = req.query;
-
-      console.log("Export query params:", req.query);
-
-      // Start with all leads
-      let filteredLeads = await storage.getLeads();
-      console.log("Total leads available:", filteredLeads.length);
-
-      // Debug: Show unique personnel names
-      const uniquePersonnel = [
-        ...new Set(
-          filteredLeads.map((lead) => lead.assignedPersonnel).filter(Boolean)
-        ),
-      ];
-      console.log("Unique personnel in data:", uniquePersonnel);
-
-      // Apply basic date/type filters only if specified
-      if (
-        startDate ||
-        endDate ||
-        month ||
-        year ||
-        (salesRep && !salesRep.includes(",")) ||
-        leadType
-      ) {
-        filteredLeads = await storage.getLeadsByFilter({
-          startDate: startDate as string,
-          endDate: endDate as string,
-          month: month as string,
-          year: year as string,
-          salesRep:
-            salesRep && !salesRep.includes(",")
-              ? (salesRep as string)
-              : undefined,
-          leadType: leadType as string,
-        });
-      }
-
-      console.log("After basic filtering:", filteredLeads.length, "leads");
-
-      // Apply advanced multi-select personnel filter
-      if (salesRep && salesRep.includes(",")) {
-        // Fix Turkish character encoding issue
-        const personnelList = (salesRep as string).split(",").map((p) => {
-          let decoded = decodeURIComponent(p.trim());
-          // Fix common Turkish character encoding issues
-          decoded = decoded.replace(/ReÃ§ber/g, "Reçber");
-          decoded = decoded.replace(/Ã§/g, "ç");
-          decoded = decoded.replace(/Ã¼/g, "ü");
-          decoded = decoded.replace(/Ã¶/g, "ö");
-          decoded = decoded.replace(/Ä±/g, "ı");
-          decoded = decoded.replace(/Ä°/g, "İ");
-          decoded = decoded.replace(/Å/g, "Ş");
-          decoded = decoded.replace(/ÅŸ/g, "ş");
-          decoded = decoded.replace(/Äž/g, "Ğ");
-          decoded = decoded.replace(/ÄŸ/g, "ğ");
-          return decoded;
-        });
-        console.log("Filtering by personnel (corrected):", personnelList);
-        console.log("Original personnel param:", salesRep);
-        console.log(
-          "Personnel in leads:",
-          filteredLeads.map((lead) => lead.assignedPersonnel).slice(0, 10)
-        );
-
-        filteredLeads = filteredLeads.filter(
-          (lead) =>
-            lead.assignedPersonnel &&
-            personnelList.includes(lead.assignedPersonnel.trim())
-        );
-        console.log(
-          "After personnel filtering:",
-          filteredLeads.length,
-          "leads"
-        );
-      }
-
-      // Apply project filtering
-      if (projects && projects !== "all") {
-        const projectList = (projects as string)
-          .split(",")
-          .map((p) => decodeURIComponent(p.trim()));
-        console.log("Filtering by projects:", projectList);
-        filteredLeads = filteredLeads.filter(
-          (lead) =>
-            lead.projectName && projectList.includes(lead.projectName.trim())
-        );
-        console.log("After project filtering:", filteredLeads.length, "leads");
-      }
-
-      // Apply status filtering
-      if (statuses && statuses !== "all") {
-        const statusList = (statuses as string)
-          .split(",")
-          .map((s) => decodeURIComponent(s.trim()));
-        console.log("Filtering by statuses:", statusList);
-        filteredLeads = filteredLeads.filter(
-          (lead) => lead.status && statusList.includes(lead.status.trim())
-        );
-        console.log("After status filtering:", filteredLeads.length, "leads");
-      }
-
-      // Apply lead type filtering if specified
-      if (leadType && leadType !== "all") {
-        console.log("Filtering by lead type:", leadType);
-        if (leadType === "satis") {
-          filteredLeads = filteredLeads.filter(
-            (lead) => lead.leadType !== "kiralik"
-          );
-        } else if (leadType === "kiralik") {
-          filteredLeads = filteredLeads.filter(
-            (lead) => lead.leadType === "kiralik"
-          );
-        }
-        console.log(
-          "After lead type filtering:",
-          filteredLeads.length,
-          "leads"
-        );
-      }
-
-      console.log("Final filtered leads count:", filteredLeads.length);
-
-      const salesReps = await storage.getSalesReps();
-      const allLeads = await storage.getLeads(); // For comprehensive analytics
-      // Generate comprehensive analytics if requested
-      let analytics = {};
-      if (
-        includeAnalytics === "true" ||
-        reportType === "comprehensive" ||
-        reportType === "analytics-only"
-      ) {
-        // Calculate comprehensive statistics
-        const statusCounts = filteredLeads.reduce((acc, lead) => {
-          const status = lead.status || "Tanımsız";
-          acc[status] = (acc[status] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-
-        const personnelStats = filteredLeads.reduce((acc, lead) => {
-          const personnel = lead.assignedPersonnel || "Atanmamış";
-          if (!acc[personnel]) {
-            acc[personnel] = { total: 0, satis: 0, takipte: 0, olumsuz: 0 };
-          }
-          acc[personnel].total++;
-          if (
-            lead.status?.toLowerCase().includes("satış") ||
-            lead.status?.toLowerCase().includes("satis")
-          ) {
-            acc[personnel].satis++;
-          }
-          if (lead.status?.toLowerCase().includes("takip")) {
-            acc[personnel].takipte++;
-          }
-          if (lead.status?.toLowerCase().includes("olumsuz")) {
-            acc[personnel].olumsuz++;
-          }
-          return acc;
-        }, {} as Record<string, any>);
-
-        const projectStats = filteredLeads.reduce((acc, lead) => {
-          const project = lead.projectName || "Belirtilmemiş";
-          acc[project] = (acc[project] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-
-        const leadTypeStats = filteredLeads.reduce((acc, lead) => {
-          const type = lead.leadType || "Belirtilmemiş";
-          acc[type] = (acc[type] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-
-        analytics = {
-          totalLeads: filteredLeads.length,
-          statusBreakdown: statusCounts,
-          personnelPerformance: personnelStats,
-          projectDistribution: projectStats,
-          leadTypeDistribution: leadTypeStats,
-          conversionRate:
-            filteredLeads.length > 0
-              ? Math.round(
-                  (Object.entries(statusCounts)
-                    .filter(([status]) =>
-                      status.toLowerCase().includes("satış")
-                    )
-                    .reduce((sum, [, count]) => sum + count, 0) /
-                    filteredLeads.length) *
-                    100
-                )
-              : 0,
-          filterSummary: {
-            dateRange:
-              startDate && endDate ? `${startDate} - ${endDate}` : "Tümü",
-            personnel: salesRep === "all" || !salesRep ? "Tümü" : salesRep,
-            projects: projects === "all" || !projects ? "Tümü" : projects,
-            leadType: leadType === "all" || !leadType ? "Tümü" : leadType,
-            statuses: statuses === "all" || !statuses ? "Tümü" : statuses,
-          },
-        };
-      }
-
-      if (format === "json") {
-        const exportData: any = {
-          reportType: reportType || "comprehensive",
-          exportDate: new Date().toISOString(),
-          customTitle: customTitle || "İNNO Gayrimenkul Lead Raporu",
-          filterSummary: (analytics as any).filterSummary || {},
-        };
-
-        if (
-          includeRawData === "true" ||
-          reportType === "comprehensive" ||
-          reportType === "leads-only"
-        ) {
-          exportData.leads = filteredLeads;
-          exportData.salesReps = salesReps;
-        }
-
-        if (
-          includeAnalytics === "true" ||
-          reportType === "comprehensive" ||
-          reportType === "analytics-only"
-        ) {
-          exportData.analytics = analytics;
-        }
-
-        res.setHeader("Content-Type", "application/json; charset=utf-8");
-
-        // Add total leads count to the response
-        exportData.totalLeads = filteredLeads.length;
-
-        res.json(exportData);
-      } else if (format === "excel") {
-        const XLSX = require("xlsx");
-
-        // Create workbook and worksheets
-        const wb = XLSX.utils.book_new();
-
-        // Add comprehensive title page
-        const titleData = [
-          { "İNNO Gayrimenkul Yatırım A.Ş.": "" },
-          {
-            "İNNO Gayrimenkul Yatırım A.Ş.":
-              customTitle || "Kapsamlı Lead Raporu",
-          },
-          { "İNNO Gayrimenkul Yatırım A.Ş.": "" },
-          {
-            "İNNO Gayrimenkul Yatırım A.Ş.": `Rapor Tarihi: ${new Date().toLocaleDateString(
-              "tr-TR"
-            )}`,
-          },
-          {
-            "İNNO Gayrimenkul Yatırım A.Ş.": `Toplam Lead Sayısı: ${filteredLeads.length}`,
-          },
-          { "İNNO Gayrimenkul Yatırım A.Ş.": "" },
-          { "İNNO Gayrimenkul Yatırım A.Ş.": "Filtre Özeti:" },
-          {
-            "İNNO Gayrimenkul Yatırım A.Ş.": `Tarih Aralığı: ${
-              (analytics as any).filterSummary?.dateRange || "Tümü"
-            }`,
-          },
-          {
-            "İNNO Gayrimenkul Yatırım A.Ş.": `Personel: ${
-              (analytics as any).filterSummary?.personnel || "Tümü"
-            }`,
-          },
-          {
-            "İNNO Gayrimenkul Yatırım A.Ş.": `Projeler: ${
-              (analytics as any).filterSummary?.projects || "Tümü"
-            }`,
-          },
-          {
-            "İNNO Gayrimenkul Yatırım A.Ş.": `Lead Tipi: ${
-              (analytics as any).filterSummary?.leadType || "Tümü"
-            }`,
-          },
-          {
-            "İNNO Gayrimenkul Yatırım A.Ş.": `Durumlar: ${
-              (analytics as any).filterSummary?.statuses || "Tümü"
-            }`,
-          },
-        ];
-
-        const titleWS = XLSX.utils.json_to_sheet(titleData);
-        XLSX.utils.book_append_sheet(wb, titleWS, "Rapor Bilgileri");
-
-        // Add analytics if requested
-        if (
-          includeAnalytics === "true" ||
-          reportType === "comprehensive" ||
-          reportType === "analytics-only"
-        ) {
-          const analyticsData = analytics as any;
-
-          // Status breakdown sheet
-          const statusData = Object.entries(
-            analyticsData.statusBreakdown || {}
-          ).map(([status, count]) => ({
-            Durum: status,
-            Sayı: count,
-            Yüzde:
-              filteredLeads.length > 0
-                ? Math.round(((count as number) / filteredLeads.length) * 100)
-                : 0,
-          }));
-          const statusWS = XLSX.utils.json_to_sheet(statusData);
-          XLSX.utils.book_append_sheet(wb, statusWS, "Durum Analizi");
-
-          // Personnel performance sheet
-          const personnelData = Object.entries(
-            analyticsData.personnelPerformance || {}
-          ).map(([personnel, stats]: [string, any]) => ({
-            Personel: personnel,
-            "Toplam Lead": stats.total,
-            Satış: stats.satis,
-            Takipte: stats.takipte,
-            Olumsuz: stats.olumsuz,
-            "Başarı Oranı %":
-              stats.total > 0
-                ? Math.round((stats.satis / stats.total) * 100)
-                : 0,
-          }));
-          const personnelWS = XLSX.utils.json_to_sheet(personnelData);
-          XLSX.utils.book_append_sheet(wb, personnelWS, "Personel Performansı");
-
-          // Project distribution sheet
-          const projectData = Object.entries(
-            analyticsData.projectDistribution || {}
-          ).map(([project, count]) => ({
-            Proje: project,
-            "Lead Sayısı": count,
-            Yüzde:
-              filteredLeads.length > 0
-                ? Math.round(((count as number) / filteredLeads.length) * 100)
-                : 0,
-          }));
-          const projectWS = XLSX.utils.json_to_sheet(projectData);
-          XLSX.utils.book_append_sheet(wb, projectWS, "Proje Dağılımı");
-
-          // Lead type distribution sheet
-          const leadTypeData = Object.entries(
-            analyticsData.leadTypeDistribution || {}
-          ).map(([type, count]) => ({
-            "Lead Tipi": type,
-            Sayı: count,
-            Yüzde:
-              filteredLeads.length > 0
-                ? Math.round(((count as number) / filteredLeads.length) * 100)
-                : 0,
-          }));
-          const leadTypeWS = XLSX.utils.json_to_sheet(leadTypeData);
-          XLSX.utils.book_append_sheet(wb, leadTypeWS, "Lead Tipi Analizi");
-        }
-
-        // Prepare leads data for Excel if requested
-        if (
-          includeRawData === "true" ||
-          reportType === "comprehensive" ||
-          reportType === "leads-only"
-        ) {
-          const leadsData = filteredLeads.map((lead) => ({
-            "Müşteri ID": lead.customerId || "",
-            "İletişim ID": lead.contactId || "",
-            "Müşteri Adı Soyadı": lead.customerName || "",
-            "İlk Müşteri Kaynağı": lead.firstCustomerSource || "",
-            "Form Müşteri Kaynağı": lead.formCustomerSource || "",
-            "WebForm Notu": lead.webFormNote || "",
-            "Talep Geliş Tarihi": lead.requestDate || "",
-            "İnfo Form Geliş Yeri 1": lead.infoFormLocation1 || "",
-            "İnfo Form Geliş Yeri 2": lead.infoFormLocation2 || "",
-            "İnfo Form Geliş Yeri 3": lead.infoFormLocation3 || "",
-            "İnfo Form Geliş Yeri 4": lead.infoFormLocation4 || "",
-            "Atanan Personel": lead.assignedPersonnel || "",
-            "Hatırlatma Personeli": lead.reminderPersonnel || "",
-            "Geri Dönüş Var mı": lead.wasCalledBack ? "Evet" : "Hayır",
-            "WebForm İletişim Telefon": lead.webFormContactPhone || "",
-            "WebForm İletişim Email": lead.webFormContactEmail || "",
-            "WebForm Telefon Dönüşü": lead.webFormPhoneCallback
-              ? "Evet"
-              : "Hayır",
-            "WebForm Email Dönüşü": lead.webFormEmailCallback
-              ? "Evet"
-              : "Hayır",
-            "Birebir Görüşme": lead.oneOnOneMeeting ? "Evet" : "Hayır",
-            "Birebir Görüşme Tarihi": lead.oneOnOneMeetingDate || "",
-            "Birebir Görüşme Sonucu": lead.oneOnOneMeetingResult || "",
-            "Son Görüşme Sonucu": lead.lastMeetingResult || "",
-            "Müşteri Cevap Tarihi": lead.customerResponseDate || "",
-            "Görüşme Notu": lead.callNote || "",
-            Satış: lead.sale ? "Evet" : "Hayır",
-            "Dönüş Olumsuzluk Nedeni": lead.negativeReason || "",
-            Randevu: lead.appointment ? "Evet" : "Hayır",
-            "Proje Adı": lead.projectName || "",
-            "Lead Tipi": lead.leadType || "",
-            Status: lead.status || "",
-          }));
-
-          // Create leads worksheet
-          const leadsWS = XLSX.utils.json_to_sheet(leadsData);
-          XLSX.utils.book_append_sheet(wb, leadsWS, "Lead Verileri");
-        }
-
-        // Generate Excel buffer
-        const excelBuffer = XLSX.write(wb, {
-          type: "buffer",
-          bookType: "xlsx",
-        });
-
-        res.setHeader(
-          "Content-Type",
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        );
-        res.setHeader(
-          "Content-Disposition",
-          `attachment; filename="İNNO-Kapsamlı-Lead-Raporu-${
-            new Date().toISOString().split("T")[0]
-          }.xlsx"`
-        );
-        res.send(excelBuffer);
-      } else if (format === "pdf") {
-        // Return comprehensive data for frontend PDF generation using jsPDF
-        const exportData: any = {
-          format: "pdf",
-          reportType: reportType || "comprehensive",
-          customTitle: customTitle || "İNNO Gayrimenkul Lead Raporu",
-          exportDate: new Date().toISOString(),
-          filterSummary: (analytics as any).filterSummary || {},
-        };
-
-        if (
-          includeRawData === "true" ||
-          reportType === "comprehensive" ||
-          reportType === "leads-only"
-        ) {
-          exportData.data = { leads: filteredLeads, salesReps };
-        }
-
-        if (
-          includeAnalytics === "true" ||
-          reportType === "comprehensive" ||
-          reportType === "analytics-only"
-        ) {
-          exportData.analytics = analytics;
-        }
-
-        res.setHeader("Content-Type", "application/json");
-        res.json(exportData);
-      } else {
-        res.status(400).json({ message: "Unsupported export format" });
-      }
-    } catch (error) {
-      res
-        .status(500)
-        .json({ message: "Export failed", error: (error as Error).message });
-    }
-  });
-
   // Settings endpoints
   app.get("/api/settings", async (req, res) => {
     try {
@@ -1316,413 +843,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(setting);
     } catch (error) {
       res.status(400).json({ message: "Invalid setting data", error });
-    }
-  });
-
-  // Export endpoints
-  // Enhanced Export endpoint with comprehensive data and dynamic status support
-  app.get("/api/export/excel", async (req, res) => {
-    try {
-      const { startDate, endDate, salesRep, leadType, month, year } = req.query;
-
-      // Enhanced filtering with automatic month logic
-      let finalStartDate = startDate as string;
-      let finalEndDate = endDate as string;
-
-      if (month && year) {
-        const monthNum = parseInt(month as string);
-        const yearNum = parseInt(year as string);
-        finalStartDate = `${yearNum}-${monthNum
-          .toString()
-          .padStart(2, "0")}-01`;
-        const lastDay = new Date(yearNum, monthNum, 0).getDate();
-        finalEndDate = `${yearNum}-${monthNum
-          .toString()
-          .padStart(2, "0")}-${lastDay}`;
-      }
-
-      const leads = await storage.getLeadsByFilter({
-        startDate: finalStartDate,
-        endDate: finalEndDate,
-        salesRep: salesRep as string,
-        leadType: leadType as string,
-      });
-
-      // Create workbook with comprehensive data
-      const workbook = XLSX.utils.book_new();
-
-      // Generate filename with period information
-      const periodInfo =
-        month && year
-          ? `${getMonthName(parseInt(month as string))}_${year}`
-          : finalStartDate && finalEndDate
-          ? `${finalStartDate}_to_${finalEndDate}`
-          : new Date().toISOString().split("T")[0];
-
-      // Main leads worksheet with all comprehensive data
-      const worksheetData = leads.map((lead) => ({
-        "Müşteri ID": lead.customerId || "",
-        "İletişim ID": lead.contactId || "",
-        "Müşteri Adı Soyadı": lead.customerName,
-        "İlk Müşteri Kaynağı": lead.firstCustomerSource || "",
-        "Form Müşteri Kaynağı": lead.formCustomerSource || "",
-        "WebForm Notu": lead.webFormNote || "",
-        "Talep Geliş Tarihi": lead.requestDate,
-        "İnfo Form Geliş Yeri": lead.infoFormLocation1 || "",
-        "İnfo Form Geliş Yeri 2": lead.infoFormLocation2 || "",
-        "İnfo Form Geliş Yeri 3": lead.infoFormLocation3 || "",
-        "İnfo Form Geliş Yeri 4": lead.infoFormLocation4 || "",
-        "Atanan Personel": lead.assignedPersonnel,
-        "Lead Tipi": lead.leadType === "kiralama" ? "Kiralama" : "Satış",
-        "Son Görüşme Sonucu (Durum)": lead.status,
-        "Proje Adı": lead.projectName || "",
-        "Görüşme Notu": lead.callNote || "",
-        Satış: lead.sale ? "Evet" : "Hayır",
-        Randevu: lead.appointment ? "Evet" : "Hayır",
-        "Birebir Görüşme": lead.oneOnOneMeeting ? "Evet" : "Hayır",
-        "Olumsuzluk Nedeni": lead.negativeReason || "",
-      }));
-
-      const worksheet = XLSX.utils.json_to_sheet(worksheetData);
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Lead Verileri");
-
-      // Create summary worksheet
-      const statusCounts = leads.reduce((acc, lead) => {
-        const status = lead.status || "Belirtilmemiş";
-        acc[status] = (acc[status] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-
-      const summaryData = [
-        {
-          Bilgi: "Rapor Özeti",
-          Değer: `İNNO Gayrimenkul Yatırım A.Ş. - ${periodInfo}`,
-        },
-        { Bilgi: "Toplam Lead Sayısı", Değer: leads.length },
-        {
-          Bilgi: "Dışa Aktarma Tarihi",
-          Değer: new Date().toLocaleDateString("tr-TR"),
-        },
-        {
-          Bilgi: "Filtreleme Kriteri",
-          Değer: salesRep === "all" || !salesRep ? "Tüm Personel" : salesRep,
-        },
-        { Bilgi: "", Değer: "" },
-        { Bilgi: "STATUS DAĞILIMI", Değer: "" },
-        ...Object.entries(statusCounts).map(([status, count]) => ({
-          Bilgi: status,
-          Değer: count,
-        })),
-      ];
-
-      const summaryWS = XLSX.utils.json_to_sheet(summaryData);
-      XLSX.utils.book_append_sheet(wb, summaryWS, "Rapor Özeti");
-
-      // Write the workbook to buffer
-      const excelBuffer = XLSX.write(workbook, {
-        type: "buffer",
-        bookType: "xlsx",
-      });
-
-      // Set proper headers
-      res.setHeader(
-        "Content-Type",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      );
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename="İNNO_Lead_Raporu_${periodInfo}.xlsx"`
-      );
-      res.send(excelBuffer);
-    } catch (error) {
-      res.status(500).json({
-        message: "Failed to export Excel",
-        error: (error as Error).message,
-      });
-    }
-  });
-
-  app.get("/api/export/json", async (req, res) => {
-    try {
-      const { startDate, endDate, salesRep, leadType } = req.query;
-      const leads = await storage.getLeadsByFilter({
-        startDate: startDate as string,
-        endDate: endDate as string,
-        salesRep: salesRep as string,
-        leadType: leadType as string,
-      });
-
-      res.setHeader("Content-Type", "application/json");
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename="lead-raporu-${
-          new Date().toISOString().split("T")[0]
-        }.json"`
-      );
-      res.json(leads);
-    } catch (error) {
-      res.status(500).json({
-        message: "Failed to export JSON",
-        error: (error as Error).message,
-      });
-    }
-  });
-
-  // Enhanced Statistics endpoint with dynamic status grouping and date filtering
-  app.get("/api/stats", async (req, res) => {
-    try {
-      const { startDate, endDate, salesRep, leadType, month, year } = req.query;
-
-      // Enhanced filtering with automatic month logic
-      let finalStartDate = startDate as string;
-      let finalEndDate = endDate as string;
-
-      // Auto-select full month logic
-      if (month && year) {
-        const monthNum = parseInt(month as string);
-        const yearNum = parseInt(year as string);
-        finalStartDate = `${yearNum}-${monthNum
-          .toString()
-          .padStart(2, "0")}-01`;
-        const lastDay = new Date(yearNum, monthNum, 0).getDate();
-        finalEndDate = `${yearNum}-${monthNum
-          .toString()
-          .padStart(2, "0")}-${lastDay}`;
-      }
-
-      const leads = await storage.getLeadsByFilter({
-        startDate: finalStartDate,
-        endDate: finalEndDate,
-        salesRep: salesRep as string,
-        leadType: leadType as string,
-      });
-
-      // Dynamic status grouping based on SON GORUSME SONUCU values
-      const byStatus = leads.reduce((acc, lead) => {
-        const status = lead.status || "yeni";
-        acc[status] = (acc[status] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-
-      // Enhanced statistics with percentage calculations
-      const totalLeads = leads.length;
-      const stats = {
-        totalLeads,
-        byStatus,
-        byStatusWithPercentages: Object.keys(byStatus).map((status) => ({
-          status,
-          count: byStatus[status],
-          percentage:
-            totalLeads > 0
-              ? Math.round((byStatus[status] / totalLeads) * 100)
-              : 0,
-        })),
-        byType: leads.reduce((acc, lead) => {
-          acc[lead.leadType] = (acc[lead.leadType] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>),
-        bySalesRep: leads.reduce((acc, lead) => {
-          const rep = lead.assignedPersonnel || "Belirtilmemiş";
-          acc[rep] = (acc[rep] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>),
-        dateRange: {
-          startDate: finalStartDate,
-          endDate: finalEndDate,
-          isMonthFilter: !!(month && year),
-        },
-      };
-
-      res.json(stats);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch stats" });
-    }
-  });
-
-  // New endpoint for getting all unique status values from data
-  app.get("/api/status-values", async (req, res) => {
-    try {
-      const leads = await storage.getLeads();
-      const statusSet = new Set(leads.map((lead) => lead.status));
-      const uniqueStatuses = Array.from(statusSet).filter(Boolean);
-      res.json(uniqueStatuses);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch status values" });
-    }
-  });
-
-  // Duplicate detection endpoint
-  app.get("/api/duplicates", async (_req, res) => {
-    try {
-      const leads = await storage.getLeads();
-      const duplicates: { [key: string]: any[] } = {};
-      const duplicateStats = {
-        totalLeads: leads.length,
-        duplicateGroups: 0,
-        duplicateCount: 0,
-        duplicatePercentage: 0,
-      };
-
-      // Group by customer ID and contact ID
-      const customerIdGroups: { [key: string]: any[] } = {};
-      const contactIdGroups: { [key: string]: any[] } = {};
-
-      leads.forEach((lead) => {
-        if (lead.customerId) {
-          if (!customerIdGroups[lead.customerId]) {
-            customerIdGroups[lead.customerId] = [];
-          }
-          customerIdGroups[lead.customerId].push(lead);
-        }
-
-        if (lead.contactId) {
-          if (!contactIdGroups[lead.contactId]) {
-            contactIdGroups[lead.contactId] = [];
-          }
-          contactIdGroups[lead.contactId].push(lead);
-        }
-      });
-
-      // Find duplicates
-      Object.entries(customerIdGroups).forEach(([id, group]) => {
-        if (group.length > 1) {
-          duplicates[`customer_${id}`] = group;
-          duplicateStats.duplicateGroups++;
-          duplicateStats.duplicateCount += group.length - 1;
-        }
-      });
-
-      Object.entries(contactIdGroups).forEach(([id, group]) => {
-        if (group.length > 1 && !duplicates[`customer_${id}`]) {
-          duplicates[`contact_${id}`] = group;
-          duplicateStats.duplicateGroups++;
-          duplicateStats.duplicateCount += group.length - 1;
-        }
-      });
-
-      duplicateStats.duplicatePercentage =
-        leads.length > 0
-          ? Math.round((duplicateStats.duplicateCount / leads.length) * 100)
-          : 0;
-
-      res.json({ duplicates, stats: duplicateStats });
-    } catch (error) {
-      console.error("Error detecting duplicates:", error);
-      res.status(500).json({ error: "Failed to detect duplicates" });
-    }
-  });
-
-  // Negative lead analysis endpoint
-  app.get("/api/negative-analysis", async (_req, res) => {
-    try {
-      const leads = await storage.getLeads();
-      // Match exactly how enhanced-stats counts "Olumsuz" leads
-      const negativeLeads = leads.filter(
-        (lead) =>
-          lead.status?.includes("Olumsuz") ||
-          lead.status?.toLowerCase().includes("olumsuz")
-      );
-
-      const reasonCounts: { [key: string]: number } = {};
-      const personnelCounts: { [key: string]: number } = {};
-
-      negativeLeads.forEach((lead) => {
-        // Comprehensive reason extraction - check multiple fields
-        let reason = "Belirtilmemiş";
-        if (lead.negativeReason && lead.negativeReason.trim() !== "") {
-          reason = lead.negativeReason.trim();
-        } else if (lead.lastMeetingNote && lead.lastMeetingNote.trim() !== "") {
-          reason = lead.lastMeetingNote.trim();
-        } else if (lead.responseResult && lead.responseResult.trim() !== "") {
-          reason = lead.responseResult.trim();
-        } else if (lead.status) {
-          reason = lead.status;
-        }
-
-        const personnel = lead.assignedPersonnel || "Atanmamış";
-
-        reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;
-        personnelCounts[personnel] = (personnelCounts[personnel] || 0) + 1;
-      });
-
-      const totalNegative = negativeLeads.length;
-      const reasonAnalysis = Object.entries(reasonCounts).map(
-        ([reason, count]) => ({
-          reason,
-          count,
-          percentage:
-            totalNegative > 0 ? Math.round((count / totalNegative) * 100) : 0,
-        })
-      );
-
-      const personnelAnalysis = Object.entries(personnelCounts).map(
-        ([personnel, count]) => ({
-          personnel,
-          count,
-          percentage:
-            totalNegative > 0 ? Math.round((count / totalNegative) * 100) : 0,
-        })
-      );
-
-      res.json({
-        totalNegative,
-        totalLeads: leads.length,
-        negativePercentage:
-          leads.length > 0
-            ? Math.round((totalNegative / leads.length) * 100)
-            : 0,
-        reasonAnalysis: reasonAnalysis.sort((a, b) => b.count - a.count),
-        personnelAnalysis: personnelAnalysis.sort((a, b) => b.count - a.count),
-        negativeLeads,
-      });
-    } catch (error) {
-      console.error("Error in negative analysis:", error);
-      res.status(500).json({ error: "Failed to perform negative analysis" });
-    }
-  });
-
-  // Project analysis endpoint
-  app.get("/api/project-analysis", async (_req, res) => {
-    try {
-      const leads = await storage.getLeads();
-      const projectCounts: { [key: string]: number } = {};
-      const projectLeadTypes: {
-        [key: string]: { kiralama: number; satis: number };
-      } = {};
-
-      leads.forEach((lead) => {
-        const project = lead.projectName || "Proje Belirtilmemiş";
-        projectCounts[project] = (projectCounts[project] || 0) + 1;
-
-        if (!projectLeadTypes[project]) {
-          projectLeadTypes[project] = { kiralama: 0, satis: 0 };
-        }
-
-        if (lead.leadType === "kiralama") {
-          projectLeadTypes[project].kiralama++;
-        } else if (lead.leadType === "satis") {
-          projectLeadTypes[project].satis++;
-        }
-      });
-
-      const projectAnalysis = Object.entries(projectCounts).map(
-        ([project, count]) => ({
-          project,
-          count,
-          percentage:
-            leads.length > 0 ? Math.round((count / leads.length) * 100) : 0,
-          kiralama: projectLeadTypes[project].kiralama,
-          satis: projectLeadTypes[project].satis,
-        })
-      );
-
-      res.json({
-        totalProjects: Object.keys(projectCounts).length,
-        projectAnalysis: projectAnalysis.sort((a, b) => b.count - a.count),
-      });
-    } catch (error) {
-      console.error("Error in project analysis:", error);
-      res.status(500).json({ error: "Failed to perform project analysis" });
     }
   });
 
@@ -2196,7 +1316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // New endpoint for meetings analytics
   app.get("/api/meeting-analytics", async (req, res) => {
     try {
-      const { startDate, endDate, salesRep, leadType, month, year } = req.query;
+      const { startDate, endDate, salesRep, leadType, month, year, project } = req.query;
 
       // Enhanced filtering with automatic month logic
       let finalStartDate = startDate as string;
@@ -2219,6 +1339,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         endDate: finalEndDate,
         salesRep: salesRep as string,
         leadType: leadType as string,
+        project: project as string,
       });
 
       // Meeting analytics statistics
@@ -2353,6 +1474,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         endDate: finalEndDate,
         salesRep: salesRep as string,
         leadType: leadType as string,
+        status: req.query.status as string,
+        project: req.query.project as string,
       });
 
       // Target audience analytics from infoFormLocation2
@@ -2460,6 +1583,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         endDate: finalEndDate,
         salesRep: salesRep as string,
         leadType: leadType as string,
+        status: req.query.status as string,
+        project: req.query.project as string,
       });
 
       // Artwork analytics from infoFormLocation3
@@ -2708,6 +1833,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const router = express.Router();
+
+  router.post('/api/export/pdf', async (req, res) => {
+    console.log('PDF export endpoint hit');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    
+    try {
+      const reportProps = req.body; // Expect company, project, salesperson, data, etc.
+      
+      // Validate that we have some data to work with
+      if (!reportProps) {
+        console.error('No report props provided');
+        return res.status(400).json({ error: 'Report data is required' });
+      }
+      
+      console.log('Calling generateReportPDF...');
+      const pdfBuffer = await generateReportPDF(reportProps);
+      console.log('PDF generation completed, buffer size:', pdfBuffer.length);
+      
+      if (!pdfBuffer || pdfBuffer.length === 0) {
+        console.error('Generated PDF buffer is empty or null');
+        return res.status(500).json({ error: 'Failed to generate PDF - empty buffer' });
+      }
+      
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'attachment; filename="lead-report.pdf"',
+        'Content-Length': pdfBuffer.length.toString(),
+      });
+      
+      console.log('Sending PDF response...');
+      res.send(pdfBuffer);
+      console.log('PDF response sent successfully');
+      
+    } catch (err) {
+      console.error('PDF export error:', err);
+      console.error('Error stack:', err instanceof Error ? err.stack : 'No stack trace');
+      
+      // Send detailed error information in development
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      const errorStack = err instanceof Error ? err.stack : undefined;
+      
+      res.status(500).json({ 
+        error: 'Failed to generate PDF report',
+        message: errorMessage,
+        ...(process.env.NODE_ENV === 'development' && { stack: errorStack })
+      });
+    }
+  });
+
+  app.use('/api', router);
+
   const httpServer = createServer(app);
   return httpServer;
+}
+
+// Helper to safely get a string from req.query (handles string | string[] | undefined)
+function getQueryString(param: any): string {
+  if (Array.isArray(param)) return param[0] || "";
+  return param || "";
 }

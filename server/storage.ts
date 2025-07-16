@@ -29,6 +29,7 @@ export interface IStorage {
     salesRep?: string;
     leadType?: string;
     status?: string;
+    project?: string;
   }): Promise<Lead[]>;
 
   // Sales Reps
@@ -205,6 +206,7 @@ export class MemStorage implements IStorage {
     salesRep?: string;
     leadType?: string;
     status?: string;
+    project?: string;
   }): Promise<Lead[]> {
     let filteredLeads = Array.from(this.leads.values());
 
@@ -254,6 +256,20 @@ export class MemStorage implements IStorage {
       filteredLeads = filteredLeads.filter(
         (lead) => lead.status === filters.status
       );
+    }
+
+    // Project filtering (normalize for robust match)
+    if (filters.project && filters.project !== "all") {
+      const normalize = (name: string) =>
+        (name || "")
+          .toLocaleLowerCase("tr-TR")
+          .replace(/\s+/g, " ")
+          .trim();
+      const normalizedProject = normalize(filters.project);
+      filteredLeads = filteredLeads.filter((lead) => {
+        const projectField = normalize(lead.projectName || (lead as any)?.["Proje"] || "");
+        return projectField === normalizedProject;
+      });
     }
 
     return filteredLeads;

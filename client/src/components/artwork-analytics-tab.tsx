@@ -38,6 +38,8 @@ import {
 } from "./ui/table";
 import AppLayout from "./layouts/app-layout";
 import ProjectFilter from "./project-filter";
+import StandardChart from "./charts/StandardChart";
+import { prepareChartData } from "./charts/chart-utils";
 
 interface ArtworkAnalyticsTabProps {
   filters?: {
@@ -222,91 +224,57 @@ export function ArtworkAnalyticsTab({
         </div>
       ) : (
         <>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Görsel/Video Dağılımı</CardTitle>
-                <CardDescription>
-                  İnfo Form Geliş Yeri 3 alanında belirtilen görsel/video
-                  dağılımı
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={artworkData?.artworkAnalysis.slice(0, 10) || []}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={true}
-                        outerRadius={100}
-                        fill="#8884d8"
-                        dataKey="count"
-                        nameKey="artwork"
-                        label={({ name, percent }) =>
-                          `${name}: ${(percent * 100).toFixed(0)}%`
-                        }
-                      >
-                        {artworkData?.artworkAnalysis
-                          .slice(0, 10)
-                          .map((entry: any, index: number) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={COLORS[index % COLORS.length]}
-                            />
-                          ))}
-                      </Pie>
-                      <Tooltip formatter={(value, name) => [value, name]} />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+          {/* Stack charts vertically for more space */}
+          <div className="flex flex-col gap-6">
+            {/* Görsel/Video Dağılımı - Pie/3D Pie Chart */}
+            <StandardChart
+              title="Görsel/Video Dağılımı"
+              data={prepareChartData(
+                (artworkData?.artworkAnalysis || []).map((item: any) => ({
+                  name: item.artwork,
+                  value: item.count,
+                  percentage: item.percentage,
+                }))
+              )}
+              chartType="3d-pie"
+              allowTypeChange={true}
+              showDataTable={true}
+              showBadge={true}
+              badgeText={`${artworkData?.artworkAnalysis?.length || 0} Tür`}
+              gradientColors={["from-blue-50", "to-indigo-100"]}
+              borderColor="border-blue-100 dark:border-blue-800"
+              icon="🖼️"
+              description="İnfo Form Geliş Yeri 3 alanında belirtilen görsel/video dağılımı"
+              tableTitle="Görsel/Video Detayları"
+              height={400}
+            />
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Görsel/Video Başarı Oranları</CardTitle>
-                <CardDescription>
-                  Her görsel/video türünün görüşme ve satış başarı oranları
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={
-                        artworkData?.artworkAnalysis
-                          .filter((a: any) => a.artwork !== "Belirtilmemiş")
-                          .slice(0, 8) || []
-                      }
-                      margin={{
-                        top: 20,
-                        right: 30,
-                        left: 20,
-                        bottom: 5,
-                      }}
-                    >
-                      <XAxis dataKey="artwork" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar
-                        dataKey="meetingRate"
-                        name="Görüşme Oranı (%)"
-                        fill="#8884d8"
-                      />
-                      <Bar
-                        dataKey="salesRate"
-                        name="Satış Oranı (%)"
-                        fill="#82ca9d"
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Görsel/Video Başarı Oranları - Bar Chart */}
+            <StandardChart
+              title="Görsel/Video Başarı Oranları"
+              data={prepareChartData(
+                (artworkData?.artworkAnalysis || [])
+                  .filter((a: any) => a.artwork !== "Belirtilmemiş")
+                  .map((item: any) => ({
+                    name: item.artwork,
+                    value: item.salesRate, // Use salesRate for main bar, or combine as needed
+                    percentage: item.salesRate, // For bar chart, percentage can be salesRate
+                    meetingRate: item.meetingRate,
+                    salesRate: item.salesRate,
+                  }))
+              )}
+              chartType="bar"
+              allowTypeChange={true}
+              showDataTable={true}
+              showBadge={true}
+              badgeText={`${artworkData?.artworkAnalysis?.length || 0} Tür`}
+              gradientColors={["from-green-50", "to-emerald-100"]}
+              borderColor="border-green-100 dark:border-green-800"
+              icon="📈"
+              description="Her görsel/video türünün görüşme ve satış başarı oranları"
+              tableTitle="Başarı Oranları Detayları"
+              height={400}
+            />
           </div>
 
           <Card>
