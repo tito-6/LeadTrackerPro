@@ -21,7 +21,7 @@ import DataEntryTab from "@/components/data-entry-tab";
 import ReportsTab from "@/components/reports-tab";
 import ExportTab from "@/components/export-tab";
 import SettingsTab from "@/components/settings-tab";
-import OlumsuzAnaliziTab from "@/components/olumsuz-analizi-tab";
+import OlumsuzAnaliziTab from "@/components/olumsuz-analizi-tab-clean";
 import FollowUpAnalyticsTab from "@/components/follow-up-analytics-tab";
 import IntelligentSettingsTab from "@/components/intelligent-settings-tab";
 import ExcelInputTab from "@/components/excel-input-tab";
@@ -51,7 +51,7 @@ export default function Dashboard() {
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 rounded-lg overflow-hidden flex items-center justify-center bg-white border border-gray-200 shadow-sm">
                 <img
-                  src="/attached_assets/innogylogo.webp"
+                  src="/attached_assets/innogylogo.png"
                   alt="İNNO Gayrimenkul Logo"
                   className="w-10 h-10 object-contain"
                   onError={(e) => {

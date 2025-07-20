@@ -14,6 +14,12 @@ import Papa from "papaparse";
 import path from "path";
 import { generateReportPDF } from './pdfReport';
 import express from 'express';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Enhanced function to extract both project name and lead type from WebForm Notu
 function extractDataFromWebForm(webFormNote: string | undefined): {
@@ -24,45 +30,29 @@ function extractDataFromWebForm(webFormNote: string | undefined): {
 
   const originalNote = webFormNote.trim();
 
-  // Extract lead type (Satılık/Kiralık) - Enhanced for your specific format
+  // --- Lead Type Extraction (Best Practice) ---
   let leadType: string | undefined;
-
-  // Specific pattern for your format: "/ Ilgilendigi Gayrimenkul Tipi :Satılık /" or ":Kiralık /"
-  const specificPatterns = [
-    // Match ":Kiralık" in the Ilgilendigi Gayrimenkul Tipi format
-    {
-      regex: /Ilgilendigi\s+Gayrimenkul\s+Tipi\s*:?\s*Kiralık/i,
-      type: "kiralama",
-    },
-    // Match ":Satılık" in the Ilgilendigi Gayrimenkul Tipi format
-    {
-      regex: /Ilgilendigi\s+Gayrimenkul\s+Tipi\s*:?\s*Satılık/i,
-      type: "satis",
-    },
-    // Additional general patterns for KIRALIK (all common variations)
-    {
-      regex: /kiralık|kiraliq|kiralik|kırala|kıralı|krala|krali|kerala|keralı/i,
-      type: "kiralama",
-    },
-    // Additional general patterns for SATILIK (all common variations)
-    {
-      regex: /satılık|satıliq|satilik|satlik|satlık|satılk|satlk|satış|satis/i,
-      type: "satis",
-    },
-  ];
-
-  for (const pattern of specificPatterns) {
-    if (pattern.regex.test(originalNote)) {
-      leadType = pattern.type;
-      console.log(
-        `Lead type detected: "${leadType}" from pattern: ${
-          pattern.regex
-        } in: "${originalNote.substring(0, 100)}..."`
-      );
-      break;
+  // Regex to extract value after 'Ilgilendigi Gayrimenkul Tipi :' and before next '/' or end
+  const leadTypeMatch = originalNote.match(/Ilgilendigi\s+Gayrimenkul\s+Tipi\s*:\s*([^/\n]*)/i);
+  if (leadTypeMatch) {
+    let extracted = leadTypeMatch[1].trim();
+    // Normalize Turkish and English i's, remove accents, lowercase
+    extracted = extracted
+      .replace(/İ/g, 'i')
+      .replace(/ı/g, 'i')
+      .replace(/I/g, 'i')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+    if (extracted === 'kiralık' || extracted === 'kiralik') {
+      leadType = 'kiralama';
+    } else if (extracted === 'satılık' || extracted === 'satilik') {
+      leadType = 'satis';
+    } else {
+      leadType = 'Tanımsız';
     }
-    // Reset the regex lastIndex for global patterns
-    pattern.regex.lastIndex = 0;
+    console.log(`WebForm Notu: '${originalNote}' => Extracted: '${extracted}' => leadType: '${leadType}'`);
+  } else {
+    leadType = 'Tanımsız';
   }
 
   // Enhanced project name extraction patterns
@@ -243,7 +233,7 @@ function mapRowToLead(row: any): any {
     "";
 
   // Enhanced lead type detection from WebForm Notu and other columns
-  let leadType = "kiralama"; // Default to kiralama
+  let leadType = "Tanımsız"; // Default to Tanımsız
 
   // First try the Lead Tipi column if it exists
   const leadTypeValue = row["Lead Tipi"] || row.leadType || "";
@@ -255,6 +245,11 @@ function mapRowToLead(row: any): any {
       normalized.includes("sale")
     ) {
       leadType = "satis";
+    } else if (
+      normalized.includes("kiralık") ||
+      normalized.includes("kiralik")
+    ) {
+      leadType = "kiralama";
     }
   }
 
@@ -262,7 +257,7 @@ function mapRowToLead(row: any): any {
   const webFormNote =
     row["WebForm Notu"] || row["Web Form Notu"] || row.webFormNote || "";
   const webFormData = extractDataFromWebForm(webFormNote);
-  if (webFormData.leadType) {
+  if (webFormData.leadType && webFormData.leadType !== "Tanımsız") {
     leadType = webFormData.leadType; // Override with WebForm detected type
     console.log(
       `✓ WebForm lead type detected: "${leadType}" from: "${webFormNote.substring(
@@ -423,7 +418,27 @@ function mapRowToLead(row: any): any {
   };
 }
 
+import { sampleLeads } from './sample-data';
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Load sample data for testing
+  app.get("/api/load-sample-data", async (req, res) => {
+    try {
+      // Clear existing leads
+      await storage.clearAllLeads();
+      
+      // Add sample leads
+      for (const lead of sampleLeads) {
+        await storage.createLead(lead);
+      }
+      
+      res.json({ success: true, message: "Sample data loaded successfully", count: sampleLeads.length });
+    } catch (error) {
+      console.error("Failed to load sample data:", error);
+      res.status(500).json({ message: "Failed to load sample data" });
+    }
+  });
+
   // Leads endpoints
   app.get("/api/leads", async (req, res) => {
     try {
@@ -849,6 +864,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Takipte (Follow-up) data endpoints
   let takipteStorage: any[] = [];
 
+  // Initialize takipteStorage with data from JSON file
+  const initializeTakipteStorage = () => {
+    try {
+      const takipteDataPath = path.join(__dirname, '../takipte_response.json');
+      if (fs.existsSync(takipteDataPath)) {
+        const rawData = fs.readFileSync(takipteDataPath, 'utf8');
+        takipteStorage = JSON.parse(rawData);
+        console.log(`Loaded ${takipteStorage.length} takipte records from file`);
+      } else {
+        console.log('No takipte data file found, starting with empty storage');
+        takipteStorage = [];
+      }
+    } catch (error) {
+      console.error('Error loading takipte data:', error);
+      takipteStorage = [];
+    }
+  };
+
+  // Initialize storage on startup
+  initializeTakipteStorage();
+
+  // Function to save takipteStorage to JSON file
+  function saveTakipteStorage() {
+    try {
+      const takipteDataPath = path.join(__dirname, "../takipte_response.json");
+      fs.writeFileSync(takipteDataPath, JSON.stringify(takipteStorage, null, 2));
+      console.log(`Saved ${takipteStorage.length} takipte records to file`);
+    } catch (error) {
+      console.error("Error saving takipte data:", error);
+    }
+  }
+
   app.post("/api/takipte/import", upload.single("file"), async (req, res) => {
     try {
       if (!req.file) {
@@ -906,6 +953,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Processed ${takipteStorage.length} takipte records`);
 
+      // Save to JSON file
+      saveTakipteStorage();
+
       res.json({
         message: "Takipte file imported successfully",
         imported: takipteStorage.length,
@@ -944,6 +994,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Store takipte data
       takipteStorage = validData;
+
+      // Save to JSON file
+      saveTakipteStorage();
 
       res.json({
         message: "Excel takipte data imported successfully",
@@ -1181,6 +1234,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(filteredData);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch takipte data" });
+    }
+  });
+
+  // Update individual cell in takipte data
+  app.put("/api/takipte/update-cell", async (req, res) => {
+    try {
+      const { rowIndex, columnId, value } = req.body;
+
+      if (rowIndex < 0 || rowIndex >= takipteStorage.length) {
+        return res.status(400).json({ message: "Invalid row index" });
+      }
+
+      if (!columnId) {
+        return res.status(400).json({ message: "Column ID is required" });
+      }
+
+      // Update the cell value
+      takipteStorage[rowIndex][columnId] = value;
+
+      // Save to JSON file
+      saveTakipteStorage();
+
+      res.json({ 
+        message: "Cell updated successfully", 
+        rowIndex, 
+        columnId, 
+        value 
+      });
+    } catch (error) {
+      console.error("Error updating cell:", error);
+      res.status(500).json({ 
+        message: "Failed to update cell", 
+        error: (error as Error).message 
+      });
     }
   });
 

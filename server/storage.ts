@@ -58,6 +58,16 @@ export interface IStorage {
   ): Promise<LeadExpense | undefined>;
   deleteLeadExpense(id: number): Promise<boolean>;
   getLeadExpensesByMonth(month: string): Promise<LeadExpense[]>;
+  
+  // Get all leads or filtered leads
+  getLeads(): Promise<Lead[]>;
+  getLeadsByFilter(filter: {
+    startDate?: string;
+    endDate?: string;
+    salesRep?: string;
+    leadType?: string;
+    status?: string;
+  }): Promise<Lead[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -196,6 +206,45 @@ export class MemStorage implements IStorage {
   async clearAllLeads(): Promise<void> {
     this.leads.clear();
     this.currentLeadId = 1;
+  }
+  
+  async getLeads(): Promise<Lead[]> {
+    return Array.from(this.leads.values());
+  }
+  
+  async getLeadsByFilter(filter: {
+    startDate?: string;
+    endDate?: string;
+    salesRep?: string;
+    leadType?: string;
+    status?: string;
+  }): Promise<Lead[]> {
+    const allLeads = Array.from(this.leads.values());
+    
+    return allLeads.filter(lead => {
+      // Apply filters if provided
+      if (filter.startDate && lead.requestDate && lead.requestDate < filter.startDate) {
+        return false;
+      }
+      
+      if (filter.endDate && lead.requestDate && lead.requestDate > filter.endDate) {
+        return false;
+      }
+      
+      if (filter.salesRep && lead.assignedPersonnel !== filter.salesRep) {
+        return false;
+      }
+      
+      if (filter.leadType && lead.leadType !== filter.leadType) {
+        return false;
+      }
+      
+      if (filter.status && lead.status !== filter.status) {
+        return false;
+      }
+      
+      return true;
+    });
   }
 
   async getLeadsByFilter(filters: {

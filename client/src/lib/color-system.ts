@@ -71,6 +71,23 @@ export const STANDARD_COLORS = {
     Medium: "#f59e0b", // Amber for medium impact (5-10%)
     Low: "#10b981", // Green for low impact (<5%)
   },
+  
+  // Negative reason analysis colors
+  NEGATIVE: {
+    "Fiyat": "#ef4444", // Red - Price issues
+    "Bütçe": "#ef4444", // Red - Budget issues
+    "Konum": "#f59e0b", // Orange - Location issues
+    "Uzaklık": "#f59e0b", // Orange - Distance issues
+    "Müşteri Vazgeçti": "#8b5cf6", // Purple - Customer changed mind
+    "Alıcı Profili Uygun Değil": "#6366f1", // Indigo - Buyer profile not suitable
+    "Proje Beğenilmedi": "#f97316", // Orange - Project not liked
+    "Ödeme Planı": "#10b981", // Green - Payment plan issues
+    "Ulaşılamıyor": "#6b7280", // Gray - Unreachable
+    "Başka Yerden Aldı": "#ec4899", // Pink - Bought elsewhere
+    "Başka Projeden Aldı": "#ec4899", // Pink - Bought from another project
+    "Belirtilmemiş": "#6b7280", // Gray - Not specified
+    Default: "#6b7280", // Gray - Default
+  },
 
   // Office colors (for multi-office analysis)
   OFFICE: {
