@@ -33,6 +33,7 @@ import {
   Cell,
   LineChart,
   Line,
+  LabelList,
 } from "recharts";
 import {
   TrendingUp,
@@ -45,6 +46,8 @@ import {
   Star,
   Trash2,
   RefreshCw,
+  Settings,
+  FileText,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import StandardChart from "@/components/charts/StandardChart";
@@ -99,6 +102,31 @@ export default function EnhancedOverviewDashboardTab() {
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Cache clearing function
+  const clearCache = async () => {
+    try {
+      // Clear all queries from the cache
+      await queryClient.invalidateQueries();
+      // Alternatively, you can be more specific:
+      // await queryClient.invalidateQueries({ queryKey: ["/api/enhanced-stats"] });
+      // await queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      // await queryClient.invalidateQueries({ queryKey: ["/api/takipte"] });
+
+      toast({
+        title: "✅ Önbellek Temizlendi",
+        description: "Tüm veriler yeniden yüklenecek.",
+        duration: 3000,
+      });
+    } catch (error) {
+      toast({
+        title: "❌ Hata",
+        description: "Önbellek temizlenirken bir hata oluştu.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
+  };
 
   // Get 3D settings from chart settings
   const { data: settings } = useSettings();
@@ -259,7 +287,7 @@ export default function EnhancedOverviewDashboardTab() {
   const personnelStatusMatrix = useMemo(() => {
     if (!filteredLeads.length || !enhancedStats) return [];
 
-    const { takipte, leads } = enhancedStats;
+    const { leads } = enhancedStats;
     const personnelStats: { [key: string]: any } = {};
 
     // Initialize all personnel with all statuses set to 0
@@ -270,7 +298,7 @@ export default function EnhancedOverviewDashboardTab() {
       personnelStats[personnel] = {
         name: personnel,
         totalLeads: 0,
-        takipteCount: takipte.byPersonnel?.[personnel] || 0,
+        takipteCount: 0, // Will be calculated correctly below
         // Add a dedicated counter for Birebir Görüşme
         birebirGorusmeCount: 0,
       };
@@ -293,7 +321,7 @@ export default function EnhancedOverviewDashboardTab() {
         personnelStats[personnel] = {
           name: personnel,
           totalLeads: 0,
-          takipteCount: takipte.byPersonnel?.[personnel] || 0,
+          takipteCount: 0,
           birebirGorusmeCount: 0,
         };
 
@@ -313,8 +341,36 @@ export default function EnhancedOverviewDashboardTab() {
       }
 
       // Increment Birebir Görüşme count if oneOnOneMeeting === 'Evet'
-      if (lead.oneOnOneMeeting && lead.oneOnOneMeeting.trim().toLowerCase() === "evet") {
+      if (
+        lead.oneOnOneMeeting &&
+        lead.oneOnOneMeeting.trim().toLowerCase() === "evet"
+      ) {
         personnelStats[personnel].birebirGorusmeCount++;
+      }
+
+      // CORRECT TAKIPTE COUNT: Only count leads that are marked "takipte" in main file AND have match in takip file
+      if (
+        originalStatus &&
+        (originalStatus.toLowerCase().includes("takipte") ||
+          originalStatus.toLowerCase().includes("takip") ||
+          originalStatus.toLowerCase().includes("potansiyel"))
+      ) {
+        // Check if this lead has a match in takip data file
+        const hasMatchInTakipFile =
+          takipteData &&
+          takipteData.some(
+            (takipLead: any) =>
+              (takipLead.customerName ||
+                takipLead["Müşteri Adı Soyadı(292)"]) &&
+              lead.customerName &&
+              (takipLead.customerName || takipLead["Müşteri Adı Soyadı(292)"])
+                .toLowerCase()
+                .trim() === lead.customerName.toLowerCase().trim()
+          );
+
+        if (hasMatchInTakipFile) {
+          personnelStats[personnel].takipteCount++;
+        }
       }
     });
 
@@ -324,12 +380,21 @@ export default function EnhancedOverviewDashboardTab() {
       Object.keys(leads.byPersonnel || {})
     );
     console.log(
-      "Debug - Takipte personnel:",
-      Object.keys(takipte.byPersonnel || {})
+      "Debug - Takipte counts by personnel:",
+      Object.values(personnelStats).map((p: any) => ({
+        name: p.name,
+        takipteCount: p.takipteCount,
+      }))
     );
 
     return Object.values(personnelStats);
-  }, [filteredLeads, enhancedStats, statusColumns, normalizeStatus]);
+  }, [
+    filteredLeads,
+    enhancedStats,
+    statusColumns,
+    normalizeStatus,
+    takipteData,
+  ]);
 
   // Toggle column visibility
   const toggleColumn = (columnKey: string) => {
@@ -342,6 +407,99 @@ export default function EnhancedOverviewDashboardTab() {
       }
       return newSet;
     });
+  };
+
+  // GLOBAL UNIQUE COLOR SYSTEM - Ensures each category gets a distinct color across ALL reports
+  const globalColorPalette = [
+    "#3b82f6", // Blue
+    "#ef4444", // Red
+    "#10b981", // Green
+    "#f59e0b", // Amber
+    "#8b5cf6", // Purple
+    "#f97316", // Orange
+    "#06b6d4", // Cyan
+    "#84cc16", // Lime
+    "#ec4899", // Pink
+    "#6366f1", // Indigo
+    "#14b8a6", // Teal
+    "#a855f7", // Violet
+    "#f472b6", // Rose
+    "#22c55e", // Emerald
+    "#fb923c", // Orange-alt
+    "#8b5a2b", // Brown
+    "#059669", // Green-alt
+    "#dc2626", // Red-alt
+    "#1d4ed8", // Blue-alt
+    "#7c2d12", // Brown-alt
+    "#701a75", // Purple-alt
+    "#92400e", // Yellow-alt
+    "#065f46", // Emerald-alt
+    "#1e40af", // Blue-deep
+    "#be123c", // Rose-alt
+    "#166534", // Green-deep
+    "#9333ea", // Violet-alt
+    "#c2410c", // Orange-deep
+    "#0891b2", // Cyan-alt
+    "#be185d", // Pink-alt
+  ];
+
+  // Track all categories across all reports to ensure uniqueness - PERSISTENT across renders
+  const categoryColorMap = useMemo(() => new Map<string, string>(), []);
+
+  const getUniqueColorForCategory = (categoryName: string): string => {
+    // Return existing color if already assigned
+    if (categoryColorMap.has(categoryName)) {
+      return categoryColorMap.get(categoryName)!;
+    }
+
+    // Assign next available color
+    const assignedColors = Array.from(categoryColorMap.values());
+    const availableColors = globalColorPalette.filter(
+      (color) => !assignedColors.includes(color)
+    );
+
+    // If we run out of predefined colors, generate variations
+    let newColor: string;
+    if (availableColors.length > 0) {
+      newColor = availableColors[0];
+    } else {
+      // Generate a variation of existing colors
+      const baseColor =
+        globalColorPalette[categoryColorMap.size % globalColorPalette.length];
+      newColor = adjustColorBrightness(
+        baseColor,
+        categoryColorMap.size % 2 === 0 ? 0.3 : -0.3
+      );
+    }
+
+    categoryColorMap.set(categoryName, newColor);
+    return newColor;
+  };
+
+  // Helper function to adjust color brightness for variations
+  const adjustColorBrightness = (hex: string, factor: number): string => {
+    hex = hex.replace("#", "");
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+
+    const newR = Math.max(0, Math.min(255, Math.round(r * (1 + factor))));
+    const newG = Math.max(0, Math.min(255, Math.round(g * (1 + factor))));
+    const newB = Math.max(0, Math.min(255, Math.round(b * (1 + factor))));
+
+    return `#${newR.toString(16).padStart(2, "0")}${newG
+      .toString(16)
+      .padStart(2, "0")}${newB.toString(16).padStart(2, "0")}`;
+  };
+
+  // UNIFIED COLOR FUNCTIONS - All use the same global unique system
+  const getUnifiedSourceColor = (sourceName: string) => {
+    return getUniqueColorForCategory(sourceName);
+  };
+
+  // Meeting types also use the global unique system
+  const getMeetingTypeColor = (meetingType: string) => {
+    return getUniqueColorForCategory(meetingType);
   };
 
   // Memoized calculations for performance - NOW USING FILTERED DATA
@@ -400,7 +558,17 @@ export default function EnhancedOverviewDashboardTab() {
       name: status,
       value: count as number,
       percentage: Math.round(((count as number) / totalLeads) * 100),
+      color: getUniqueColorForCategory(status),
     }));
+
+    console.log(
+      "📊 Lead Durum Dağılımı - Data with colors:",
+      statusData.map((item) => ({
+        name: item.name,
+        value: item.value,
+        color: item.color,
+      }))
+    );
 
     // Personnel data for charts from filtered data
     const personnelCounts = filteredLeadsForDate.reduce((acc: any, lead) => {
@@ -411,9 +579,28 @@ export default function EnhancedOverviewDashboardTab() {
 
     const personnelData = Object.entries(personnelCounts).map(
       ([person, leadCount]) => {
-        const takipteCount = filteredTakipte.filter(
-          (t: any) => (t["Personel Adı(203)"] || t.assignedPersonnel) === person
-        ).length;
+        // CORRECT TAKIPTE COUNT: Count leads that are marked "takipte" in main file AND have match in takip file
+        const takipteCount = filteredLeadsForDate.filter((lead) => {
+          const isAssignedToPerson =
+            (lead.assignedPersonnel || "Atanmamış") === person;
+          const isMarkedTakipte =
+            lead.status &&
+            (lead.status.toLowerCase().includes("takipte") ||
+              lead.status.toLowerCase().includes("takip") ||
+              lead.status.toLowerCase().includes("potansiyel"));
+          const hasMatchInTakipFile = filteredTakipte.some(
+            (takipLead: any) =>
+              (takipLead.customerName ||
+                takipLead["Müşteri Adı Soyadı(292)"]) &&
+              lead.customerName &&
+              (takipLead.customerName || takipLead["Müşteri Adı Soyadı(292)"])
+                .toLowerCase()
+                .trim() === lead.customerName.toLowerCase().trim()
+          );
+
+          return isAssignedToPerson && isMarkedTakipte && hasMatchInTakipFile;
+        }).length;
+
         return {
           name: person,
           leadCount: leadCount as number,
@@ -433,11 +620,25 @@ export default function EnhancedOverviewDashboardTab() {
       return acc;
     }, {});
 
-    const typeData = Object.entries(typeCounts).map(([type, count]) => ({
-      name: type === "kiralama" ? "Kiralık" : type === "satis" ? "Satış" : type,
-      value: count as number,
-      percentage: Math.round(((count as number) / totalLeads) * 100),
-    }));
+    const typeData = Object.entries(typeCounts).map(([type, count]) => {
+      const displayName =
+        type === "kiralama" ? "Kiralık" : type === "satis" ? "Satış" : type;
+      return {
+        name: displayName,
+        value: count as number,
+        percentage: Math.round(((count as number) / totalLeads) * 100),
+        color: getUniqueColorForCategory(displayName),
+      };
+    });
+
+    console.log(
+      "📊 Lead Tipi Dağılımı - Data with colors:",
+      typeData.map((item) => ({
+        name: item.name,
+        value: item.value,
+        color: item.color,
+      }))
+    );
 
     return {
       totalLeads,
@@ -502,6 +703,47 @@ export default function EnhancedOverviewDashboardTab() {
     const total = filteredTakipte.length;
     if (total === 0) return null;
 
+    // PRE-ASSIGN COLORS: Collect all unique categories across all reports to ensure unique colors
+    const allSourceCategories = new Set<string>();
+    const allMeetingTypeCategories = new Set<string>();
+
+    // Collect all source categories from takipte data
+    filteredTakipte.forEach((t: any) => {
+      const source = t["İrtibat Müşteri Kaynağı"] || t.source || "Bilinmiyor";
+      allSourceCategories.add(source);
+    });
+
+    // Collect all meeting type categories from takipte data
+    filteredTakipte.forEach((t: any) => {
+      const meetingType = t["Görüşme Tipi"] || t.meetingType || "Bilinmiyor";
+      allMeetingTypeCategories.add(meetingType);
+    });
+
+    // Collect main source categories from leads data if available
+    if (dashboardMetrics?.leads) {
+      dashboardMetrics.leads.forEach((lead: any) => {
+        const source = lead.firstCustomerSource || "Bilinmiyor";
+        allSourceCategories.add(source);
+      });
+    }
+
+    // Pre-assign colors to ALL categories in order to ensure uniqueness
+    const allCategories = [
+      ...Array.from(allSourceCategories).sort(), // Sort for consistent order
+      ...Array.from(allMeetingTypeCategories).sort(),
+    ];
+
+    // Pre-assign colors to ensure consistency
+    allCategories.forEach((category) => {
+      getUniqueColorForCategory(category);
+    });
+
+    // Debug: Log color assignments to verify uniqueness
+    console.log(
+      "🎨 Color Assignments for 🎯 Kaynak Analizi:",
+      Array.from(categoryColorMap.entries())
+    );
+
     // Customer source analysis from filtered data
     const sourceCounts = filteredTakipte.reduce((acc: any, t: any) => {
       const source = t["İrtibat Müşteri Kaynağı"] || t.source || "Bilinmiyor";
@@ -513,7 +755,17 @@ export default function EnhancedOverviewDashboardTab() {
       name: source,
       value: count as number,
       percentage: Math.round(((count as number) / total) * 100),
+      color: getUnifiedSourceColor(source),
     }));
+
+    // Debug: Log source data with colors
+    console.log(
+      "📱 Müşteri Kaynak Analizi - Data with colors:",
+      sourceData.map((item) => ({
+        name: item.name,
+        color: item.color,
+      }))
+    );
 
     // Meeting type distribution from filtered data
     const meetingCounts = filteredTakipte.reduce((acc: any, t: any) => {
@@ -527,7 +779,17 @@ export default function EnhancedOverviewDashboardTab() {
         name: type,
         value: count as number,
         percentage: Math.round(((count as number) / total) * 100),
+        color: getMeetingTypeColor(type),
       })
+    );
+
+    // Debug: Log meeting type data with colors
+    console.log(
+      "🤝 Görüşme Tipi Dağılımı - Data with colors:",
+      meetingTypeData.map((item) => ({
+        name: item.name,
+        color: item.color,
+      }))
     );
 
     // Office performance from filtered data
@@ -541,6 +803,7 @@ export default function EnhancedOverviewDashboardTab() {
       name: office,
       value: count as number,
       percentage: Math.round(((count as number) / total) * 100),
+      color: getUniqueColorForCategory(office),
     }));
 
     // Customer criteria (Satış vs Kira) from filtered data
@@ -554,7 +817,26 @@ export default function EnhancedOverviewDashboardTab() {
       name: kriter,
       value: count as number,
       percentage: Math.round(((count as number) / total) * 100),
+      color: getUniqueColorForCategory(kriter),
     }));
+
+    console.log(
+      "🏢 Ofis Performansı - Data with colors:",
+      officeData.map((item) => ({
+        name: item.name,
+        value: item.value,
+        color: item.color,
+      }))
+    );
+
+    console.log(
+      "🎯 Müşteri Kriterleri - Data with colors:",
+      kriterData.map((item) => ({
+        name: item.name,
+        value: item.value,
+        color: item.color,
+      }))
+    );
 
     return {
       sourceData,
@@ -587,7 +869,7 @@ export default function EnhancedOverviewDashboardTab() {
         case "status":
           return getColor("STATUS", item.name);
         case "source":
-          return getSourceColor(item.name);
+          return getUnifiedSourceColor(item.name);
         default:
           return getColor("STATUS", item.name);
       }
@@ -596,31 +878,125 @@ export default function EnhancedOverviewDashboardTab() {
 
   return (
     <div className="space-y-6">
-      {/* Project Filter at the top */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <ProjectFilter value={selectedProject} onChange={setSelectedProject} />
-      </div>
-      {/* Header with Data Completeness Alert */}
+      {/* Header */}
       <div className="flex justify-between items-start">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">
-            🧠 Akıllı Dashboard - Genel Görünüm
+            Proje Bazlı Analiz - Genel Görünüm
           </h2>
           <p className="text-gray-600 mt-1">
-            AI-destekli lead performans analizi
+            Lead performans analizi ve raporlama
           </p>
         </div>
 
-        {!hasSecondaryData && (
-          <Alert className="max-w-md border-amber-200 bg-amber-50">
-            <AlertCircle className="h-4 w-4 text-amber-600" />
-            <AlertDescription className="text-amber-800">
-              <strong>⚠️ Eksik Veri:</strong> Takip dosyası yüklenmemiş. Detaylı
-              analiz için ikinci dosyayı yükleyin.
-            </AlertDescription>
-          </Alert>
-        )}
+        <div className="flex flex-col gap-3 items-end">
+          {/* Cache Clear Button */}
+          <Button
+            onClick={clearCache}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2 hover:bg-blue-50 border-blue-200"
+          >
+            <RefreshCw className="h-4 w-4" />
+            🗑️ Önbelleği Temizle
+          </Button>
+
+          {!hasSecondaryData && (
+            <Alert className="max-w-md border-amber-200 bg-amber-50">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-800">
+                <strong>⚠️ Eksik Veri:</strong> Takip dosyası yüklenmemiş.
+                Detaylı analiz için ikinci dosyayı yükleyin.
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
       </div>
+
+      {/* Unified Filters and Controls Card */}
+      <Card className="p-6 bg-gradient-to-r from-gray-50 to-blue-50 border-2 border-blue-100">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Settings className="h-5 w-5" />
+            🎛️ Kontrol Paneli - Filtreler ve Ayarlar
+          </CardTitle>
+          <CardDescription>
+            Tüm filtreleme ve görselleştirme kontrollerini buradan
+            yapabilirsiniz
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* First Row: Project Filter */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">
+              📁 Proje Filtresi
+            </label>
+            <ProjectFilter
+              value={selectedProject}
+              onChange={setSelectedProject}
+            />
+          </div>
+
+          {/* Second Row: Date Filters */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">
+              📅 Tarih Filtreleri
+            </label>
+            <DateFilter
+              onFilterChange={setDateFilters}
+              initialFilters={dateFilters}
+            />
+          </div>
+
+          {/* Third Row: Chart Controls and Actions */}
+          <div className="flex flex-wrap gap-4 items-center justify-between pt-4 border-t border-gray-200">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                📊 Grafik Türü
+              </label>
+              <div className="flex space-x-2">
+                {chartTypeOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setChartType(option.value)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      chartType === option.value
+                        ? "bg-blue-500 text-white shadow-lg transform scale-105"
+                        : "bg-white text-gray-700 hover:bg-blue-50 border border-gray-200 hover:border-blue-300"
+                    }`}
+                  >
+                    {option.icon} {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col items-end gap-3">
+              {/* Removed emoji badges as requested */}
+              <div className="flex gap-2 text-sm">
+                {/* Badge section removed */}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => clearCacheMutation.mutate()}
+                disabled={clearCacheMutation.isPending}
+                className="flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-700 border-red-200 hover:border-red-300"
+              >
+                {clearCacheMutation.isPending ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                {clearCacheMutation.isPending
+                  ? "Temizleniyor..."
+                  : "🗑️ Önbellek Temizle"}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Main KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -628,7 +1004,7 @@ export default function EnhancedOverviewDashboardTab() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center">
               <Users className="mr-2 h-4 w-4" />
-              📊 Real-time Leads
+              Total Leads
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -672,87 +1048,7 @@ export default function EnhancedOverviewDashboardTab() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center">
-              <Star className="mr-2 h-4 w-4" />
-              🤖 AI-Power Status
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-bold">
-              {hasSecondaryData ? "🤖 Active" : "⚠️ Limited"}
-            </div>
-            <p className="text-orange-100 text-xs">
-              {hasSecondaryData
-                ? "Tam AI analiz aktif"
-                : "İkinci dosya gerekli"}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Date Filter and Chart Controls */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-1">
-          <DateFilter
-            onFilterChange={setDateFilters}
-            initialFilters={dateFilters}
-          />
-        </div>
-
-        <div className="lg:col-span-2">
-          <div className="flex flex-wrap gap-4 items-center justify-between bg-gray-50 p-4 rounded-lg h-full">
-            {/* Chart Type Selector */}
-            <div className="flex space-x-2">
-              {chartTypeOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => setChartType(option.value)}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    chartType === option.value
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-                  }`}
-                >
-                  {option.icon} {option.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex gap-2 items-center">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => clearCacheMutation.mutate()}
-                disabled={clearCacheMutation.isPending}
-                className="flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
-              >
-                {clearCacheMutation.isPending ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Trash2 className="h-4 w-4" />
-                )}
-                {clearCacheMutation.isPending
-                  ? "Temizleniyor..."
-                  : "Önbellek Temizle"}
-              </Button>
-
-              <div className="flex gap-2 text-sm text-gray-600">
-                <Badge variant="outline">📊 Real-time</Badge>
-                <Badge variant="outline">🤖 AI-Power</Badge>
-                {hasSecondaryData && (
-                  <Badge
-                    variant="outline"
-                    className="bg-green-50 text-green-700"
-                  >
-                    ✅ Tam Veri
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* AI-Power Status card removed as requested */}
       </div>
 
       {/* Personnel Summary Table */}
@@ -827,7 +1123,15 @@ export default function EnhancedOverviewDashboardTab() {
                           </th>
                         ))}
                       <th className="text-center p-2 font-medium bg-green-50">
-                        Takip Kayıtları
+                        <div className="flex items-center justify-center gap-1">
+                          <span className="text-xs">Takip Kayıtları</span>
+                          <span
+                            className="text-xs text-gray-500"
+                            title="Ana dosyada 'Takipte' olarak işaretlenmiş VE takip dosyasında eşleşen kayıtlar"
+                          >
+                            ℹ️
+                          </span>
+                        </div>
                       </th>
                     </tr>
                   </thead>
@@ -950,22 +1254,20 @@ export default function EnhancedOverviewDashboardTab() {
 
       {/* Main Analytics Tabs */}
       <Tabs defaultValue="status" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="status">Durum Analizi</TabsTrigger>
           <TabsTrigger value="personnel">Personel Performansı</TabsTrigger>
           <TabsTrigger value="sources">🎯 Kaynak Analizi</TabsTrigger>
           <TabsTrigger value="data-explorer">📊 Lead Verileri</TabsTrigger>
-          <TabsTrigger value="advanced">🧠 Gelişmiş Analiz</TabsTrigger>
+          {/* Removed Potansiyel Takipte tab - incorrect statistics */}
+          {/* <TabsTrigger value="advanced">🧠 Gelişmiş Analiz</TabsTrigger> */}
         </TabsList>
 
         <TabsContent value="status" className="space-y-4">
           <div className="grid grid-cols-1 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Lead Durum Dağılımı</CardTitle>
-                <CardDescription>
-                  Mevcut lead durumlarının analizi
-                </CardDescription>
+                <CardTitle>📊 Lead Durum Dağılımı - Özet Tablosu</CardTitle>
               </CardHeader>
               <CardContent>
                 {dashboardMetrics?.statusData && (
@@ -973,18 +1275,58 @@ export default function EnhancedOverviewDashboardTab() {
                     <StandardChart
                       title=""
                       data={dashboardMetrics.statusData}
-                      height={400}
+                      height={500}
                       chartType={chartType}
+                      showDataTable={false}
+                      className="[&_.grid]:!grid-cols-1 [&_.space-y-4]:!hidden mb-6"
                     />
-                    <DataTable
-                      title="Lead Durum Dağılımı"
-                      data={dashboardMetrics.statusData.map((item) => ({
-                        Durum: item.name,
-                        Adet: item.value,
-                        Yüzde: `${item.value} (%${item.percentage})`,
-                      }))}
-                      totalRecords={dashboardMetrics.totalLeads}
-                    />
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse border border-gray-200">
+                        <thead>
+                          <tr className="bg-gray-50">
+                            <th className="border border-gray-200 px-4 py-2 text-left font-medium">
+                              Durum
+                            </th>
+                            <th className="border border-gray-200 px-4 py-2 text-left font-medium">
+                              Adet
+                            </th>
+                            <th className="border border-gray-200 px-4 py-2 text-left font-medium">
+                              Yüzde
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dashboardMetrics.statusData.map((item, index) => (
+                            <tr
+                              key={index}
+                              className="hover:bg-gray-50"
+                              style={{
+                                backgroundColor: `${item.color}15`,
+                                borderLeft: `4px solid ${item.color}`,
+                              }}
+                            >
+                              <td className="border border-gray-200 px-4 py-2 font-medium">
+                                <div className="flex items-center gap-2">
+                                  <div
+                                    className="w-3 h-3 rounded-full"
+                                    style={{
+                                      backgroundColor: item.color,
+                                    }}
+                                  />
+                                  {item.name}
+                                </div>
+                              </td>
+                              <td className="border border-gray-200 px-4 py-2 text-center font-medium">
+                                {item.value}
+                              </td>
+                              <td className="border border-gray-200 px-4 py-2 text-center">
+                                {item.value} (%{item.percentage})
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </>
                 )}
               </CardContent>
@@ -1001,18 +1343,58 @@ export default function EnhancedOverviewDashboardTab() {
                     <StandardChart
                       title=""
                       data={dashboardMetrics.typeData}
-                      height={400}
+                      height={500}
                       chartType={chartType}
+                      showDataTable={false}
+                      className="[&_.grid]:!grid-cols-1 [&_.space-y-4]:!hidden mb-6"
                     />
-                    <DataTable
-                      title="Lead Tipi Dağılımı"
-                      data={dashboardMetrics.typeData.map((item) => ({
-                        Tip: item.name,
-                        Adet: item.value,
-                        Yüzde: `${item.value} (%${item.percentage})`,
-                      }))}
-                      totalRecords={dashboardMetrics.totalLeads}
-                    />
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse border border-gray-200">
+                        <thead>
+                          <tr className="bg-gray-50">
+                            <th className="border border-gray-200 px-4 py-2 text-left font-medium">
+                              Tip
+                            </th>
+                            <th className="border border-gray-200 px-4 py-2 text-left font-medium">
+                              Adet
+                            </th>
+                            <th className="border border-gray-200 px-4 py-2 text-left font-medium">
+                              Yüzde
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dashboardMetrics.typeData.map((item, index) => (
+                            <tr
+                              key={index}
+                              className="hover:bg-gray-50"
+                              style={{
+                                backgroundColor: `${item.color}15`,
+                                borderLeft: `4px solid ${item.color}`,
+                              }}
+                            >
+                              <td className="border border-gray-200 px-4 py-2 font-medium">
+                                <div className="flex items-center gap-2">
+                                  <div
+                                    className="w-3 h-3 rounded-full"
+                                    style={{
+                                      backgroundColor: item.color,
+                                    }}
+                                  />
+                                  {item.name}
+                                </div>
+                              </td>
+                              <td className="border border-gray-200 px-4 py-2 text-center font-medium">
+                                {item.value}
+                              </td>
+                              <td className="border border-gray-200 px-4 py-2 text-center">
+                                {item.value} (%{item.percentage})
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </>
                 )}
               </CardContent>
@@ -1048,7 +1430,18 @@ export default function EnhancedOverviewDashboardTab() {
                         fill="#8884d8"
                         name="Lead Sayısı"
                         radius={[4, 4, 0, 0]}
-                      />
+                      >
+                        <LabelList
+                          dataKey="leadCount"
+                          position="top"
+                          style={{
+                            textAnchor: "middle",
+                            fontSize: "16px",
+                            fontWeight: "bold",
+                            fill: "#374151",
+                          }}
+                        />
+                      </Bar>
                       {hasSecondaryData && (
                         <Bar
                           dataKey="takipteCount"
@@ -1069,7 +1462,6 @@ export default function EnhancedOverviewDashboardTab() {
                         (item.leadCount / dashboardMetrics.totalLeads) * 100
                       )}`,
                       "Takip Kayıtları": item.takipteCount,
-                      Verimlilik: `%${item.efficiency}`,
                     }))}
                     className="mt-6"
                   />
@@ -1080,108 +1472,33 @@ export default function EnhancedOverviewDashboardTab() {
         </TabsContent>
 
         <TabsContent value="sources" className="space-y-4">
-          {hasSecondaryData && takipteAnalytics ? (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Customer Source Analysis */}
-                <StandardChart
-                  title="Müşteri Kaynak Analizi"
-                  data={
-                    takipteAnalytics.sourceData?.map((item, index) => ({
-                      name: item.name,
-                      value: Number(item.value),
-                      percentage: item.percentage,
-                      color: `hsl(${index * 45}, 70%, 60%)`,
-                    })) || []
-                  }
-                  showDataTable={true}
-                  showBadge={false}
-                  gradientColors={["from-blue-50", "to-indigo-100"]}
-                  borderColor="border-blue-100 dark:border-blue-800"
-                  height={300}
-                  chartType={chartType}
-                  allowTypeChange={false}
-                  description="Lead kaynaklarının dağılımı"
-                  icon="📱"
-                  tableTitle="Kaynak Detayları"
-                />
-
-                {/* Meeting Type Distribution */}
-                <StandardChart
-                  title="Görüşme Tipi Dağılımı"
-                  data={
-                    takipteAnalytics.meetingTypeData?.map((item, index) => ({
-                      name: item.name,
-                      value: Number(item.value),
-                      percentage: item.percentage,
-                      color: `hsl(${index * 60}, 65%, 55%)`,
-                    })) || []
-                  }
-                  showDataTable={true}
-                  showBadge={false}
-                  gradientColors={["from-green-50", "to-emerald-100"]}
-                  borderColor="border-green-100 dark:border-green-800"
-                  height={300}
-                  chartType={chartType}
-                  allowTypeChange={false}
-                  description="İletişim yöntemlerinin analizi"
-                  icon="🤝"
-                  tableTitle="Görüşme Detayları"
-                />
-              </div>
-
-              {/* Lead Source from Main Data */}
-              {dashboardMetrics?.leads && (
-                <Card className="p-6 shadow-lg border-2 border-purple-100 dark:border-purple-800">
-                  <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                      📈 Ana Lead Kaynak Analizi
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Asıl lead dosyasından kaynak verileri
-                    </p>
-                  </div>
-                  <ResponsiveContainer width="100%" height={400}>
-                    <BarChart
-                      data={Array.from(
-                        new Set(
-                          dashboardMetrics.leads.map(
-                            (l) => l.firstCustomerSource || "Bilinmiyor"
-                          )
+          <div className="space-y-6">
+            {/* Main Lead Source Analysis - Always available */}
+            {dashboardMetrics?.leads && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>📈 Lead Kaynak Analizi</CardTitle>
+                  <CardDescription>
+                    Ana lead dosyasından kaynak verileri
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {(() => {
+                    // PRE-ASSIGN COLORS: Collect all unique source categories from leads data
+                    const allSourceCategories = Array.from(
+                      new Set(
+                        dashboardMetrics.leads.map(
+                          (l) => l.firstCustomerSource || "Bilinmiyor"
                         )
                       )
-                        .map((source) => ({
-                          name: source,
-                          value: dashboardMetrics.leads.filter(
-                            (l) =>
-                              (l.firstCustomerSource || "Bilinmiyor") === source
-                          ).length,
-                          percentage: Math.round(
-                            (dashboardMetrics.leads.filter(
-                              (l) =>
-                                (l.firstCustomerSource || "Bilinmiyor") ===
-                                source
-                            ).length /
-                              dashboardMetrics.leads.length) *
-                              100
-                          ),
-                        }))
-                        .sort((a, b) => b.value - a.value)}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="name"
-                        angle={-45}
-                        textAnchor="end"
-                        height={120}
-                      />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="value" fill="#3b82f6" name="Lead Sayısı" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <DataTable
-                    data={Array.from(
+                    ).sort(); // Sort for consistent order
+
+                    // Pre-assign colors to ensure uniqueness across all reports
+                    allSourceCategories.forEach((category) => {
+                      getUniqueColorForCategory(category);
+                    });
+
+                    const sourceData = Array.from(
                       new Set(
                         dashboardMetrics.leads.map(
                           (l) => l.firstCustomerSource || "Bilinmiyor"
@@ -1189,440 +1506,198 @@ export default function EnhancedOverviewDashboardTab() {
                       )
                     )
                       .map((source) => ({
-                        Kaynak: source,
-                        Adet: dashboardMetrics.leads.filter(
+                        name: source,
+                        value: dashboardMetrics.leads.filter(
                           (l) =>
                             (l.firstCustomerSource || "Bilinmiyor") === source
                         ).length,
-                        Yüzde: `%${Math.round(
+                        percentage: Math.round(
                           (dashboardMetrics.leads.filter(
                             (l) =>
                               (l.firstCustomerSource || "Bilinmiyor") === source
                           ).length /
                             dashboardMetrics.leads.length) *
                             100
-                        )}`,
+                        ),
+                        color: getUniqueColorForCategory(source),
                       }))
-                      .sort((a, b) => b["Adet"] - a["Adet"])}
-                    title="Ana Lead Kaynak Detayları"
-                    className="mt-4"
-                  />
-                </Card>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {/* Show basic source analysis from main leads data even without secondary file */}
-              {dashboardMetrics?.leads && (
-                <Card className="p-6 shadow-lg border-2 border-blue-100 dark:border-blue-800">
-                  <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                      📈 Lead Kaynak Analizi
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Ana lead dosyasından kaynak verileri
-                    </p>
-                  </div>
-                  <ResponsiveContainer width="100%" height={400}>
-                    <BarChart
-                      data={Array.from(
-                        new Set(
-                          dashboardMetrics.leads.map(
-                            (l) => l.firstCustomerSource || "Bilinmiyor"
-                          )
-                        )
-                      )
-                        .map((source) => ({
-                          name: source,
-                          value: dashboardMetrics.leads.filter(
-                            (l) =>
-                              (l.firstCustomerSource || "Bilinmiyor") === source
-                          ).length,
-                          percentage: Math.round(
-                            (dashboardMetrics.leads.filter(
-                              (l) =>
-                                (l.firstCustomerSource || "Bilinmiyor") ===
-                                source
-                            ).length /
-                              dashboardMetrics.leads.length) *
-                              100
-                          ),
-                        }))
-                        .sort((a, b) => b.value - a.value)}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="name"
-                        angle={-45}
-                        textAnchor="end"
-                        height={120}
-                      />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="value" fill="#3b82f6" name="Lead Sayısı" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <DataTable
-                    data={Array.from(
-                      new Set(
-                        dashboardMetrics.leads.map(
-                          (l) => l.firstCustomerSource || "Bilinmiyor"
-                        )
-                      )
-                    )
-                      .map((source) => ({
-                        Kaynak: source,
-                        Adet: dashboardMetrics.leads.filter(
-                          (l) =>
-                            (l.firstCustomerSource || "Bilinmiyor") === source
-                        ).length,
-                        Yüzde: `%${Math.round(
-                          (dashboardMetrics.leads.filter(
-                            (l) =>
-                              (l.firstCustomerSource || "Bilinmiyor") === source
-                          ).length /
-                            dashboardMetrics.leads.length) *
-                            100
-                        )}`,
-                      }))
-                      .sort((a, b) => b["Adet"] - a["Adet"])}
-                    title="Lead Kaynak Detayları"
-                    className="mt-4"
-                  />
-                </Card>
-              )}
+                      .sort((a, b) => b.value - a.value);
 
+                    // Debug: Log source data with colors
+                    console.log(
+                      "📈 Lead Kaynak Analizi - Data with colors:",
+                      sourceData.map((item) => ({
+                        name: item.name,
+                        color: item.color,
+                      }))
+                    );
+
+                    return (
+                      <>
+                        <StandardChart
+                          title=""
+                          data={sourceData}
+                          height={500}
+                          chartType={chartType}
+                          showDataTable={false}
+                          className="[&_.grid]:!grid-cols-1 [&_.space-y-4]:!hidden mb-6"
+                        />
+                        <div className="overflow-x-auto">
+                          <table className="w-full border-collapse border border-gray-200">
+                            <thead>
+                              <tr className="bg-gray-50">
+                                <th className="border border-gray-200 px-4 py-2 text-left font-medium">
+                                  Kaynak
+                                </th>
+                                <th className="border border-gray-200 px-4 py-2 text-left font-medium">
+                                  Adet
+                                </th>
+                                <th className="border border-gray-200 px-4 py-2 text-left font-medium">
+                                  Yüzde
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sourceData.map((item, index) => (
+                                <tr
+                                  key={index}
+                                  className="hover:bg-gray-50"
+                                  style={{
+                                    backgroundColor: `${item.color}15`,
+                                    borderLeft: `4px solid ${item.color}`,
+                                  }}
+                                >
+                                  <td className="border border-gray-200 px-4 py-2 font-medium">
+                                    <div className="flex items-center gap-2">
+                                      <div
+                                        className="w-3 h-3 rounded-full"
+                                        style={{
+                                          backgroundColor: item.color,
+                                        }}
+                                      />
+                                      {item.name}
+                                    </div>
+                                  </td>
+                                  <td className="border border-gray-200 px-4 py-2 text-center font-medium">
+                                    {item.value}
+                                  </td>
+                                  <td className="border border-gray-200 px-4 py-2 text-center">
+                                    {item.value} (%{item.percentage})
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+            )}
+
+            {!hasSecondaryData && (
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  Daha detaylı kaynak analizi için takip dosyası yükleyin. Şu
-                  anda ana lead verilerinden temel analiz gösteriliyor.
+                  Bu tab ana lead verilerinden kaynak analizi gösteriyor. Takip
+                  dosyası tabanlı analizler için 📊 Takip Analizi tabına bakın.
                 </AlertDescription>
               </Alert>
-            </div>
-          )}
+            )}
+          </div>
         </TabsContent>
 
+        {/* 
         <TabsContent value="advanced" className="space-y-4">
-          {hasSecondaryData && takipteAnalytics ? (
-            <div className="space-y-6">
+          <div className="space-y-6">
+            Advanced Analysis from Main Data Only
+            {dashboardMetrics?.leads && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Customer Criteria Analysis */}
-                <Card className="p-6 shadow-lg border-2 border-orange-100 dark:border-orange-800">
+                <Card className="p-6 shadow-lg border-2 border-indigo-100 dark:border-indigo-800">
                   <div className="mb-4">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                      🎯 Müşteri Kriterleri
+                      📊 Gelişmiş Durum Analizi
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Satış vs Kira müşteri analizi
+                      Lead durumlarının detaylı incelemesi
                     </p>
                   </div>
-                  <StandardChart
-                    title=""
-                    data={takipteAnalytics.kriterData}
-                    height={300}
-                    chartType={chartType}
-                  />
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={Object.entries(
+                          dashboardMetrics.leads.reduce((acc: any, lead) => {
+                            const status = lead.status || "Tanımsız";
+                            acc[status] = (acc[status] || 0) + 1;
+                            return acc;
+                          }, {})
+                        ).map(([status, count]) => ({
+                          name: status,
+                          value: count,
+                          percentage: Math.round(
+                            ((count as number) /
+                              dashboardMetrics.leads.length) *
+                              100
+                          ),
+                        }))}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percentage }) =>
+                          `${name}: %${percentage}`
+                        }
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {Object.entries(
+                          dashboardMetrics.leads.reduce((acc: any, lead) => {
+                            const status = lead.status || "Tanımsız";
+                            acc[status] = (acc[status] || 0) + 1;
+                            return acc;
+                          }, {})
+                        ).map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={getUniqueColorForCategory(entry[0])}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
                   <DataTable
-                    data={takipteAnalytics.kriterData.map((item) => ({
-                      Kriter: item.name,
-                      Adet: item.value,
-                      Yüzde: `${item.value} (%${item.percentage})`,
+                    data={Object.entries(
+                      dashboardMetrics.leads.reduce((acc: any, lead) => {
+                        const status = lead.status || "Tanımsız";
+                        acc[status] = (acc[status] || 0) + 1;
+                        return acc;
+                      }, {})
+                    ).map(([status, count]) => ({
+                      Durum: status,
+                      Adet: count,
+                      Yüzde: `%${Math.round(
+                        ((count as number) / dashboardMetrics.leads.length) *
+                          100
+                      )}`,
                     }))}
-                    title="Kriter Detayları"
+                    title="Durum Detay Analizi"
                     className="mt-4"
                   />
                 </Card>
 
-                {/* Office Performance */}
-                <Card className="p-6 shadow-lg border-2 border-teal-100 dark:border-teal-800">
+                <Card className="p-6 shadow-lg border-2 border-emerald-100 dark:border-emerald-800">
                   <div className="mb-4">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                      🏢 Ofis Performansı
+                      🏠 Proje Analizi
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Şube bazlı aktivite analizi
+                      En popüler projeler
                     </p>
                   </div>
-                  <StandardChart
-                    title=""
-                    data={takipteAnalytics.officeData}
-                    height={300}
-                    chartType={chartType}
-                  />
-                  <DataTable
-                    data={takipteAnalytics.officeData.map((item) => ({
-                      Ofis: item.name,
-                      Adet: item.value,
-                      Yüzde: `${item.value} (%${item.percentage})`,
-                    }))}
-                    title="Ofis Detayları"
-                    className="mt-4"
-                  />
-                </Card>
-              </div>
-
-              {/* Advanced Status Analysis from Main Data */}
-              {dashboardMetrics?.leads && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <Card className="p-6 shadow-lg border-2 border-indigo-100 dark:border-indigo-800">
-                    <div className="mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                        📊 Gelişmiş Durum Analizi
-                      </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Lead durumlarının detaylı incelemesi
-                      </p>
-                    </div>
-                    <div className="flex flex-row">
-                      <ResponsiveContainer width="100%" height={300}>
-                        <PieChart>
-                          <Pie
-                            data={Object.entries(
-                              dashboardMetrics.leads.reduce(
-                                (acc: any, lead) => {
-                                  const status = lead.status || "Tanımsız";
-                                  acc[status] = (acc[status] || 0) + 1;
-                                  return acc;
-                                },
-                                {}
-                              )
-                            ).map(([status, count]) => ({
-                              name: status,
-                              value: count,
-                              percentage: Math.round(
-                                ((count as number) /
-                                  dashboardMetrics.leads.length) *
-                                  100
-                              ),
-                            }))}
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="value"
-                          >
-                            {Object.entries(
-                              dashboardMetrics.leads.reduce(
-                                (acc: any, lead) => {
-                                  const status = lead.status || "Tanımsız";
-                                  acc[status] = (acc[status] || 0) + 1;
-                                  return acc;
-                                },
-                                {}
-                              )
-                            ).map((entry, index) => (
-                              <Cell
-                                key={`cell-${index}`}
-                                fill={getColor("STATUS", entry[0])}
-                              />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
-                      <div className="ml-6 flex flex-col justify-center">
-                        <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                          Durum Dağılımı
-                        </h4>
-                        <div className="flex flex-col gap-2">
-                          {Object.entries(
-                            dashboardMetrics.leads.reduce((acc: any, lead) => {
-                              const status = lead.status || "Tanımsız";
-                              acc[status] = (acc[status] || 0) + 1;
-                              return acc;
-                            }, {})
-                          ).map(([status, count]) => (
-                            <div key={status} className="flex items-center">
-                              <div
-                                className="w-4 h-4 rounded-full mr-2"
-                                style={{
-                                  backgroundColor: getColor("STATUS", status),
-                                }}
-                              ></div>
-                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                {status}: {count as number} (
-                                {Math.round(
-                                  ((count as number) /
-                                    dashboardMetrics.leads.length) *
-                                    100
-                                )}
-                                %)
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-
-                  <Card className="p-6 shadow-lg border-2 border-emerald-100 dark:border-emerald-800">
-                    <div className="mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                        🏠 Proje Analizi
-                      </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        En popüler projeler
-                      </p>
-                    </div>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <BarChart
-                        data={Array.from(
-                          new Set(
-                            dashboardMetrics.leads.map(
-                              (l) => l.projectName || "Bilinmiyor"
-                            )
-                          )
-                        )
-                          .map((project) => ({
-                            name:
-                              project.length > 15
-                                ? project.substring(0, 15) + "..."
-                                : project,
-                            value: dashboardMetrics.leads.filter(
-                              (l) => (l.projectName || "Bilinmiyor") === project
-                            ).length,
-                          }))
-                          .sort((a, b) => b.value - a.value)
-                          .slice(0, 10)}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis
-                          dataKey="name"
-                          angle={-45}
-                          textAnchor="end"
-                          height={80}
-                        />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="value" fill="#10b981" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </Card>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {/* Show basic advanced analysis from main data even without secondary file */}
-              {dashboardMetrics?.leads && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <Card className="p-6 shadow-lg border-2 border-indigo-100 dark:border-indigo-800">
-                    <div className="mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                        📊 Gelişmiş Durum Analizi
-                      </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Lead durumlarının detaylı incelemesi
-                      </p>
-                    </div>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <PieChart>
-                        <Pie
-                          data={Object.entries(
-                            dashboardMetrics.leads.reduce((acc: any, lead) => {
-                              const status = lead.status || "Tanımsız";
-                              acc[status] = (acc[status] || 0) + 1;
-                              return acc;
-                            }, {})
-                          ).map(([status, count]) => ({
-                            name: status,
-                            value: count,
-                            percentage: Math.round(
-                              ((count as number) /
-                                dashboardMetrics.leads.length) *
-                                100
-                            ),
-                          }))}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percentage }) =>
-                            `${name}: %${percentage}`
-                          }
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {Object.entries(
-                            dashboardMetrics.leads.reduce((acc: any, lead) => {
-                              const status = lead.status || "Tanımsız";
-                              acc[status] = (acc[status] || 0) + 1;
-                              return acc;
-                            }, {})
-                          ).map((entry, index) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={getColor("STATUS", entry[0])}
-                            />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <DataTable
-                      data={Object.entries(
-                        dashboardMetrics.leads.reduce((acc: any, lead) => {
-                          const status = lead.status || "Tanımsız";
-                          acc[status] = (acc[status] || 0) + 1;
-                          return acc;
-                        }, {})
-                      ).map(([status, count]) => ({
-                        Durum: status,
-                        Adet: count,
-                        Yüzde: `%${Math.round(
-                          ((count as number) / dashboardMetrics.leads.length) *
-                            100
-                        )}`,
-                      }))}
-                      title="Durum Detay Analizi"
-                      className="mt-4"
-                    />
-                  </Card>
-
-                  <Card className="p-6 shadow-lg border-2 border-emerald-100 dark:border-emerald-800">
-                    <div className="mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                        🏠 Proje Analizi
-                      </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        En popüler projeler
-                      </p>
-                    </div>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <BarChart
-                        data={Array.from(
-                          new Set(
-                            dashboardMetrics.leads.map(
-                              (l) => l.projectName || "Bilinmiyor"
-                            )
-                          )
-                        )
-                          .map((project) => ({
-                            name:
-                              project.length > 15
-                                ? project.substring(0, 15) + "..."
-                                : project,
-                            value: dashboardMetrics.leads.filter(
-                              (l) => (l.projectName || "Bilinmiyor") === project
-                            ).length,
-                          }))
-                          .sort((a, b) => b.value - a.value)
-                          .slice(0, 10)}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis
-                          dataKey="name"
-                          angle={-45}
-                          textAnchor="end"
-                          height={80}
-                        />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="value" fill="#10b981" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                    <DataTable
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart
                       data={Array.from(
                         new Set(
                           dashboardMetrics.leads.map(
@@ -1631,448 +1706,76 @@ export default function EnhancedOverviewDashboardTab() {
                         )
                       )
                         .map((project) => ({
-                          Proje: project,
-                          Adet: dashboardMetrics.leads.filter(
+                          name:
+                            project.length > 15
+                              ? project.substring(0, 15) + "..."
+                              : project,
+                          value: dashboardMetrics.leads.filter(
                             (l) => (l.projectName || "Bilinmiyor") === project
                           ).length,
-                          Yüzde: `%${Math.round(
-                            (dashboardMetrics.leads.filter(
-                              (l) => (l.projectName || "Bilinmiyor") === project
-                            ).length /
-                              dashboardMetrics.leads.length) *
-                            100
-                          )}`,
                         }))
-                        .sort((a, b) => b["Adet"] - a["Adet"])
+                        .sort((a, b) => b.value - a.value)
                         .slice(0, 10)}
-                      title="Proje Detayları"
-                      className="mt-4"
-                    />
-                  </Card>
-                </div>
-              )}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="name"
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                      />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="value" fill="#10b981" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <DataTable
+                    data={Array.from(
+                      new Set(
+                        dashboardMetrics.leads.map(
+                          (l) => l.projectName || "Bilinmiyor"
+                        )
+                      )
+                    )
+                      .map((project) => ({
+                        Proje: project,
+                        Adet: dashboardMetrics.leads.filter(
+                          (l) => (l.projectName || "Bilinmiyor") === project
+                        ).length,
+                        Yüzde: `%${Math.round(
+                          (dashboardMetrics.leads.filter(
+                            (l) => (l.projectName || "Bilinmiyor") === project
+                          ).length /
+                            dashboardMetrics.leads.length) *
+                            100
+                        )}`,
+                      }))
+                      .sort((a, b) => b["Adet"] - a["Adet"])
+                      .slice(0, 10)}
+                    title="Proje Detayları"
+                    className="mt-4"
+                  />
+                </Card>
+              </div>
+            )}
 
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Tam gelişmiş analiz için takip dosyası yükleyin. Şu anda ana
-                  lead verilerinden temel gelişmiş analiz gösteriliyor.
-                </AlertDescription>
-              </Alert>
-            </div>
-          )}
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Bu tab ana lead verilerinden gelişmiş analizler gösteriyor.
+                Takip dosyası tabanlı analizler için 📊 Takip Analizi tabına
+                bakın.
+              </AlertDescription>
+            </Alert>
+          </div>
         </TabsContent>
+        */}
 
         <TabsContent value="data-explorer" className="space-y-4">
           <LeadDataExplorer leads={filteredLeads || []} isLoading={false} />
-
-          {/* Enhanced Data Tables Section */}
-          <div className="space-y-6 mt-8">
-            <div className="border-t pt-6">
-              <h3 className="text-xl font-semibold text-gray-900 mb-6">
-                📊 Tüm Veri Tabloları
-              </h3>
-
-              {/* Olumsuzluk Nedenleri Advanced Table */}
-              {dashboardMetrics?.leads && (
-                <Card className="mb-6">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg font-medium flex items-center gap-2">
-                        ❌ Olumsuzluk Nedenleri - Detaylı Analiz
-                        <Badge variant="outline">
-                          {
-                            dashboardMetrics.leads.filter(
-                              (l) =>
-                                l.negativeReason &&
-                                l.negativeReason.trim() !== ""
-                            ).length
-                          }{" "}
-                          olumsuz lead
-                        </Badge>
-                      </CardTitle>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const negativeLeads = dashboardMetrics.leads.filter(
-                              (l) =>
-                                l.negativeReason &&
-                                l.negativeReason.trim() !== ""
-                            );
-                            const csvContent = [
-                              "Müşteri Adı,Olumsuzluk Nedeni,Atanan Personel,Proje,Lead Tipi,Tarih",
-                              ...negativeLeads.map(
-                                (lead) =>
-                                  `"${lead.customerName || ""}","${
-                                    lead.negativeReason || ""
-                                  }","${lead.assignedPersonnel || ""}","${
-                                    lead.projectName || ""
-                                  }","${lead.leadType || ""}","${
-                                    lead.requestDate || ""
-                                  }"`
-                              ),
-                            ].join("\n");
-                            const blob = new Blob([csvContent], {
-                              type: "text/csv",
-                            });
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement("a");
-                            a.href = url;
-                            a.download = `olumsuzluk_nedenleri_detay_${new Date()
-                              .toISOString()
-                              .slice(0, 10)}.csv`;
-                            a.click();
-                          }}
-                          className="flex items-center gap-1"
-                        >
-                          CSV
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const negativeLeads = dashboardMetrics.leads.filter(
-                              (l) =>
-                                l.negativeReason &&
-                                l.negativeReason.trim() !== ""
-                            );
-                            const headers =
-                              "Müşteri Adı\tOlumsuzluk Nedeni\tAtanan Personel\tProje\tLead Tipi\tTarih\n";
-                            const content = negativeLeads
-                              .map(
-                                (lead) =>
-                                  `${lead.customerName || ""}\t${
-                                    lead.negativeReason || ""
-                                  }\t${lead.assignedPersonnel || ""}\t${
-                                    lead.projectName || ""
-                                  }\t${lead.leadType || ""}\t${
-                                    lead.requestDate || ""
-                                  }`
-                              )
-                              .join("\n");
-                            const blob = new Blob([headers + content], {
-                              type: "application/vnd.ms-excel",
-                            });
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement("a");
-                            a.href = url;
-                            a.download = `olumsuzluk_nedenleri_detay_${new Date()
-                              .toISOString()
-                              .slice(0, 10)}.xls`;
-                            a.click();
-                          }}
-                          className="flex items-center gap-1"
-                        >
-                          Excel
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <MasterDataTable
-                      title="Olumsuzluk Nedenleri - Detaylı Liste"
-                      data={dashboardMetrics.leads
-                        .filter(
-                          (l) =>
-                            l.negativeReason && l.negativeReason.trim() !== ""
-                        )
-                        .map((lead) => ({
-                          customerName: lead.customerName || "Bilinmiyor",
-                          negativeReason: lead.negativeReason || "",
-                          assignedPersonnel:
-                            lead.assignedPersonnel || "Atanmamış",
-                          projectName: lead.projectName || "Belirtilmemiş",
-                          leadType: lead.leadType || "Bilinmiyor",
-                          requestDate: lead.requestDate || "",
-                          status: lead.status || "Bilinmiyor",
-                          lastMeetingNote: lead.lastMeetingNote || "",
-                          responseResult: lead.responseResult || "",
-                        }))}
-                      columns={[
-                        {
-                          key: "customerName",
-                          label: "Müşteri Adı",
-                          type: "text",
-                        },
-                        {
-                          key: "negativeReason",
-                          label: "Olumsuzluk Nedeni",
-                          type: "badge",
-                        },
-                        {
-                          key: "assignedPersonnel",
-                          label: "Atanan Personel",
-                          type: "badge",
-                        },
-                        { key: "projectName", label: "Proje", type: "text" },
-                        { key: "leadType", label: "Lead Tipi", type: "badge" },
-                        {
-                          key: "requestDate",
-                          label: "Talep Tarihi",
-                          type: "date",
-                        },
-                        { key: "status", label: "Durum", type: "badge" },
-                        {
-                          key: "lastMeetingNote",
-                          label: "Son Görüşme Notu",
-                          type: "text",
-                        },
-                        {
-                          key: "responseResult",
-                          label: "Dönüş Sonucu",
-                          type: "text",
-                        },
-                      ]}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Status Distribution Table */}
-              <Card className="mb-6">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg font-medium flex items-center gap-2">
-                      📊 Durum Dağılımı - Detaylı Tablo
-                      <Badge variant="outline">
-                        {dashboardMetrics?.statusData?.length || 0} durum
-                      </Badge>
-                    </CardTitle>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const csvContent = [
-                            "Durum,Adet,Yüzde",
-                            ...(dashboardMetrics?.statusData || []).map(
-                              (item) =>
-                                `"${item.name}",${item.value},${item.percentage}%`
-                            ),
-                          ].join("\n");
-                          const blob = new Blob([csvContent], {
-                            type: "text/csv",
-                          });
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement("a");
-                          a.href = url;
-                          a.download = `durum_dagilimi_${new Date()
-                            .toISOString()
-                            .slice(0, 10)}.csv`;
-                          a.click();
-                        }}
-                        className="flex items-center gap-1"
-                      >
-                        CSV
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const headers = "Durum\tAdet\tYüzde\n";
-                          const content = (dashboardMetrics?.statusData || [])
-                            .map(
-                              (item) =>
-                                `${item.name}\t${item.value}\t${item.percentage}%`
-                            )
-                            .join("\n");
-                          const blob = new Blob([headers + content], {
-                            type: "application/vnd.ms-excel",
-                          });
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement("a");
-                          a.href = url;
-                          a.download = `durum_dagilimi_${new Date()
-                            .toISOString()
-                            .slice(0, 10)}.xls`;
-                          a.click();
-                        }}
-                        className="flex items-center gap-1"
-                      >
-                        Excel
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse border border-gray-200">
-                      <thead>
-                        <tr className="bg-gray-50">
-                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">
-                            Durum
-                          </th>
-                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">
-                            Adet
-                          </th>
-                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">
-                            Yüzde
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {dashboardMetrics?.statusData?.map((item, index) => (
-                          <tr key={index} className="hover:bg-gray-50">
-                            <td className="border border-gray-200 px-4 py-2">
-                              {item.name}
-                            </td>
-                            <td className="border border-gray-200 px-4 py-2 text-center font-medium">
-                              {item.value}
-                            </td>
-                            <td className="border border-gray-200 px-4 py-2 text-center">
-                              {item.percentage}%
-                            </td>
-                          </tr>
-                        )) || (
-                          <tr>
-                            <td
-                              colSpan={3}
-                              className="border border-gray-200 px-4 py-8 text-center text-gray-500"
-                            >
-                              Veri bulunamadı
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Personnel Performance Table */}
-              <Card className="mb-6">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg font-medium flex items-center gap-2">
-                      👥 Personel Performansı - Detaylı Tablo
-                      <Badge variant="outline">
-                        {dashboardMetrics?.personnelData?.length || 0} personel
-                      </Badge>
-                    </CardTitle>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const csvContent = [
-                            "Personel,Lead Sayısı,Takip Sayısı,Verimlilik %",
-                            ...(dashboardMetrics?.personnelData || []).map(
-                              (item) =>
-                                `"${item.name}",${item.leadCount},${item.takipteCount},${item.efficiency}%`
-                            ),
-                          ].join("\n");
-                          const blob = new Blob([csvContent], {
-                            type: "text/csv",
-                          });
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement("a");
-                          a.href = url;
-                          a.download = `personel_performansi_${new Date()
-                            .toISOString()
-                            .slice(0, 10)}.csv`;
-                          a.click();
-                        }}
-                        className="flex items-center gap-1"
-                      >
-                        CSV
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const headers =
-                            "Personel\tLead Sayısı\tTakip Sayısı\tVerimlilik %\n";
-                          const content = (
-                            dashboardMetrics?.personnelData || []
-                          )
-                            .map(
-                              (item) =>
-                                `${item.name}\t${item.leadCount}\t${item.takipteCount}\t${item.efficiency}%`
-                            )
-                            .join("\n");
-                          const blob = new Blob([headers + content], {
-                            type: "application/vnd.ms-excel",
-                          });
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement("a");
-                          a.href = url;
-                          a.download = `personel_performansi_${new Date()
-                            .toISOString()
-                            .slice(0, 10)}.xls`;
-                          a.click();
-                        }}
-                        className="flex items-center gap-1"
-                      >
-                        Excel
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse border border-gray-200">
-                      <thead>
-                        <tr className="bg-gray-50">
-                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">
-                            Personel
-                          </th>
-                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">
-                            Lead Sayısı
-                          </th>
-                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">
-                            Takip Sayısı
-                          </th>
-                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">
-                            Verimlilik %
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {dashboardMetrics?.personnelData?.map((item, index) => (
-                          <tr key={index} className="hover:bg-gray-50">
-                            <td className="border border-gray-200 px-4 py-2 font-medium">
-                              {item.name}
-                            </td>
-                            <td className="border border-gray-200 px-4 py-2 text-center">
-                              {item.leadCount}
-                            </td>
-                            <td className="border border-gray-200 px-4 py-2 text-center">
-                              {item.takipteCount}
-                            </td>
-                            <td className="border border-gray-200 px-4 py-2 text-center">
-                              <Badge
-                                variant={
-                                  item.efficiency > 70
-                                    ? "default"
-                                    : item.efficiency > 40
-                                    ? "secondary"
-                                    : "destructive"
-                                }
-                              >
-                                {item.efficiency}%
-                              </Badge>
-                            </td>
-                          </tr>
-                        )) || (
-                          <tr>
-                            <td
-                              colSpan={4}
-                              className="border border-gray-200 px-4 py-8 text-center text-gray-500"
-                            >
-                              Veri bulunamadı
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
         </TabsContent>
+
+        {/* Potansiyel Takipte tab removed - incorrect statistics, use Takip Kayıtları column instead */}
       </Tabs>
 
       {/* Footer Summary */}
@@ -2091,9 +1794,14 @@ export default function EnhancedOverviewDashboardTab() {
               </div>
               <div>
                 <span className="font-medium">
-                  {dashboardMetrics?.totalTakipte || 0}
+                  {personnelStatusMatrix
+                    ? personnelStatusMatrix.reduce(
+                        (sum, person) => sum + person.takipteCount,
+                        0
+                      )
+                    : 0}
                 </span>{" "}
-                Takip Kaydı
+                Eşleşen Takip
               </div>
               <div>
                 <span className="font-medium">

@@ -170,7 +170,7 @@ STORAGE_TYPE=memory
 
 ### 2. Analyze Data
 
-- **🧠 Akıllı Dashboard**: Overview with key metrics
+- **Proje Bazlı Analiz**: Overview with key metrics
 - **📊 Raporlar**: Detailed analytics and filtering
 - **❌ Olumsuz Analizi**: Negative lead analysis
 - **Unified Takip Analizi**: Follow-up tracking

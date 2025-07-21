@@ -1,4 +1,12 @@
-import { pgTable, text, serial, integer, boolean, timestamp, decimal } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  serial,
+  integer,
+  boolean,
+  timestamp,
+  decimal,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -8,7 +16,7 @@ export const leads = pgTable("leads", {
   customerId: text("customer_id"),
   contactId: text("contact_id"),
   customerName: text("customer_name").notNull(),
-  
+
   // Source and Form Data
   firstCustomerSource: text("first_customer_source"),
   formCustomerSource: text("form_customer_source"),
@@ -18,11 +26,11 @@ export const leads = pgTable("leads", {
   infoFormLocation2: text("info_form_location_2"),
   infoFormLocation3: text("info_form_location_3"),
   infoFormLocation4: text("info_form_location_4"),
-  
+
   // Personnel Assignment
   assignedPersonnel: text("assigned_personnel").notNull(),
   reminderPersonnel: text("reminder_personnel"),
-  
+
   // Response and Follow-up
   wasCalledBack: text("was_called_back"), // Geri dönüş yapıldı mı?
   webFormPoolDate: text("web_form_pool_date"),
@@ -38,7 +46,7 @@ export const leads = pgTable("leads", {
   daysToResponse: integer("days_to_response"),
   callNote: text("call_note"),
   emailNote: text("email_note"),
-  
+
   // Meeting and Results
   oneOnOneMeeting: text("one_on_one_meeting"), // Birebir görüşme yapıldı mı?
   meetingDate: text("meeting_date"),
@@ -49,16 +57,21 @@ export const leads = pgTable("leads", {
   appointmentDate: text("appointment_date"),
   lastMeetingNote: text("last_meeting_note"),
   lastMeetingResult: text("last_meeting_result"),
-  
+
   // Derived fields
   leadType: text("lead_type").notNull(), // 'kiralama' or 'satis' (derived from webFormNote)
   status: text("status").notNull(), // 'yeni', 'bilgi-verildi', 'olumsuz', 'satis', 'takipte', 'randevu'
   projectName: text("project_name"), // Extracted from WebForm Notu
-  
+
   // Lead Expenses (in Turkish Lira)
-  agencyMonthlyFees: decimal("agency_monthly_fees", { precision: 10, scale: 2 }).default("0.00"), // Agency monthly fees in TL
-  adsExpenses: decimal("ads_expenses", { precision: 10, scale: 2 }).default("0.00"), // Advertising expenses in TL
-  
+  agencyMonthlyFees: decimal("agency_monthly_fees", {
+    precision: 10,
+    scale: 2,
+  }).default("0.00"), // Agency monthly fees in TL
+  adsExpenses: decimal("ads_expenses", { precision: 10, scale: 2 }).default(
+    "0.00"
+  ), // Advertising expenses in TL
+
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -77,7 +90,7 @@ export const settings = pgTable("settings", {
 
 export const leadExpenses = pgTable("lead_expenses", {
   id: serial("id").primaryKey(),
-  month: text("month").notNull(), // Format: "2025-01" 
+  month: text("month").notNull(), // Format: "2025-01"
   expenseType: text("expense_type").notNull(), // "agency_fee" or "ads_expense"
   amountTL: decimal("amount_tl", { precision: 10, scale: 2 }).notNull(),
   description: text("description"),
@@ -85,48 +98,50 @@ export const leadExpenses = pgTable("lead_expenses", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertLeadSchema = createInsertSchema(leads).omit({
-  id: true,
-  createdAt: true,
-}).extend({
-  // Make some fields optional for backwards compatibility
-  customerId: z.string().optional(),
-  contactId: z.string().optional(),
-  firstCustomerSource: z.string().optional(),
-  formCustomerSource: z.string().optional(),
-  webFormNote: z.string().optional(),
-  infoFormLocation1: z.string().optional(),
-  infoFormLocation2: z.string().optional(),
-  infoFormLocation3: z.string().optional(),
-  infoFormLocation4: z.string().optional(),
-  reminderPersonnel: z.string().optional(),
-  wasCalledBack: z.string().optional(),
-  webFormPoolDate: z.string().optional(),
-  formSystemDate: z.string().optional(),
-  assignmentTimeDiff: z.string().optional(),
-  responseTimeDiff: z.string().optional(),
-  outgoingCallSystemDate: z.string().optional(),
-  customerResponseDate: z.string().optional(),
-  wasEmailSent: z.string().optional(),
-  customerEmailResponseDate: z.string().optional(),
-  unreachableByPhone: z.string().optional(),
-  daysWaitingResponse: z.number().optional(),
-  daysToResponse: z.number().optional(),
-  agencyMonthlyFees: z.string().optional(),
-  adsExpenses: z.string().optional(),
-  callNote: z.string().optional(),
-  emailNote: z.string().optional(),
-  oneOnOneMeeting: z.string().optional(),
-  meetingDate: z.string().optional(),
-  responseResult: z.string().optional(),
-  negativeReason: z.string().optional(),
-  wasSaleMade: z.string().optional(),
-  saleCount: z.number().optional(),
-  appointmentDate: z.string().optional(),
-  lastMeetingNote: z.string().optional(),
-  lastMeetingResult: z.string().optional(),
-  projectName: z.string().optional(),
-});
+export const insertLeadSchema = createInsertSchema(leads)
+  .omit({
+    id: true,
+    createdAt: true,
+  })
+  .extend({
+    // Make some fields optional for backwards compatibility
+    customerId: z.string().optional(),
+    contactId: z.string().optional(),
+    firstCustomerSource: z.string().optional(),
+    formCustomerSource: z.string().optional(),
+    webFormNote: z.string().optional(),
+    infoFormLocation1: z.string().optional(),
+    infoFormLocation2: z.string().optional(),
+    infoFormLocation3: z.string().optional(),
+    infoFormLocation4: z.string().optional(),
+    reminderPersonnel: z.string().optional(),
+    wasCalledBack: z.string().optional(),
+    webFormPoolDate: z.string().optional(),
+    formSystemDate: z.string().optional(),
+    assignmentTimeDiff: z.string().optional(),
+    responseTimeDiff: z.string().optional(),
+    outgoingCallSystemDate: z.string().optional(),
+    customerResponseDate: z.string().optional(),
+    wasEmailSent: z.string().optional(),
+    customerEmailResponseDate: z.string().optional(),
+    unreachableByPhone: z.string().optional(),
+    daysWaitingResponse: z.number().optional(),
+    daysToResponse: z.number().optional(),
+    agencyMonthlyFees: z.string().optional(),
+    adsExpenses: z.string().optional(),
+    callNote: z.string().optional(),
+    emailNote: z.string().optional(),
+    oneOnOneMeeting: z.string().optional(),
+    meetingDate: z.string().optional(),
+    responseResult: z.string().optional(),
+    negativeReason: z.string().optional(),
+    wasSaleMade: z.string().optional(),
+    saleCount: z.number().optional(),
+    appointmentDate: z.string().optional(),
+    lastMeetingNote: z.string().optional(),
+    lastMeetingResult: z.string().optional(),
+    projectName: z.string().optional(),
+  });
 
 export const insertSalesRepSchema = createInsertSchema(salesReps).omit({
   id: true,
@@ -136,11 +151,15 @@ export const insertSettingsSchema = createInsertSchema(settings).omit({
   id: true,
 });
 
-export const insertLeadExpenseSchema = createInsertSchema(leadExpenses).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+export const insertLeadExpenseSchema = createInsertSchema(leadExpenses)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    expenseType: z.enum(["agency_fee", "ads_expense"]),
+  });
 
 export type Lead = typeof leads.$inferSelect;
 export type InsertLead = z.infer<typeof insertLeadSchema>;
@@ -148,7 +167,5 @@ export type SalesRep = typeof salesReps.$inferSelect;
 export type InsertSalesRep = z.infer<typeof insertSalesRepSchema>;
 export type Settings = typeof settings.$inferSelect;
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
-export type LeadExpense = typeof leadExpenses.$inferSelect;
-export type InsertLeadExpense = z.infer<typeof insertLeadExpenseSchema>;
 export type LeadExpense = typeof leadExpenses.$inferSelect;
 export type InsertLeadExpense = z.infer<typeof insertLeadExpenseSchema>;

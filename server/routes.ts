@@ -5,6 +5,8 @@ import {
   insertLeadSchema,
   insertSalesRepSchema,
   insertSettingsSchema,
+  insertLeadExpenseSchema,
+  leadExpenses,
 } from "@shared/schema";
 import { usdExchangeService } from "./usd-exchange-service";
 import { handleAIQuery } from "./routes/ai-advanced";
@@ -12,11 +14,11 @@ import multer from "multer";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import path from "path";
-import { generateReportPDF } from './pdfReport';
-import express from 'express';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import { generateReportPDF } from "./pdfReport";
+import express from "express";
+import fs from "fs";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -33,26 +35,31 @@ function extractDataFromWebForm(webFormNote: string | undefined): {
   // --- Lead Type Extraction (Best Practice) ---
   let leadType: string | undefined;
   // Regex to extract value after 'Ilgilendigi Gayrimenkul Tipi :' and before next '/' or end
-  const leadTypeMatch = originalNote.match(/Ilgilendigi\s+Gayrimenkul\s+Tipi\s*:\s*([^/\n]*)/i);
+  const leadTypeMatch = originalNote.match(
+    /Ilgilendigi\s+Gayrimenkul\s+Tipi\s*:\s*([^/\n]*)/i
+  );
   if (leadTypeMatch) {
     let extracted = leadTypeMatch[1].trim();
     // Normalize Turkish and English i's, remove accents, lowercase
     extracted = extracted
-      .replace(/İ/g, 'i')
-      .replace(/ı/g, 'i')
-      .replace(/I/g, 'i')
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/İ/g, "i")
+      .replace(/ı/g, "i")
+      .replace(/I/g, "i")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase();
-    if (extracted === 'kiralık' || extracted === 'kiralik') {
-      leadType = 'kiralama';
-    } else if (extracted === 'satılık' || extracted === 'satilik') {
-      leadType = 'satis';
+    if (extracted === "kiralık" || extracted === "kiralik") {
+      leadType = "kiralama";
+    } else if (extracted === "satılık" || extracted === "satilik") {
+      leadType = "satis";
     } else {
-      leadType = 'Tanımsız';
+      leadType = "Tanımsız";
     }
-    console.log(`WebForm Notu: '${originalNote}' => Extracted: '${extracted}' => leadType: '${leadType}'`);
+    console.log(
+      `WebForm Notu: '${originalNote}' => Extracted: '${extracted}' => leadType: '${leadType}'`
+    );
   } else {
-    leadType = 'Tanımsız';
+    leadType = "Tanımsız";
   }
 
   // Enhanced project name extraction patterns
@@ -418,7 +425,7 @@ function mapRowToLead(row: any): any {
   };
 }
 
-import { sampleLeads } from './sample-data';
+import { sampleLeads } from "./sample-data";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Load sample data for testing
@@ -426,13 +433,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Clear existing leads
       await storage.clearAllLeads();
-      
+
       // Add sample leads
       for (const lead of sampleLeads) {
         await storage.createLead(lead);
       }
-      
-      res.json({ success: true, message: "Sample data loaded successfully", count: sampleLeads.length });
+
+      res.json({
+        success: true,
+        message: "Sample data loaded successfully",
+        count: sampleLeads.length,
+      });
     } catch (error) {
       console.error("Failed to load sample data:", error);
       res.status(500).json({ message: "Failed to load sample data" });
@@ -867,17 +878,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize takipteStorage with data from JSON file
   const initializeTakipteStorage = () => {
     try {
-      const takipteDataPath = path.join(__dirname, '../takipte_response.json');
+      const takipteDataPath = path.join(__dirname, "../takipte_response.json");
       if (fs.existsSync(takipteDataPath)) {
-        const rawData = fs.readFileSync(takipteDataPath, 'utf8');
+        const rawData = fs.readFileSync(takipteDataPath, "utf8");
         takipteStorage = JSON.parse(rawData);
-        console.log(`Loaded ${takipteStorage.length} takipte records from file`);
+        console.log(
+          `Loaded ${takipteStorage.length} takipte records from file`
+        );
       } else {
-        console.log('No takipte data file found, starting with empty storage');
+        console.log("No takipte data file found, starting with empty storage");
         takipteStorage = [];
       }
     } catch (error) {
-      console.error('Error loading takipte data:', error);
+      console.error("Error loading takipte data:", error);
       takipteStorage = [];
     }
   };
@@ -889,7 +902,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   function saveTakipteStorage() {
     try {
       const takipteDataPath = path.join(__dirname, "../takipte_response.json");
-      fs.writeFileSync(takipteDataPath, JSON.stringify(takipteStorage, null, 2));
+      fs.writeFileSync(
+        takipteDataPath,
+        JSON.stringify(takipteStorage, null, 2)
+      );
       console.log(`Saved ${takipteStorage.length} takipte records to file`);
     } catch (error) {
       console.error("Error saving takipte data:", error);
@@ -1256,17 +1272,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Save to JSON file
       saveTakipteStorage();
 
-      res.json({ 
-        message: "Cell updated successfully", 
-        rowIndex, 
-        columnId, 
-        value 
+      res.json({
+        message: "Cell updated successfully",
+        rowIndex,
+        columnId,
+        value,
       });
     } catch (error) {
       console.error("Error updating cell:", error);
-      res.status(500).json({ 
-        message: "Failed to update cell", 
-        error: (error as Error).message 
+      res.status(500).json({
+        message: "Failed to update cell",
+        error: (error as Error).message,
       });
     }
   });
@@ -1403,7 +1419,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // New endpoint for meetings analytics
   app.get("/api/meeting-analytics", async (req, res) => {
     try {
-      const { startDate, endDate, salesRep, leadType, month, year, project } = req.query;
+      const { startDate, endDate, salesRep, leadType, month, year, project } =
+        req.query;
 
       // Enhanced filtering with automatic month logic
       let finalStartDate = startDate as string;
@@ -1920,57 +1937,473 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const router = express.Router();
-
-  router.post('/api/export/pdf', async (req, res) => {
-    console.log('PDF export endpoint hit');
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
-    
+  // Negative analysis endpoint for Olumsuz Analizi tab
+  app.get("/api/negative-analysis", async (req, res) => {
     try {
-      const reportProps = req.body; // Expect company, project, salesperson, data, etc.
-      
-      // Validate that we have some data to work with
-      if (!reportProps) {
-        console.error('No report props provided');
-        return res.status(400).json({ error: 'Report data is required' });
+      const { startDate, endDate, salesRep, leadType, month, year } = req.query;
+
+      // Enhanced filtering with automatic month logic
+      let finalStartDate = startDate as string;
+      let finalEndDate = endDate as string;
+
+      if (month && year) {
+        const monthNum = parseInt(month as string);
+        const yearNum = parseInt(year as string);
+        finalStartDate = `${yearNum}-${monthNum
+          .toString()
+          .padStart(2, "0")}-01`;
+        const lastDay = new Date(yearNum, monthNum, 0).getDate();
+        finalEndDate = `${yearNum}-${monthNum
+          .toString()
+          .padStart(2, "0")}-${lastDay}`;
       }
-      
-      console.log('Calling generateReportPDF...');
-      const pdfBuffer = await generateReportPDF(reportProps);
-      console.log('PDF generation completed, buffer size:', pdfBuffer.length);
-      
-      if (!pdfBuffer || pdfBuffer.length === 0) {
-        console.error('Generated PDF buffer is empty or null');
-        return res.status(500).json({ error: 'Failed to generate PDF - empty buffer' });
-      }
-      
-      res.set({
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="lead-report.pdf"',
-        'Content-Length': pdfBuffer.length.toString(),
+
+      const leads = await storage.getLeadsByFilter({
+        startDate: finalStartDate,
+        endDate: finalEndDate,
+        salesRep: salesRep as string,
+        leadType: leadType as string,
       });
-      
-      console.log('Sending PDF response...');
-      res.send(pdfBuffer);
-      console.log('PDF response sent successfully');
-      
-    } catch (err) {
-      console.error('PDF export error:', err);
-      console.error('Error stack:', err instanceof Error ? err.stack : 'No stack trace');
-      
-      // Send detailed error information in development
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      const errorStack = err instanceof Error ? err.stack : undefined;
-      
-      res.status(500).json({ 
-        error: 'Failed to generate PDF report',
-        message: errorMessage,
-        ...(process.env.NODE_ENV === 'development' && { stack: errorStack })
+
+      // Filter negative leads
+      const negativeLeads = leads.filter((lead) => {
+        return (
+          lead.status?.includes("Olumsuz") ||
+          lead.status?.toLowerCase().includes("olumsuz")
+        );
+      });
+
+      const totalLeads = leads.length;
+      const totalNegative = negativeLeads.length;
+      const negativePercentage =
+        totalLeads > 0 ? (totalNegative / totalLeads) * 100 : 0;
+
+      // Analyze reasons for negative outcomes
+      const reasonCounts: Record<string, number> = {};
+      negativeLeads.forEach((lead) => {
+        // Priority: negativeReason -> lastMeetingNote -> responseResult -> status
+        let reason =
+          lead.negativeReason && lead.negativeReason.trim() !== ""
+            ? lead.negativeReason.trim()
+            : lead.lastMeetingNote && lead.lastMeetingNote.trim() !== ""
+            ? lead.lastMeetingNote.trim()
+            : lead.responseResult && lead.responseResult.trim() !== ""
+            ? lead.responseResult.trim()
+            : lead.status || "Belirtilmemiş";
+
+        // Clean up the reason
+        if (reason.toLowerCase().includes("olumsuz")) {
+          reason =
+            reason.replace(/\s*-\s*olumsuz/gi, "").trim() || "Belirtilmemiş";
+        }
+
+        reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;
+      });
+
+      const reasonAnalysis = Object.entries(reasonCounts)
+        .map(([reason, count]) => ({
+          reason,
+          count,
+          percentage: totalNegative > 0 ? (count / totalNegative) * 100 : 0,
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      // Analyze by personnel
+      const personnelCounts: Record<string, number> = {};
+      negativeLeads.forEach((lead) => {
+        const personnel = lead.assignedPersonnel || "Atanmamış";
+        personnelCounts[personnel] = (personnelCounts[personnel] || 0) + 1;
+      });
+
+      const personnelAnalysis = Object.entries(personnelCounts)
+        .map(([personnel, count]) => ({
+          personnel,
+          count,
+          percentage: totalNegative > 0 ? (count / totalNegative) * 100 : 0,
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      const result = {
+        totalNegative,
+        totalLeads,
+        negativePercentage,
+        reasonAnalysis,
+        personnelAnalysis,
+      };
+
+      res.json(result);
+    } catch (error) {
+      console.error("Negative analysis error:", error);
+      res.status(500).json({ error: "Failed to generate negative analysis" });
+    }
+  });
+
+  // Lead Expenses API endpoints
+  app.get("/api/lead-expenses", async (req, res) => {
+    try {
+      const { month } = req.query;
+
+      let expenses;
+      if (month) {
+        expenses = await storage.getLeadExpensesByMonth(month as string);
+      } else {
+        expenses = await storage.getLeadExpenses();
+      }
+
+      res.json(expenses);
+    } catch (error) {
+      console.error("Error fetching lead expenses:", error);
+      res.status(500).json({ error: "Failed to fetch lead expenses" });
+    }
+  });
+
+  app.post("/api/lead-expenses", async (req, res) => {
+    try {
+      const expenseData = insertLeadExpenseSchema.parse(req.body);
+      const newExpense = await storage.createLeadExpense(expenseData);
+      res.json(newExpense);
+    } catch (error) {
+      console.error("Error creating lead expense:", error);
+      res.status(500).json({ error: "Failed to create lead expense" });
+    }
+  });
+
+  app.put("/api/lead-expenses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const expenseData = req.body;
+      const updatedExpense = await storage.updateLeadExpense(id, expenseData);
+      res.json(updatedExpense);
+    } catch (error) {
+      console.error("Error updating lead expense:", error);
+      res.status(500).json({ error: "Failed to update lead expense" });
+    }
+  });
+
+  app.delete("/api/lead-expenses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteLeadExpense(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting lead expense:", error);
+      res.status(500).json({ error: "Failed to delete lead expense" });
+    }
+  });
+
+  app.get("/api/expense-stats", async (req, res) => {
+    try {
+      const expenses = await storage.getLeadExpenses();
+      const leads = await storage.getLeads();
+      const totalLeads = leads.length;
+
+      // Calculate stats - parse amountTL as number since it's stored as string
+      const totalTL = expenses.reduce(
+        (sum, expense) => sum + parseFloat(expense.amountTL),
+        0
+      );
+      const agencyFees = expenses
+        .filter((expense) => expense.expenseType === "agency_fee")
+        .reduce((sum, expense) => sum + parseFloat(expense.amountTL), 0);
+      const adsExpenses = expenses
+        .filter((expense) => expense.expenseType === "ads_expense")
+        .reduce((sum, expense) => sum + parseFloat(expense.amountTL), 0);
+
+      // Calculate average cost per lead
+      const avgCostPerLead = totalLeads > 0 ? totalTL / totalLeads : 0;
+
+      const stats = {
+        expenses: {
+          tl: {
+            totalExpenses: totalTL,
+            totalAgencyFees: agencyFees,
+            totalAdsExpenses: adsExpenses,
+            avgCostPerLead: avgCostPerLead,
+          },
+        },
+      };
+
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching expense stats:", error);
+      res.status(500).json({ error: "Failed to fetch expense stats" });
+    }
+  });
+
+  // USD/TL Exchange Rate endpoint
+  app.get("/api/exchange-rate/usd", async (req, res) => {
+    try {
+      console.log("Fetching USD/TL exchange rate from TCMB...");
+      const exchangeRate = await usdExchangeService.getUSDToTRYRate();
+
+      const response = {
+        rate: exchangeRate.sellingRate, // Primary rate for calculations
+        buyingRate: exchangeRate.buyingRate,
+        sellingRate: exchangeRate.sellingRate,
+        lastUpdated: exchangeRate.lastUpdated,
+        source: "TCMB (Türkiye Cumhuriyet Merkez Bankası)",
+      };
+
+      console.log("USD/TL rate fetched successfully:", response.rate);
+      res.json(response);
+    } catch (error) {
+      console.error("Error fetching USD/TL exchange rate:", error);
+      res.status(500).json({
+        error: "Failed to fetch exchange rate",
+        fallbackRate: 34.5,
+        message: "Using fallback rate due to service unavailability",
       });
     }
   });
 
-  app.use('/api', router);
+  // Salesperson Performance Analysis endpoint
+  app.get("/api/salesperson-performance/:name", async (req, res) => {
+    try {
+      const { name } = req.params;
+      const { startDate, endDate, month, year, leadType, project, status } =
+        req.query;
+
+      // Enhanced filtering with automatic month logic
+      let finalStartDate = startDate as string;
+      let finalEndDate = endDate as string;
+
+      if (month && year) {
+        const monthNum = parseInt(month as string);
+        const yearNum = parseInt(year as string);
+        finalStartDate = `${yearNum}-${monthNum
+          .toString()
+          .padStart(2, "0")}-01`;
+        const lastDay = new Date(yearNum, monthNum, 0).getDate();
+        finalEndDate = `${yearNum}-${monthNum
+          .toString()
+          .padStart(2, "0")}-${lastDay}`;
+      }
+
+      // Get all leads for this salesperson
+      const allLeads = await storage.getLeads();
+      let salespersonLeads = allLeads.filter(
+        (lead) => lead.assignedPersonnel === name
+      );
+
+      // Apply date filtering
+      if (finalStartDate || finalEndDate) {
+        salespersonLeads = salespersonLeads.filter((lead) => {
+          const leadDate = new Date(lead.requestDate || lead.createdAt || "");
+          if (finalStartDate && leadDate < new Date(finalStartDate))
+            return false;
+          if (finalEndDate && leadDate > new Date(finalEndDate)) return false;
+          return true;
+        });
+      }
+
+      // Apply other filters
+      if (leadType) {
+        salespersonLeads = salespersonLeads.filter(
+          (lead) => lead.leadType === leadType
+        );
+      }
+      if (project) {
+        salespersonLeads = salespersonLeads.filter(
+          (lead) => lead.projectName === project
+        );
+      }
+      if (status) {
+        salespersonLeads = salespersonLeads.filter(
+          (lead) => lead.status === status
+        );
+      }
+
+      // Get all expenses
+      const allExpenses = await storage.getLeadExpenses();
+
+      // Calculate total expenses (assuming they apply to all leads proportionally)
+      const totalExpenses = allExpenses.reduce(
+        (sum, expense) => sum + parseFloat(expense.amountTL),
+        0
+      );
+      const totalLeadsInSystem = allLeads.length;
+
+      // Calculate this salesperson's share of expenses based on their lead proportion
+      const salespersonShare =
+        totalLeadsInSystem > 0
+          ? salespersonLeads.length / totalLeadsInSystem
+          : 0;
+      const salespersonTotalCost = totalExpenses * salespersonShare;
+
+      // Calculate sales metrics
+      const salesLeads = salespersonLeads.filter((lead) => {
+        const status = lead.status?.toLowerCase() || "";
+        return (
+          status.includes("satış") ||
+          status.includes("satis") ||
+          status.includes("satıl") ||
+          status.includes("satil") ||
+          lead.wasSaleMade?.toLowerCase() === "evet" ||
+          lead.wasSaleMade?.toLowerCase() === "yes"
+        );
+      });
+
+      const meetingLeads = salespersonLeads.filter(
+        (lead) =>
+          lead.oneOnOneMeeting?.toLowerCase() === "evet" ||
+          lead.oneOnOneMeeting?.toLowerCase() === "yes"
+      );
+
+      // Calculate conversion rates (as decimal values for frontend)
+      const salesConversionRate =
+        salespersonLeads.length > 0
+          ? salesLeads.length / salespersonLeads.length
+          : 0;
+      const meetingConversionRate =
+        salespersonLeads.length > 0
+          ? meetingLeads.length / salespersonLeads.length
+          : 0;
+      const salesFromMeetings =
+        meetingLeads.length > 0 ? salesLeads.length / meetingLeads.length : 0;
+
+      // Calculate cost metrics
+      const costPerLead =
+        salespersonLeads.length > 0
+          ? salespersonTotalCost / salespersonLeads.length
+          : 0;
+      const costPerSale =
+        salesLeads.length > 0 ? salespersonTotalCost / salesLeads.length : 0;
+      const costPerMeeting =
+        meetingLeads.length > 0
+          ? salespersonTotalCost / meetingLeads.length
+          : 0;
+
+      // Calculate ROI (assuming average sale value - this should be configurable)
+      const averageSaleValue = 500000; // TL - this should come from settings or be calculated from actual sales
+      const totalRevenue = salesLeads.length * averageSaleValue;
+      const roi =
+        salespersonTotalCost > 0
+          ? (totalRevenue - salespersonTotalCost) / salespersonTotalCost
+          : 0;
+
+      const performanceData = {
+        salesperson: name,
+        period: {
+          startDate: finalStartDate,
+          endDate: finalEndDate,
+          month,
+          year,
+        },
+
+        // Lead metrics
+        totalLeads: salespersonLeads.length,
+        totalSales: salesLeads.length,
+        totalMeetings: meetingLeads.length,
+
+        // Conversion rates
+        salesConversionRate: salesConversionRate,
+        meetingConversionRate: meetingConversionRate,
+        salesFromMeetingsRate: salesFromMeetings,
+
+        // Cost analysis
+        totalCost: Math.round(salespersonTotalCost * 100) / 100,
+        costPerLead: Math.round(costPerLead * 100) / 100,
+        costPerSale: Math.round(costPerSale * 100) / 100,
+        costPerMeeting: Math.round(costPerMeeting * 100) / 100,
+
+        // ROI analysis
+        estimatedRevenue: totalRevenue,
+        estimatedROI: roi,
+        averageSaleValue: averageSaleValue,
+
+        // Performance indicators
+        salesEfficiency: salesLeads.length > 0 ? "High" : "Needs Improvement",
+        costEfficiency:
+          costPerSale < 50000
+            ? "Excellent"
+            : costPerSale < 100000
+            ? "Good"
+            : "Needs Improvement",
+
+        // Detailed breakdowns
+        leadsByType: salespersonLeads.reduce((acc, lead) => {
+          acc[lead.leadType] = (acc[lead.leadType] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>),
+
+        leadsByStatus: salespersonLeads.reduce((acc, lead) => {
+          const status = lead.status || "Tanımsız";
+          acc[status] = (acc[status] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>),
+
+        salesByProject: salesLeads.reduce((acc, lead) => {
+          const project = lead.projectName || "Belirtilmemiş";
+          acc[project] = (acc[project] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>),
+      };
+
+      res.json(performanceData);
+    } catch (error) {
+      console.error("Error calculating salesperson performance:", error);
+      res.status(500).json({
+        error: "Failed to calculate salesperson performance",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  const router = express.Router();
+
+  router.post("/api/export/pdf", async (req, res) => {
+    console.log("PDF export endpoint hit");
+    console.log("Request body:", JSON.stringify(req.body, null, 2));
+
+    try {
+      const reportProps = req.body; // Expect company, project, salesperson, data, etc.
+
+      // Validate that we have some data to work with
+      if (!reportProps) {
+        console.error("No report props provided");
+        return res.status(400).json({ error: "Report data is required" });
+      }
+
+      console.log("Calling generateReportPDF...");
+      const pdfBuffer = await generateReportPDF(reportProps);
+      console.log("PDF generation completed, buffer size:", pdfBuffer.length);
+
+      if (!pdfBuffer || pdfBuffer.length === 0) {
+        console.error("Generated PDF buffer is empty or null");
+        return res
+          .status(500)
+          .json({ error: "Failed to generate PDF - empty buffer" });
+      }
+
+      res.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": 'attachment; filename="lead-report.pdf"',
+        "Content-Length": pdfBuffer.length.toString(),
+      });
+
+      console.log("Sending PDF response...");
+      res.send(pdfBuffer);
+      console.log("PDF response sent successfully");
+    } catch (err) {
+      console.error("PDF export error:", err);
+      console.error(
+        "Error stack:",
+        err instanceof Error ? err.stack : "No stack trace"
+      );
+
+      // Send detailed error information in development
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      const errorStack = err instanceof Error ? err.stack : undefined;
+
+      res.status(500).json({
+        error: "Failed to generate PDF report",
+        message: errorMessage,
+        ...(process.env.NODE_ENV === "development" && { stack: errorStack }),
+      });
+    }
+  });
+
+  app.use("/api", router);
 
   const httpServer = createServer(app);
   return httpServer;

@@ -325,9 +325,7 @@ export default function SalespersonPerformanceTab({
           </p>
         </div>
         <div className="flex gap-2">
-          <Badge variant="outline">
-            📊 Real-time: {salespersonLeads.length}
-          </Badge>
+          <Badge variant="outline">Toplam: {salespersonLeads.length}</Badge>
           <Badge variant="outline">🎯 Hedef: {salesTargetPercentage}%</Badge>
           {hasSecondaryData && <Badge variant="outline">🔗 Dual-Source</Badge>}
         </div>
@@ -441,8 +439,7 @@ export default function SalespersonPerformanceTab({
               </Select>
             </div>
             <div className="flex gap-2">
-              <Badge variant="outline">📊 Real-time</Badge>
-              <Badge variant="outline">🤖 AI-Power</Badge>
+              {/* Removed emoji badges as requested */}
             </div>
           </div>
         </div>

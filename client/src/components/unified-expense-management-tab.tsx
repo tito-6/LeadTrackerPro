@@ -62,9 +62,6 @@ interface ExpenseStats {
       totalAgencyFees: number;
       totalAdsExpenses: number;
       totalExpenses: number;
-    };
-    usd: {
-      totalExpenses: number;
       avgCostPerLead: number;
     };
   };
@@ -280,9 +277,8 @@ export default function UnifiedExpenseManagementTab() {
     const expenseData: InsertLeadExpense = {
       month: formData.month,
       expenseType: formData.expenseType,
-      amountTL: parseFloat(formData.amountTL),
+      amountTL: formData.amountTL,
       description: formData.description,
-      createdAt: new Date().toISOString(),
     };
 
     if (editingExpense) {
@@ -299,7 +295,7 @@ export default function UnifiedExpenseManagementTab() {
     setEditingExpense(expense);
     setFormData({
       month: expense.month,
-      expenseType: expense.expenseType,
+      expenseType: expense.expenseType as "agency_fee" | "ads_expense",
       amountTL: expense.amountTL.toString(),
       description: expense.description || "",
     });
@@ -466,16 +462,18 @@ export default function UnifiedExpenseManagementTab() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {formatCurrency(
-                      expenseStats.expenses.usd.avgCostPerLead,
-                      "USD"
-                    )}
+                    {expenseStats?.expenses?.tl?.avgCostPerLead !== undefined
+                      ? formatCurrency(
+                          expenseStats.expenses.tl.avgCostPerLead /
+                            (exchangeRate?.rate || 1),
+                          "USD"
+                        )
+                      : "N/A"}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {formatCurrency(
-                      expenseStats.expenses.usd.avgCostPerLead *
-                        (exchangeRate?.rate || 1)
-                    )}{" "}
+                    {expenseStats?.expenses?.tl?.avgCostPerLead !== undefined
+                      ? formatCurrency(expenseStats.expenses.tl.avgCostPerLead)
+                      : "N/A"}{" "}
                     TL
                   </p>
                 </CardContent>
@@ -514,10 +512,13 @@ export default function UnifiedExpenseManagementTab() {
                           {formatExpenseType(expense.expenseType)}
                         </Badge>
                       </TableCell>
-                      <TableCell>{formatCurrency(expense.amountTL)}</TableCell>
+                      <TableCell>
+                        {formatCurrency(parseFloat(expense.amountTL))}
+                      </TableCell>
                       <TableCell>
                         {formatCurrency(
-                          expense.amountTL / (exchangeRate?.rate || 1),
+                          parseFloat(expense.amountTL) /
+                            (exchangeRate?.rate || 1),
                           "USD"
                         )}
                       </TableCell>
@@ -697,10 +698,13 @@ export default function UnifiedExpenseManagementTab() {
                           {formatExpenseType(expense.expenseType)}
                         </Badge>
                       </TableCell>
-                      <TableCell>{formatCurrency(expense.amountTL)}</TableCell>
+                      <TableCell>
+                        {formatCurrency(parseFloat(expense.amountTL))}
+                      </TableCell>
                       <TableCell>
                         {formatCurrency(
-                          expense.amountTL / (exchangeRate?.rate || 1),
+                          parseFloat(expense.amountTL) /
+                            (exchangeRate?.rate || 1),
                           "USD"
                         )}
                       </TableCell>
@@ -860,14 +864,8 @@ export default function UnifiedExpenseManagementTab() {
             <div className="text-lg font-semibold text-yellow-600">
               Debug: Takipte Data
             </div>
-            <div className="text-sm text-gray-600">
-              {JSON.stringify(
-                Object.keys(expenseStats?.personnelCostAnalysis || {}).slice(
-                  0,
-                  3
-                )
-              )}
-            </div>
+            {/* Debug info removed - personnelCostAnalysis not implemented yet */}
+            <div className="text-sm text-gray-600">Debug info placeholder</div>
           </div>
         </TabsContent>
       </Tabs>

@@ -1,8 +1,16 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   PieChart,
   Pie,
@@ -24,10 +32,15 @@ import {
   Phone,
   FileText,
   Eye,
+  DollarSign,
+  TrendingDown,
+  Calculator,
+  Calendar,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Lead } from "@shared/schema";
 import { DataTable } from "@/components/ui/data-table";
+import { StandardChart } from "@/components/charts";
 import UniversalFilter, {
   UniversalFilters,
 } from "@/components/ui/universal-filter";
@@ -65,14 +78,14 @@ export default function SalespersonPage({
   const availableProjects = useMemo(() => {
     const projects = allLeads
       .filter((lead) => lead.projectName)
-      .map((lead) => lead.projectName)
+      .map((lead) => lead.projectName!)
       .filter(Boolean);
-    return [...new Set(projects)];
+    return Array.from(new Set(projects));
   }, [allLeads]);
 
   const availableStatuses = useMemo(() => {
     const statuses = allLeads.map((lead) => lead.status).filter(Boolean);
-    return [...new Set(statuses)];
+    return Array.from(new Set(statuses));
   }, [allLeads]);
 
   // Filter leads for this salesperson
@@ -131,23 +144,66 @@ export default function SalespersonPage({
   // Calculate statistics
   const stats = useMemo(() => {
     const total = filteredLeads.length;
+
+    // Debug logging to see actual values
+    if (filteredLeads.length > 0) {
+      console.log("🔍 DEBUG: Sample lead data for debugging:", {
+        salesperson: salespersonName,
+        sampleLead: {
+          status: filteredLeads[0]?.status,
+          wasSaleMade: filteredLeads[0]?.wasSaleMade,
+          leadType: filteredLeads[0]?.leadType,
+          customerName: filteredLeads[0]?.customerName,
+        },
+        totalLeads: filteredLeads.length,
+        allSalesValues: filteredLeads
+          .map((l) => l.wasSaleMade)
+          .filter(Boolean)
+          .slice(0, 10),
+        allStatuses: filteredLeads
+          .map((l) => l.status)
+          .filter(Boolean)
+          .slice(0, 10),
+      });
+    }
+
     const satisLeads = filteredLeads.filter(
       (lead) => lead.leadType === "satis"
     );
     const kiralamaLeads = filteredLeads.filter(
       (lead) => lead.leadType === "kiralama"
     );
-    const olumsuzLeads = filteredLeads.filter((lead) =>
-      lead.status?.includes("Olumsuz")
-    );
-    const takipteLeads = filteredLeads.filter((lead) =>
-      lead.status?.includes("Takipte")
-    );
-    const satisYapilanLeads = filteredLeads.filter(
-      (lead) => lead.wasSaleMade === "Evet"
-    );
+    const olumsuzLeads = filteredLeads.filter((lead) => {
+      const status = lead.status?.toLowerCase() || "";
+      return status.includes("olumsuz") || status.includes("negative");
+    });
+    const takipteLeads = filteredLeads.filter((lead) => {
+      const status = lead.status?.toLowerCase() || "";
+      return (
+        status.includes("takip") ||
+        status.includes("follow") ||
+        status.includes("potansiyel")
+      );
+    });
+    // Use the same logic as the "👥 Personel Atama ve Durum Özeti" table
+    // Count leads where status contains "satış" or "satis"
+    const satisYapilanLeads = filteredLeads.filter((lead) => {
+      const status = lead.status?.toLowerCase() || "";
+      const isSale = status.includes("satış") || status.includes("satis");
 
-    return {
+      // Debug individual lead
+      if (isSale) {
+        console.log("✅ SALE FOUND (by status):", {
+          customerName: lead.customerName,
+          status: lead.status,
+          originalStatus: lead.status,
+        });
+      }
+
+      return isSale;
+    });
+
+    const finalStats = {
       total,
       satis: satisLeads.length,
       kiralama: kiralamaLeads.length,
@@ -157,6 +213,11 @@ export default function SalespersonPage({
       conversion:
         total > 0 ? Math.round((satisYapilanLeads.length / total) * 100) : 0,
     };
+
+    // Debug final statistics
+    console.log("📊 FINAL STATS for", salespersonName, ":", finalStats);
+
+    return finalStats;
   }, [filteredLeads]);
 
   // Status distribution for pie chart
@@ -167,10 +228,13 @@ export default function SalespersonPage({
       return acc;
     }, {} as Record<string, number>);
 
+    const total = filteredLeads.length;
+
     return Object.entries(statusCounts)
       .map(([status, count]) => ({
         name: status,
         value: count,
+        percentage: total > 0 ? Math.round((count / total) * 100) : 0,
         color: getStatusColor(status),
       }))
       .sort((a, b) => b.value - a.value);
@@ -178,30 +242,53 @@ export default function SalespersonPage({
 
   // Lead type distribution
   const leadTypeData = useMemo(() => {
+    const total = stats.satis + stats.kiralama;
     const typeData = [
-      { name: "Satılık", value: stats.satis, color: getStandardColor("SALES") },
+      {
+        name: "Satılık",
+        value: stats.satis,
+        percentage: total > 0 ? Math.round((stats.satis / total) * 100) : 0,
+        color: getStandardColor("LEAD_TYPE", "Satılık"),
+      },
       {
         name: "Kiralık",
         value: stats.kiralama,
-        color: getStandardColor("RENTAL"),
+        percentage: total > 0 ? Math.round((stats.kiralama / total) * 100) : 0,
+        color: getStandardColor("LEAD_TYPE", "Kiralık"),
       },
     ];
     return typeData.filter((item) => item.value > 0);
   }, [stats]);
 
-  // Project distribution
+  // Project distribution with sales data
   const projectData = useMemo(() => {
-    const projectCounts = filteredLeads.reduce((acc, lead) => {
+    const projectStats = filteredLeads.reduce((acc, lead) => {
       const project = lead.projectName || "Belirtilmemiş";
-      acc[project] = (acc[project] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+      if (!acc[project]) {
+        acc[project] = {
+          total: 0,
+          sales: 0,
+        };
+      }
+      acc[project].total += 1;
 
-    return Object.entries(projectCounts)
-      .map(([project, count]) => ({
+      // Use the same logic as the "👥 Personel Atama ve Durum Özeti" table
+      const status = lead.status?.toLowerCase() || "";
+      if (status.includes("satış") || status.includes("satis")) {
+        acc[project].sales += 1;
+      }
+
+      return acc;
+    }, {} as Record<string, { total: number; sales: number }>);
+
+    return Object.entries(projectStats)
+      .map(([project, stats]) => ({
         name: project.length > 20 ? project.substring(0, 20) + "..." : project,
         fullName: project,
-        value: count,
+        value: stats.total,
+        sales: stats.sales,
+        salesRate:
+          stats.total > 0 ? Math.round((stats.sales / stats.total) * 100) : 0,
         color: getStandardColor("PROJECT", project),
       }))
       .sort((a, b) => b.value - a.value)
@@ -219,17 +306,22 @@ export default function SalespersonPage({
       .slice(0, 10);
   }, [filteredLeads]);
 
-  // Fetch expense data for cost analysis
+  // Fetch expense data for cost analysis - temporarily disabled
   const { data: expenseStats } = useQuery({
     queryKey: ["/api/expense-stats", filters],
     queryFn: async () => {
+      // Temporarily return null to avoid API errors
+      return null;
+      /* 
       const params = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
         if (value) params.append(key, value);
       });
       const response = await fetch(`/api/expense-stats?${params.toString()}`);
       return response.json();
+      */
     },
+    enabled: false, // Disable this query temporarily
   });
 
   // Fetch exchange rate for USD conversions
@@ -243,11 +335,12 @@ export default function SalespersonPage({
 
   // Calculate cost metrics for this salesperson
   const costMetrics = useMemo(() => {
-    if (!expenseStats || !exchangeRate) return null;
+    if (!expenseStats || !exchangeRate || expenseStats === null) return null;
 
-    const totalLeads = expenseStats.leadCount;
+    const stats = expenseStats as any; // Type cast for now
+    const totalLeads = stats.leadCount || 0;
     const salespersonLeads = filteredLeads.length;
-    const totalExpensesTL = expenseStats.expenses.tl.totalExpenses;
+    const totalExpensesTL = stats.expenses?.tl?.totalExpenses || 0;
 
     // Calculate salesperson's share of total costs based on lead ratio
     const leadRatio = totalLeads > 0 ? salespersonLeads / totalLeads : 0;
@@ -262,9 +355,9 @@ export default function SalespersonPage({
 
     // Agency fees and ads expenses breakdown
     const agencyFeesShare =
-      expenseStats.expenses.tl.totalAgencyFees * leadRatio;
+      (stats.expenses?.tl?.totalAgencyFees || 0) * leadRatio;
     const adsExpensesShare =
-      expenseStats.expenses.tl.totalAdsExpenses * leadRatio;
+      (stats.expenses?.tl?.totalAdsExpenses || 0) * leadRatio;
 
     return {
       totalCostTL: salespersonCostTL,
@@ -345,6 +438,9 @@ export default function SalespersonPage({
         availableStatuses={availableStatuses}
         showSalesRepFilter={false}
       />
+
+      {/* Major Performance Analysis Table */}
+      <SalespersonPerformanceTable salespersonName={salespersonName} />
 
       {/* Key Performance Indicators */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
@@ -435,19 +531,6 @@ export default function SalespersonPage({
             <p className="text-xs text-muted-foreground">
               %{stats.conversion} dönüşüm
             </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Dönüşüm</CardTitle>
-            <TrendingUp className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
-              %{stats.conversion}
-            </div>
-            <p className="text-xs text-muted-foreground">Satış oranı</p>
           </CardContent>
         </Card>
       </div>
@@ -639,55 +722,72 @@ export default function SalespersonPage({
         <TabsContent value="status" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-medium">
-                Durum Analizi
-              </CardTitle>
+              <CardTitle>📊 Durum Analizi - Detaylı Özet</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="lg:col-span-2">
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={statusData}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {statusData.map((entry, index) => (
-                          <Cell key={`status-${index}`} fill={entry.color} />
+              {statusData.length > 0 ? (
+                <>
+                  <StandardChart
+                    title=""
+                    data={statusData}
+                    height={500}
+                    chartType="pie"
+                    showDataTable={false}
+                    className="[&_.grid]:!grid-cols-1 [&_.space-y-4]:!hidden mb-6"
+                  />
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse border border-gray-200">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">
+                            Durum
+                          </th>
+                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">
+                            Adet
+                          </th>
+                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">
+                            Yüzde
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {statusData.map((item, index) => (
+                          <tr
+                            key={index}
+                            className="hover:bg-gray-50"
+                            style={{
+                              backgroundColor: `${item.color}15`,
+                              borderLeft: `4px solid ${item.color}`,
+                            }}
+                          >
+                            <td className="border border-gray-200 px-4 py-2 font-medium">
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-3 h-3 rounded-full"
+                                  style={{
+                                    backgroundColor: item.color,
+                                  }}
+                                />
+                                {item.name}
+                              </div>
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2 text-center font-medium">
+                              {item.value}
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2 text-center">
+                              %{item.percentage}
+                            </td>
+                          </tr>
                         ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend
-                        verticalAlign="middle"
-                        align="right"
-                        layout="vertical"
-                        iconType="circle"
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Bu personel için durum verisi bulunmuyor.</p>
                 </div>
-                <div className="space-y-2">
-                  <h4 className="font-medium text-sm">Durum Detayları</h4>
-                  {statusData.map((entry, index) => (
-                    <div
-                      key={`legend-${index}`}
-                      className="flex items-center gap-2 text-sm"
-                    >
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: entry.color }}
-                      />
-                      <span>
-                        {entry.name}: {entry.value}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -695,61 +795,100 @@ export default function SalespersonPage({
         <TabsContent value="sales" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-medium">
-                Satış Durumu Analizi
-              </CardTitle>
+              <CardTitle>💰 Satış Analizi - Detaylı Özet</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="lg:col-span-2">
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={salesStatusData}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {salesStatusData.map((entry, index) => (
-                          <Cell key={`sales-${index}`} fill={entry.color} />
+              {salesStatusData.length > 0 ? (
+                <>
+                  <StandardChart
+                    title=""
+                    data={salesStatusData}
+                    height={500}
+                    chartType="pie"
+                    showDataTable={false}
+                    className="[&_.grid]:!grid-cols-1 [&_.space-y-4]:!hidden mb-6"
+                  />
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse border border-gray-200">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">
+                            Satış Durumu
+                          </th>
+                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">
+                            Adet
+                          </th>
+                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">
+                            Yüzde
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {salesStatusData.map((item, index) => (
+                          <tr
+                            key={index}
+                            className="hover:bg-gray-50"
+                            style={{
+                              backgroundColor: `${item.color}15`,
+                              borderLeft: `4px solid ${item.color}`,
+                            }}
+                          >
+                            <td className="border border-gray-200 px-4 py-2 font-medium">
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-3 h-3 rounded-full"
+                                  style={{
+                                    backgroundColor: item.color,
+                                  }}
+                                />
+                                {item.name}
+                              </div>
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2 text-center font-medium">
+                              {item.value}
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2 text-center">
+                              %{((item.value / stats.total) * 100).toFixed(1)}
+                            </td>
+                          </tr>
                         ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend
-                        verticalAlign="middle"
-                        align="right"
-                        layout="vertical"
-                        iconType="circle"
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="font-medium text-sm">Satış Detayları</h4>
-                  {salesStatusData.map((entry, index) => (
-                    <div
-                      key={`sales-legend-${index}`}
-                      className="flex items-center gap-2 text-sm"
-                    >
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: entry.color }}
-                      />
-                      <span>
-                        {entry.name}: {entry.value}
-                      </span>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-4 border-t">
+                    <div className="bg-green-50 p-4 rounded-lg">
+                      <div className="text-sm font-medium text-green-700">
+                        Toplam Satış
+                      </div>
+                      <div className="text-2xl font-bold text-green-900">
+                        {stats.satisYapilan}
+                      </div>
                     </div>
-                  ))}
-                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <div className="text-sm font-medium">Dönüşüm Oranı</div>
-                    <div className="text-lg font-bold text-green-600">
-                      %{stats.conversion}
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <div className="text-sm font-medium text-blue-700">
+                        Dönüşüm Oranı
+                      </div>
+                      <div className="text-2xl font-bold text-blue-900">
+                        %{stats.conversion}
+                      </div>
+                    </div>
+                    <div className="bg-purple-50 p-4 rounded-lg">
+                      <div className="text-sm font-medium text-purple-700">
+                        Toplam Lead
+                      </div>
+                      <div className="text-2xl font-bold text-purple-900">
+                        {stats.total}
+                      </div>
                     </div>
                   </div>
+                </>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Bu personel için satış verisi bulunmuyor.</p>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -757,143 +896,100 @@ export default function SalespersonPage({
         <TabsContent value="negative" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-medium">
-                Olumsuz Analiz
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="lg:col-span-2">
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={negativeReasonsData}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {negativeReasonsData.map((entry, index) => (
-                          <Cell key={`negative-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend
-                        verticalAlign="middle"
-                        align="right"
-                        layout="vertical"
-                        iconType="circle"
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="font-medium text-sm">Sebep Detayları</h4>
-                  {negativeReasonsData.map((entry, index) => (
-                    <div
-                      key={`negative-legend-${index}`}
-                      className="flex items-center gap-2 text-sm"
-                    >
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: entry.color }}
-                      />
-                      <span>
-                        {entry.name}: {entry.value}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="negative" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">
-                Olumsuz Nedenleri Analizi
-              </CardTitle>
+              <CardTitle>❌ Olumsuz Analizi - Detaylı Sebep Analizi</CardTitle>
             </CardHeader>
             <CardContent>
               {negativeReasonsData.length > 0 ? (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  <div className="lg:col-span-2">
-                    <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={negativeReasonsData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis
-                          dataKey="name"
-                          angle={-45}
-                          textAnchor="end"
-                          height={80}
-                          fontSize={12}
-                        />
-                        <YAxis />
-                        <Tooltip
-                          content={({ active, payload, label }) => {
-                            if (active && payload && payload.length) {
-                              const data = negativeReasonsData.find(
-                                (item) => item.name === label
-                              );
-                              return (
-                                <div className="bg-white p-3 border rounded shadow">
-                                  <p className="font-medium">
-                                    {data?.fullName}
-                                  </p>
-                                  <p className="text-blue-600">
-                                    Sayı: {payload[0].value}
-                                  </p>
-                                </div>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
-                        <Bar dataKey="value" fill="#8884d8">
-                          {negativeReasonsData.map((entry, index) => (
-                            <Cell
-                              key={`negative-${index}`}
-                              fill={entry.color}
-                            />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+                <>
+                  <StandardChart
+                    title=""
+                    data={negativeReasonsData}
+                    height={500}
+                    chartType="bar"
+                    showDataTable={false}
+                    className="[&_.grid]:!grid-cols-1 [&_.space-y-4]:!hidden mb-6"
+                  />
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse border border-gray-200">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">
+                            Olumsuz Sebep
+                          </th>
+                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">
+                            Adet
+                          </th>
+                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">
+                            Yüzde
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {negativeReasonsData.map((item, index) => (
+                          <tr
+                            key={index}
+                            className="hover:bg-gray-50"
+                            style={{
+                              backgroundColor: `${item.color}15`,
+                              borderLeft: `4px solid ${item.color}`,
+                            }}
+                          >
+                            <td className="border border-gray-200 px-4 py-2 font-medium">
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-3 h-3 rounded-full"
+                                  style={{
+                                    backgroundColor: item.color,
+                                  }}
+                                />
+                                <span title={item.fullName}>
+                                  {item.fullName || item.name}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2 text-center font-medium">
+                              {item.value}
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2 text-center">
+                              %{((item.value / stats.olumsuz) * 100).toFixed(1)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm">Olumsuz Nedenleri</h4>
-                    {negativeReasonsData.map((entry, index) => (
-                      <div
-                        key={`negative-legend-${index}`}
-                        className="flex items-center gap-2 text-sm"
-                      >
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: entry.color }}
-                        />
-                        <span className="truncate" title={entry.fullName}>
-                          {entry.name}: {entry.value}
-                        </span>
+
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-4 border-t">
+                    <div className="bg-red-50 p-4 rounded-lg">
+                      <div className="text-sm font-medium text-red-700">
+                        Toplam Olumsuz
                       </div>
-                    ))}
-                    <div className="mt-4 p-3 bg-red-50 rounded-lg">
-                      <div className="text-sm font-medium">Toplam Olumsuz</div>
-                      <div className="text-lg font-bold text-red-600">
+                      <div className="text-2xl font-bold text-red-900">
                         {stats.olumsuz}
                       </div>
-                      <div className="text-xs text-gray-500">
+                    </div>
+                    <div className="bg-orange-50 p-4 rounded-lg">
+                      <div className="text-sm font-medium text-orange-700">
+                        Olumsuz Oranı
+                      </div>
+                      <div className="text-2xl font-bold text-orange-900">
                         %
                         {stats.total > 0
                           ? Math.round((stats.olumsuz / stats.total) * 100)
-                          : 0}{" "}
-                        olumsuz oran
+                          : 0}
+                      </div>
+                    </div>
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <div className="text-sm font-medium text-blue-700">
+                        Toplam Lead
+                      </div>
+                      <div className="text-2xl font-bold text-blue-900">
+                        {stats.total}
                       </div>
                     </div>
                   </div>
-                </div>
+                </>
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   <p>Bu personel için olumsuz lead bulunmuyor.</p>
@@ -906,55 +1002,72 @@ export default function SalespersonPage({
         <TabsContent value="lead-type" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-medium">
-                Lead Tipi Dağılımı
-              </CardTitle>
+              <CardTitle>🏠 Lead Tipi Dağılımı - Detaylı Analiz</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="lg:col-span-2">
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={leadTypeData}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {leadTypeData.map((entry, index) => (
-                          <Cell key={`type-${index}`} fill={entry.color} />
+              {leadTypeData.length > 0 ? (
+                <>
+                  <StandardChart
+                    title=""
+                    data={leadTypeData}
+                    height={500}
+                    chartType="pie"
+                    showDataTable={false}
+                    className="[&_.grid]:!grid-cols-1 [&_.space-y-4]:!hidden mb-6"
+                  />
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse border border-gray-200">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">
+                            Lead Tipi
+                          </th>
+                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">
+                            Adet
+                          </th>
+                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">
+                            Yüzde
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {leadTypeData.map((item, index) => (
+                          <tr
+                            key={index}
+                            className="hover:bg-gray-50"
+                            style={{
+                              backgroundColor: `${item.color}15`,
+                              borderLeft: `4px solid ${item.color}`,
+                            }}
+                          >
+                            <td className="border border-gray-200 px-4 py-2 font-medium">
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-3 h-3 rounded-full"
+                                  style={{
+                                    backgroundColor: item.color,
+                                  }}
+                                />
+                                {item.name}
+                              </div>
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2 text-center font-medium">
+                              {item.value}
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2 text-center">
+                              %{item.percentage}
+                            </td>
+                          </tr>
                         ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend
-                        verticalAlign="middle"
-                        align="right"
-                        layout="vertical"
-                        iconType="circle"
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Bu personel için lead tipi verisi bulunmuyor.</p>
                 </div>
-                <div className="space-y-2">
-                  <h4 className="font-medium text-sm">Lead Tipi Detayları</h4>
-                  {leadTypeData.map((entry, index) => (
-                    <div
-                      key={`type-legend-${index}`}
-                      className="flex items-center gap-2 text-sm"
-                    >
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: entry.color }}
-                      />
-                      <span>
-                        {entry.name}: {entry.value}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -962,51 +1075,230 @@ export default function SalespersonPage({
         <TabsContent value="projects" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-medium">
-                Proje Dağılımı
-              </CardTitle>
+              <CardTitle>🏢 Proje Dağılımı - Satış Analizi</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="lg:col-span-2">
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={projectData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="name"
-                        angle={-45}
-                        textAnchor="end"
-                        height={80}
-                        fontSize={12}
-                      />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="value" fill="#8884d8">
-                        {projectData.map((entry, index) => (
-                          <Cell key={`project-${index}`} fill={entry.color} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="font-medium text-sm">Proje Detayları</h4>
-                  {projectData.map((entry, index) => (
-                    <div
-                      key={`project-legend-${index}`}
-                      className="flex items-center gap-2 text-sm"
-                    >
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: entry.color }}
-                      />
-                      <span>
-                        {entry.name}: {entry.value}
-                      </span>
+              {projectData.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    {/* Lead Count Chart */}
+                    <div>
+                      <h4 className="font-medium text-sm mb-3">
+                        Proje Başına Lead Sayısı
+                      </h4>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={projectData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis
+                            dataKey="name"
+                            angle={-45}
+                            textAnchor="end"
+                            height={80}
+                            fontSize={12}
+                          />
+                          <YAxis />
+                          <Tooltip
+                            content={({ active, payload, label }) => {
+                              if (active && payload && payload.length) {
+                                const data = projectData.find(
+                                  (item) => item.name === label
+                                );
+                                return (
+                                  <div className="bg-white p-3 border rounded shadow">
+                                    <p className="font-medium">
+                                      {data?.fullName}
+                                    </p>
+                                    <p className="text-blue-600">
+                                      Toplam Lead: {payload[0].value}
+                                    </p>
+                                    <p className="text-green-600">
+                                      Satış: {data?.sales}
+                                    </p>
+                                    <p className="text-purple-600">
+                                      Satış Oranı: %{data?.salesRate}
+                                    </p>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Bar dataKey="value" fill="#8884d8">
+                            {projectData.map((entry, index) => (
+                              <Cell
+                                key={`project-${index}`}
+                                fill={entry.color}
+                              />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
                     </div>
-                  ))}
+
+                    {/* Sales Chart */}
+                    <div>
+                      <h4 className="font-medium text-sm mb-3">
+                        Proje Başına Satış Sayısı
+                      </h4>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart
+                          data={projectData.filter((item) => item.sales > 0)}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis
+                            dataKey="name"
+                            angle={-45}
+                            textAnchor="end"
+                            height={80}
+                            fontSize={12}
+                          />
+                          <YAxis />
+                          <Tooltip
+                            content={({ active, payload, label }) => {
+                              if (active && payload && payload.length) {
+                                const data = projectData.find(
+                                  (item) => item.name === label
+                                );
+                                return (
+                                  <div className="bg-white p-3 border rounded shadow">
+                                    <p className="font-medium">
+                                      {data?.fullName}
+                                    </p>
+                                    <p className="text-green-600">
+                                      Satış: {payload[0].value}
+                                    </p>
+                                    <p className="text-blue-600">
+                                      Toplam Lead: {data?.value}
+                                    </p>
+                                    <p className="text-purple-600">
+                                      Satış Oranı: %{data?.salesRate}
+                                    </p>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Bar dataKey="sales" fill="#10b981">
+                            {projectData.map((entry, index) => (
+                              <Cell key={`sales-${index}`} fill="#10b981" />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Detailed Data Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse border border-gray-200">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="border border-gray-200 px-4 py-2 text-left font-medium">
+                            Proje
+                          </th>
+                          <th className="border border-gray-200 px-4 py-2 text-center font-medium">
+                            Toplam Lead
+                          </th>
+                          <th className="border border-gray-200 px-4 py-2 text-center font-medium">
+                            Satış Yapılan
+                          </th>
+                          <th className="border border-gray-200 px-4 py-2 text-center font-medium">
+                            Satış Oranı
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {projectData.map((item, index) => (
+                          <tr
+                            key={index}
+                            className="hover:bg-gray-50"
+                            style={{
+                              backgroundColor: `${item.color}15`,
+                              borderLeft: `4px solid ${item.color}`,
+                            }}
+                          >
+                            <td className="border border-gray-200 px-4 py-2 font-medium">
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-3 h-3 rounded-full"
+                                  style={{
+                                    backgroundColor: item.color,
+                                  }}
+                                />
+                                <span title={item.fullName}>
+                                  {item.fullName}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2 text-center font-medium">
+                              {item.value}
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2 text-center">
+                              <span className="font-semibold text-green-600">
+                                {item.sales}
+                              </span>
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2 text-center">
+                              <span
+                                className={`font-semibold ${
+                                  item.salesRate >= 50
+                                    ? "text-green-600"
+                                    : item.salesRate >= 25
+                                    ? "text-yellow-600"
+                                    : "text-red-600"
+                                }`}
+                              >
+                                %{item.salesRate}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-4 border-t">
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <div className="text-sm font-medium text-blue-700">
+                        Toplam Proje
+                      </div>
+                      <div className="text-2xl font-bold text-blue-900">
+                        {projectData.length}
+                      </div>
+                    </div>
+                    <div className="bg-green-50 p-4 rounded-lg">
+                      <div className="text-sm font-medium text-green-700">
+                        Toplam Satış
+                      </div>
+                      <div className="text-2xl font-bold text-green-900">
+                        {projectData.reduce((sum, item) => sum + item.sales, 0)}
+                      </div>
+                    </div>
+                    <div className="bg-purple-50 p-4 rounded-lg">
+                      <div className="text-sm font-medium text-purple-700">
+                        Ortalama Satış Oranı
+                      </div>
+                      <div className="text-2xl font-bold text-purple-900">
+                        %
+                        {projectData.length > 0
+                          ? Math.round(
+                              projectData.reduce(
+                                (sum, item) => sum + item.salesRate,
+                                0
+                              ) / projectData.length
+                            )
+                          : 0}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Bu personel için proje verisi bulunmuyor.</p>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -1014,9 +1306,7 @@ export default function SalespersonPage({
         <TabsContent value="meetings" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-medium">
-                Toplantı Analizi
-              </CardTitle>
+              <CardTitle>📅 Toplantı Analizi - Detaylı Rapor</CardTitle>
             </CardHeader>
             <CardContent>
               <MeetingAnalyticsTab
@@ -1036,3 +1326,290 @@ export default function SalespersonPage({
     </div>
   );
 }
+
+// SalespersonPerformanceTable Component
+interface SalespersonPerformanceTableProps {
+  salespersonName: string;
+}
+
+const SalespersonPerformanceTable: React.FC<
+  SalespersonPerformanceTableProps
+> = ({ salespersonName }) => {
+  const [performanceData, setPerformanceData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPerformanceData();
+  }, [salespersonName]);
+
+  const fetchPerformanceData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(
+        `/api/salesperson-performance/${encodeURIComponent(salespersonName)}`
+      );
+      const data = await response.json();
+      setPerformanceData(data);
+    } catch (error) {
+      console.error("Error fetching performance data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calculator className="h-5 w-5 text-blue-600" />
+            Performans Analizi
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-gray-500">
+            <p>Performans verileri yükleniyor...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!performanceData) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calculator className="h-5 w-5 text-blue-600" />
+            Performans Analizi
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-gray-500">
+            <p>Performans verisi bulunamadı.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("tr-TR", {
+      style: "currency",
+      currency: "TRY",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const formatPercentage = (rate: number) => {
+    return `${(rate * 100).toFixed(1)}%`;
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Calculator className="h-5 w-5 text-blue-600" />
+          Kapsamlı Performans Analizi
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Metrik</TableHead>
+                <TableHead className="text-right">Değer</TableHead>
+                <TableHead className="text-right">Oran</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-blue-500" />
+                    Toplam Lead Sayısı
+                  </div>
+                </TableCell>
+                <TableCell className="text-right font-mono">
+                  {performanceData.totalLeads.toLocaleString("tr-TR")}
+                </TableCell>
+                <TableCell className="text-right text-gray-500">-</TableCell>
+              </TableRow>
+
+              <TableRow>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-green-500" />
+                    <div>
+                      <div>Satış Yapılan Lead</div>
+                      <div className="text-xs text-gray-500 font-normal">
+                        (Her 1000 leadden{" "}
+                        {Math.round(
+                          (performanceData.salesConversionRate || 0) * 1000
+                        )}{" "}
+                        satış - Backend verisine göre)
+                      </div>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="text-right font-mono">
+                  {performanceData.totalSales.toLocaleString("tr-TR")} /{" "}
+                  {performanceData.totalLeads.toLocaleString("tr-TR")}
+                </TableCell>
+                <TableCell className="text-right">
+                  <span
+                    className={`font-semibold ${
+                      performanceData.salesConversionRate > 0.1
+                        ? "text-green-600"
+                        : "text-yellow-600"
+                    }`}
+                  >
+                    {formatPercentage(performanceData.salesConversionRate)}
+                  </span>
+                </TableCell>
+              </TableRow>
+
+              <TableRow>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-purple-500" />
+                    <div>
+                      <div>Toplantı Yapılan Lead</div>
+                      <div className="text-xs text-gray-500 font-normal">
+                        (1000 leadden{" "}
+                        {Math.round(
+                          (performanceData.meetingConversionRate || 0) * 1000
+                        )}{" "}
+                        toplantı)
+                      </div>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="text-right font-mono">
+                  {performanceData.totalMeetings.toLocaleString("tr-TR")} /{" "}
+                  {performanceData.totalLeads.toLocaleString("tr-TR")}
+                </TableCell>
+                <TableCell className="text-right">
+                  <span
+                    className={`font-semibold ${
+                      performanceData.meetingConversionRate > 0.2
+                        ? "text-green-600"
+                        : "text-yellow-600"
+                    }`}
+                  >
+                    {formatPercentage(performanceData.meetingConversionRate)}
+                  </span>
+                </TableCell>
+              </TableRow>
+
+              <TableRow className="border-t-2 border-gray-200">
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-orange-500" />
+                    Toplam Maliyet
+                  </div>
+                </TableCell>
+                <TableCell className="text-right font-mono text-orange-600">
+                  {formatCurrency(performanceData.totalCost)}
+                </TableCell>
+                <TableCell className="text-right text-gray-500">-</TableCell>
+              </TableRow>
+
+              <TableRow>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    <TrendingDown className="h-4 w-4 text-red-500" />
+                    Lead Başına Maliyet
+                  </div>
+                </TableCell>
+                <TableCell className="text-right font-mono text-red-600">
+                  {formatCurrency(performanceData.costPerLead)}
+                </TableCell>
+                <TableCell className="text-right text-gray-500">-</TableCell>
+              </TableRow>
+
+              <TableRow>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    <Calculator className="h-4 w-4 text-indigo-500" />
+                    Satış Başına Maliyet
+                  </div>
+                </TableCell>
+                <TableCell className="text-right font-mono text-indigo-600">
+                  {performanceData.totalSales > 0
+                    ? formatCurrency(performanceData.costPerSale)
+                    : "N/A"}
+                </TableCell>
+                <TableCell className="text-right text-gray-500">-</TableCell>
+              </TableRow>
+
+              <TableRow>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-blue-500" />
+                    Toplantı Başına Maliyet
+                  </div>
+                </TableCell>
+                <TableCell className="text-right font-mono text-blue-600">
+                  {performanceData.totalMeetings > 0
+                    ? formatCurrency(performanceData.costPerMeeting)
+                    : "N/A"}
+                </TableCell>
+                <TableCell className="text-right text-gray-500">-</TableCell>
+              </TableRow>
+
+              {performanceData.estimatedROI !== null && (
+                <TableRow className="border-t-2 border-gray-200 bg-green-50">
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-green-600" />
+                      Tahmini ROI
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-green-700 font-bold">
+                    {formatPercentage(performanceData.estimatedROI)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <span
+                      className={`text-xs ${
+                        performanceData.estimatedROI > 0
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {performanceData.estimatedROI > 0 ? "Karlı" : "Zararlı"}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        <div className="mt-4 text-xs text-gray-500 space-y-1">
+          <p>
+            • <strong>Satış Dönüşüm Oranı:</strong> Her 1000 lead başına kaç
+            satış yapıldığını gösterir (Örnek: %0.1 = 1000 leadden 1 satış)
+          </p>
+          <p>
+            • <strong>Önemli:</strong> Backend satış sayımı frontend'den farklı
+            olabilir (backend hem status hem wasSaleMade alanlarını kontrol
+            eder)
+          </p>
+          <p>
+            • Maliyet hesaplaması: Bu personele atanan lead oranına göre
+            giderler dağıtılmıştır
+          </p>
+          <p>
+            • ROI hesaplaması: Ortalama satış değeri{" "}
+            {formatCurrency(performanceData.averageSaleValue || 50000)} olarak
+            kabul edilmiştir
+          </p>
+          <p>• Veriler mevcut filtrelere göre hesaplanmıştır</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};

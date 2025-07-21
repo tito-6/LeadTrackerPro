@@ -23,6 +23,7 @@ import ExportTab from "@/components/export-tab";
 import SettingsTab from "@/components/settings-tab";
 import OlumsuzAnaliziTab from "@/components/olumsuz-analizi-tab-clean";
 import FollowUpAnalyticsTab from "@/components/follow-up-analytics-tab";
+import RefactoredTakipAnaliziTab from "@/components/refactored-takip-analizi-tab";
 import IntelligentSettingsTab from "@/components/intelligent-settings-tab";
 import ExcelInputTab from "@/components/excel-input-tab";
 import DuplicateDetectionTab from "@/components/duplicate-detection-tab";
@@ -106,7 +107,7 @@ export default function Dashboard() {
                   className="flex items-center space-x-2 p-3"
                 >
                   <Home className="h-4 w-4" />
-                  <span>🧠 Akıllı Dashboard</span>
+                  <span>Proje Bazlı Analiz</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="unified-data-input"
@@ -227,7 +228,7 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="follow-up-analytics">
-            <FollowUpAnalyticsTab />
+            <RefactoredTakipAnaliziTab />
           </TabsContent>
 
           <TabsContent value="duplicate-detection">
