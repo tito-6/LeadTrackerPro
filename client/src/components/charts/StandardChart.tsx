@@ -132,11 +132,43 @@ export default function StandardChart({
               data={enhancedData}
               cx="50%"
               cy="50%"
-              labelLine={false}
+              labelLine={true}
               outerRadius={Math.min(height / 3, 120)}
               fill="#8884d8"
               dataKey="value"
               onClick={handleClick}
+              label={({
+                cx,
+                cy,
+                midAngle,
+                innerRadius,
+                outerRadius,
+                percent,
+                index,
+                value,
+              }) => {
+                const RADIAN = Math.PI / 180;
+                const radius = 25 + innerRadius + (outerRadius - innerRadius);
+                const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+                // Only show labels for segments larger than 5%
+                if (percent < 0.05) return null;
+
+                return (
+                  <text
+                    x={x}
+                    y={y}
+                    fill="#000"
+                    textAnchor={x > cx ? "start" : "end"}
+                    dominantBaseline="central"
+                    fontSize={11}
+                    fontWeight="bold"
+                  >
+                    {`${value}`}
+                  </text>
+                );
+              }}
             >
               {enhancedData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
@@ -159,9 +191,41 @@ export default function StandardChart({
               height={80}
               interval={0}
             />
-            <YAxis />
+            <YAxis
+              tick={{ fontSize: 12 }}
+              tickCount={10}
+              interval={0}
+              axisLine={{ stroke: "#E0E0E0" }}
+              tickLine={{ stroke: "#E0E0E0" }}
+              tickMargin={8}
+              // Force ticks to be at exact 100 unit increments
+              ticks={(() => {
+                const maxValue = Math.max(
+                  ...enhancedData.map((item) => item.value)
+                );
+                const maxTick = Math.ceil(maxValue / 100) * 100;
+                const tickArray = [];
+                for (let i = 0; i <= maxTick; i += 100) {
+                  tickArray.push(i);
+                }
+                return tickArray;
+              })()}
+              domain={[0, "dataMax + 50"]}
+              tickFormatter={(value: number) => value.toString()}
+            />
             <Tooltip />
-            <Bar dataKey="value" fill="#3B82F6" onClick={handleClick}>
+            <Bar
+              dataKey="value"
+              fill="#3B82F6"
+              onClick={handleClick}
+              label={{
+                position: "top",
+                formatter: (value: number) => `${value}`,
+                fill: "#000",
+                fontSize: 11,
+                fontWeight: "bold",
+              }}
+            >
               {enhancedData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
@@ -182,7 +246,28 @@ export default function StandardChart({
               height={80}
               interval={0}
             />
-            <YAxis />
+            <YAxis
+              tick={{ fontSize: 12 }}
+              tickCount={10}
+              interval={0}
+              axisLine={{ stroke: "#E0E0E0" }}
+              tickLine={{ stroke: "#E0E0E0" }}
+              tickMargin={8}
+              // Force ticks to be at exact 100 unit increments
+              ticks={(() => {
+                const maxValue = Math.max(
+                  ...enhancedData.map((item) => item.value)
+                );
+                const maxTick = Math.ceil(maxValue / 100) * 100;
+                const tickArray = [];
+                for (let i = 0; i <= maxTick; i += 100) {
+                  tickArray.push(i);
+                }
+                return tickArray;
+              })()}
+              domain={[0, "dataMax + 50"]}
+              tickFormatter={(value: number) => value.toString()}
+            />
             <Tooltip />
             <Line
               type="monotone"
@@ -191,6 +276,14 @@ export default function StandardChart({
               strokeWidth={3}
               dot={{ fill: "#3B82F6", strokeWidth: 2, r: 6 }}
               activeDot={{ r: 8, stroke: "#3B82F6", strokeWidth: 2 }}
+              label={{
+                position: "top",
+                formatter: (value: number) => `${value}`,
+                fill: "#000",
+                fontSize: 11,
+                fontWeight: "bold",
+                dy: -10,
+              }}
             />
           </LineChart>
         );
